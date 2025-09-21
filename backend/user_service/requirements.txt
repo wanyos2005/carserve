@@ -1,0 +1,14 @@
+# services/user-service/requirements.txt
+fastapi
+uvicorn
+psycopg2-binary
+redis
+python-jose[cryptography]
+python-dotenv
+sqlalchemy
+passlib[bcrypt]
+pyjwt
+alembic
+pydantic[email]
+fastapi-mail
+
