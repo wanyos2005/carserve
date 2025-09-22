@@ -1,92 +1,102 @@
-import uuid
 import random
-from fastapi import FastAPI, BackgroundTasks
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session
 from fastapi_mail import FastMail, MessageSchema, MessageType
+
+from core.db import get_db
+from core.security import create_access_token
+from models.users import User, OTP
+from schemas.users import SendCodeRequest, VerifyCodeRequest, Token, EmailSchema
 from config import conf
 
-from fastapi import APIRouter, Depends, HTTPException 
-from fastapi.security import OAuth2PasswordBearer 
-from sqlalchemy.orm import Session 
-
-from models.users import User
-from schemas.users import UserCreate, UserRead, UserLogin, Token,EmailSchema
-from core.db import get_db
-from core.security import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    decode_access_token,
-)
-
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
-@router.post("/register", response_model=UserRead)
-def register(user: UserCreate,background_tasks: BackgroundTasks,db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    pde=generate_otp(4)
-    new_user = User(
-        email=user.email,
-        passcode=hash_password(pde),
-        # role=user.role,
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
 
-    email_data = EmailSchema(
-        email=new_user.email,
-        subject='Your OTP',
-        body=pde,
-    )
-    send_email(email_data, background_tasks)
+# --------------------------
+# Helpers
+# --------------------------
+def generate_otp(length: int = 6) -> str:
+    return ''.join(str(random.randint(0, 9)) for _ in range(length))
 
-    return new_user
-
-def generate_otp(length: int = 6):
-    if length < 4 or length > 10:
-        return {"error": "OTP length must be between 4 and 10 digits."}
-
-    otp = ''.join([str(random.randint(0, 9)) for _ in range(length)])
-    return otp
 
 def send_email(email: EmailSchema, background_tasks: BackgroundTasks):
     message = MessageSchema(
         subject=email.subject,
-        recipients=[email.email],  # List of recipients
+        recipients=[email.email],
         body=email.body,
-        subtype=MessageType.html  # or MessageType.plain
+        subtype=MessageType.plain
     )
-
     fm = FastMail(conf)
     background_tasks.add_task(fm.send_message, message)
-    return {"message": "email has been sent"}
 
 
-@router.post("/login", response_model=Token)
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+# --------------------------
+# Send OTP
+# --------------------------
+@router.post("/send-code")
+def send_code(
+    req: SendCodeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    # ensure user exists
+    db_user = db.query(User).filter(User.email == req.email).first()
+    if not db_user:
+        db_user = User(email=req.email, verified=False)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
 
-    token = create_access_token({"sub": db_user.id, "role": db_user.role})
-    return {"access_token": token, "token_type": "bearer"}
+    # generate OTP
+    code = generate_otp(6)
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+    # save OTP in DB
+    otp_entry = OTP(email=req.email, code=code, expires_at=expires_at)
+    db.add(otp_entry)
+    db.commit()
+    #implement a feature to handle spamming.
+
+    # send email
+    send_email(
+        EmailSchema(email=req.email, subject="Your Login Code", body=f"Your code is: {code} and expires in 5 minutes."),
+        background_tasks
+    )
+
+    return {"message": "OTP sent to email"}
 
 
-@router.get("/me", response_model=UserRead)
-def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        payload = decode_access_token(token)
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+# --------------------------
+# Verify OTP
+# --------------------------
+@router.post("/verify-code", response_model=Token)
+def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
+    otp_entry = (
+        db.query(OTP)
+        .filter(OTP.email == req.email, OTP.code == req.code)
+        .order_by(OTP.created_at.desc())
+        .first()
+    )
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if not otp_entry:
+        raise HTTPException(status_code=401, detail="Invalid code")
+
+    if otp_entry.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Code expired")
+
+    # delete OTP once used
+    db.delete(otp_entry)
+
+    # mark user as verified
+    db_user = db.query(User).filter(User.email == req.email).first()
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return user
+    db_user.verified = True
+    db.commit()
+
+    # issue token
+    token = create_access_token({"sub": str(db_user.id)})
+    return {"access_token": token, "token_type": "bearer"}

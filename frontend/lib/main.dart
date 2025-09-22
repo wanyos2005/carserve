@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 // Pages
 import 'package:car_platform/pages/login_page.dart';
-import 'package:car_platform/pages/register_page.dart';
 import 'package:car_platform/pages/home_page.dart';
 
 // Services
@@ -24,7 +23,6 @@ class CarPlatformApp extends StatelessWidget {
       initialRoute: "/login",
       routes: {
         "/login": (context) => const LoginPage(),
-        "/register": (context) => const RegisterPage(),
         "/home": (context) => const HomePage(),
       },
       home: FutureBuilder(

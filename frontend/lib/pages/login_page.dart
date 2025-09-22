@@ -1,7 +1,5 @@
-// login_page.dart
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/auth_service.dart';
-// mport 'home_page.dart';
 import 'passcode_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -13,31 +11,29 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
-  // final _passwordController = TextEditingController();
   bool _loading = false;
   String? _error;
 
-  Future<void> _login() async {
+  Future<void> _sendCode() async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
-    final response = await AuthService.login(
+    final success = await AuthService.sendCode(
       _emailController.text.trim(),
-      // _passwordController.text.trim(),
     );
 
     setState(() => _loading = false);
 
-    if (response) {
+    if (success) {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const PasscodePage()),
       );
     } else {
-      setState(() => _error = "Invalid email or password");
+      setState(() => _error = "Failed to send code. Try again.");
     }
   }
 
@@ -75,7 +71,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 24),
 
-              // Email
               TextField(
                 controller: _emailController,
                 style: const TextStyle(color: Colors.white),
@@ -83,24 +78,13 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 16),
 
-              // // Password
-              // TextField(
-              //   controller: _passwordController,
-              //   obscureText: true,
-              //   style: const TextStyle(color: Colors.white),
-              //   decoration: _inputDecoration("Password"),
-              // ),
-
-              // const SizedBox(height: 24),
-
               if (_error != null)
-                Text(_error!,
-                    style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
 
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: _login,
+                      onPressed: _sendCode,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF6F61),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -109,19 +93,11 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       child: const Text(
-                        "Login with code",
+                        "Send Code",
                         style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ),
 
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, "/register"),
-                child: const Text(
-                  "Don’t have an account? Register",
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
               const Spacer(),
             ],
           ),

@@ -1,8 +1,6 @@
-// login_page.dart
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/auth_service.dart';
 import 'home_page.dart';
-
 
 class PasscodePage extends StatefulWidget {
   const PasscodePage({super.key});
@@ -12,20 +10,18 @@ class PasscodePage extends StatefulWidget {
 }
 
 class _PasscodePageState extends State<PasscodePage> {
-  final _passcodeController = TextEditingController();
-  // final _passwordController = TextEditingController();
+  final _codeController = TextEditingController();
   bool _loading = false;
   String? _error;
 
-  Future<void> _login() async {
+  Future<void> _verifyCode() async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
-    final success = await AuthService.login(
-      _passcodeController.text.trim(),
-      // _passwordController.text.trim(),
+    final success = await AuthService.verifyCode(
+      _codeController.text.trim(),
     );
 
     setState(() => _loading = false);
@@ -37,7 +33,7 @@ class _PasscodePageState extends State<PasscodePage> {
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
     } else {
-      setState(() => _error = "Invalid code");
+      setState(() => _error = "Invalid or expired code");
     }
   }
 
@@ -75,32 +71,20 @@ class _PasscodePageState extends State<PasscodePage> {
               ),
               const SizedBox(height: 24),
 
-              // Email
               TextField(
-                controller: _passcodeController,
+                controller: _codeController,
                 style: const TextStyle(color: Colors.white),
                 decoration: _inputDecoration("Passcode"),
               ),
               const SizedBox(height: 16),
 
-              // // Password
-              // TextField(
-              //   controller: _passwordController,
-              //   obscureText: true,
-              //   style: const TextStyle(color: Colors.white),
-              //   decoration: _inputDecoration("Password"),
-              // ),
-
-              // const SizedBox(height: 24),
-
               if (_error != null)
-                Text(_error!,
-                    style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
 
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: _login,
+                      onPressed: _verifyCode,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF6F61),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -114,14 +98,6 @@ class _PasscodePageState extends State<PasscodePage> {
                       ),
                     ),
 
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, "/register"),
-                child: const Text(
-                  "Don’t have an account? Register",
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
               const Spacer(),
             ],
           ),
