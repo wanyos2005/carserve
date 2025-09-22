@@ -1,5 +1,5 @@
 
-# backend/service_provider_service/alembic/env.py
+# backend/user_service/alembic/env.py
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -7,7 +7,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-from models.users import User 
+from models.users import User, OTP
 from core.db import Base  
 
 # This is the Alembic Config object
@@ -79,3 +79,6 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
+
+
