@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:car_platform/services/vehicle_service.dart';
 
 class VehicleFormPage extends StatefulWidget {
@@ -10,6 +12,9 @@ class VehicleFormPage extends StatefulWidget {
 
 class _VehicleFormPageState extends State<VehicleFormPage> {
   final _formKey = GlobalKey<FormState>();
+
+  // car make -> list of models (loaded from assets/car_models.json)
+  Map<String, List<String>> carData = {};
 
   // Fields
   String _make = "";
@@ -28,6 +33,29 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
   final List<String> _colors = [
     "Black", "White", "Silver", "Blue", "Red", "Grey", "Green", "Other"
   ];
+
+  // Hold references to the underlying controllers created by Autocomplete so we can clear them
+  TextEditingController? _makeFieldController;
+  TextEditingController? _modelFieldController;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCarData();
+  }
+
+  Future<void> _loadCarData() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/car_models.json');
+      final data = json.decode(jsonString) as Map<String, dynamic>;
+      setState(() {
+        carData = data.map((key, value) => MapEntry(key, List<String>.from(value)));
+      });
+    } catch (e) {
+      debugPrint('Could not load car_models.json: $e');
+      // app still works — Autocomplete will just have no suggestions
+    }
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -70,22 +98,96 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
             key: _formKey,
             child: Column(
               children: [
-                TextFormField(
-                  decoration: const InputDecoration(labelText: "Make"),
-                  onSaved: (val) => _make = val!.trim(),
-                  validator: (val) =>
-                      (val == null || val.isEmpty) ? "Enter vehicle make" : null,
+                // === MAKE (Autocomplete) ===
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      // show all makes as suggestions when typing, else empty
+                      return carData.keys;
+                    }
+                    final lower = textEditingValue.text.toLowerCase();
+                    return carData.keys.where((k) => k.toLowerCase().contains(lower));
+                  },
+                  onSelected: (selection) {
+                    setState(() {
+                      _make = selection;
+                      // clear model when make changes
+                      _model = "";
+                      _modelFieldController?.clear();
+                    });
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                    // keep controller reference so we can clear it when make changes
+                    _makeFieldController = controller;
+                    return TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(labelText: "Make"),
+                      validator: (val) =>
+                          (val == null || val.trim().isEmpty) ? "Enter vehicle make" : null,
+                      onSaved: (val) => _make = val!.trim(),
+                      onChanged: (val) {
+                        // while typing a make, update _make and clear model suggestions/text
+                        if (_make != val) {
+                          setState(() {
+                            _make = val;
+                            _model = "";
+                            _modelFieldController?.clear();
+                          });
+                        }
+                      },
+                      onFieldSubmitted: (_) => onFieldSubmitted(),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
-                TextFormField(
-                  decoration: const InputDecoration(labelText: "Model"),
-                  onSaved: (val) => _model = val!.trim(),
-                  validator: (val) =>
-                      (val == null || val.isEmpty) ? "Enter vehicle model" : null,
+                // === MODEL (Autocomplete filtered by make) ===
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    final query = textEditingValue.text;
+                    if (query.isEmpty) return const Iterable<String>.empty();
+
+                    // find models for exact make key if available, otherwise try fuzzy match of makes
+                    List<String> candidates = [];
+                    if (carData.containsKey(_make)) {
+                      candidates = carData[_make]!;
+                    } else {
+                      final matches = carData.keys
+                          .where((k) => k.toLowerCase().contains(_make.toLowerCase()))
+                          .toList();
+                      for (var k in matches) {
+                        candidates.addAll(carData[k]!);
+                      }
+                    }
+
+                    // if still empty (no make match), fallback to all models (optional)
+                    if (candidates.isEmpty) {
+                      candidates = carData.values.expand((v) => v).toList();
+                    }
+
+                    final lower = query.toLowerCase();
+                    return candidates.where((m) => m.toLowerCase().contains(lower));
+                  },
+                  onSelected: (selection) {
+                    setState(() => _model = selection);
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                    _modelFieldController = controller;
+                    return TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(labelText: "Model"),
+                      validator: (val) =>
+                          (val == null || val.trim().isEmpty) ? "Enter vehicle model" : null,
+                      onSaved: (val) => _model = val!.trim(),
+                      onFieldSubmitted: (_) => onFieldSubmitted(),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
+                // === Plate ===
                 TextFormField(
                   decoration: const InputDecoration(labelText: "Plate"),
                   onSaved: (val) => _plate = val!.trim().toUpperCase(),
@@ -94,6 +196,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                 ),
                 const SizedBox(height: 24),
 
+                // === Mileage ===
                 TextFormField(
                   decoration: const InputDecoration(labelText: "Mileage (km)"),
                   keyboardType: TextInputType.number,
@@ -108,6 +211,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                 ),
                 const SizedBox(height: 24),
 
+                // === Year of Manufacture ===
                 TextFormField(
                   decoration:
                       const InputDecoration(labelText: "Year of Manufacture"),
@@ -127,36 +231,35 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                 ),
                 const SizedBox(height: 24),
 
+                // === Fuel Type ===
                 DropdownButtonFormField<String>(
                   value: _fuelType,
                   decoration: const InputDecoration(labelText: "Fuel Type"),
                   items: _fuelTypes
-                      .map((ft) =>
-                          DropdownMenuItem(value: ft, child: Text(ft)))
+                      .map((ft) => DropdownMenuItem(value: ft, child: Text(ft)))
                       .toList(),
                   onChanged: (val) => setState(() => _fuelType = val!),
                 ),
                 const SizedBox(height: 24),
 
+                // === Transmission ===
                 DropdownButtonFormField<String>(
                   value: _transmission,
                   decoration: const InputDecoration(labelText: "Transmission"),
                   items: _transmissions
-                      .map((t) =>
-                          DropdownMenuItem(value: t, child: Text(t)))
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                       .toList(),
                   onChanged: (val) => setState(() => _transmission = val),
-                  validator: (val) =>
-                      val == null ? "Select transmission" : null,
+                  validator: (val) => val == null ? "Select transmission" : null,
                 ),
                 const SizedBox(height: 24),
 
+                // === Color ===
                 DropdownButtonFormField<String>(
                   value: _color,
                   decoration: const InputDecoration(labelText: "Color"),
                   items: _colors
-                      .map((c) =>
-                          DropdownMenuItem(value: c, child: Text(c)))
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (val) => setState(() => _color = val),
                   validator: (val) => val == null ? "Select color" : null,
