@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 // Pages
@@ -6,6 +7,8 @@ import 'package:car_platform/pages/home_page.dart';
 
 // Services
 import 'package:car_platform/services/auth_service.dart';
+
+const abyssBlue = Color(0xFF0A192F); // dark navy blue
 
 void main() {
   runApp(const CarPlatformApp());
@@ -18,9 +21,9 @@ class CarPlatformApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: "Car Platform",
-      theme: _buildLightTheme(),      // ✅ Light theme
-      darkTheme: _buildDarkTheme(),  // ✅ Dark theme
-      themeMode: ThemeMode.system,   // ✅ Adapts to system setting
+      theme: _buildLightTheme(),     // Light theme
+      darkTheme: _buildDarkTheme(),  // Dark theme
+      themeMode: ThemeMode.system,
       initialRoute: "/login",
       routes: {
         "/login": (context) => const LoginPage(),
@@ -46,12 +49,12 @@ class CarPlatformApp extends StatelessWidget {
 
   // 🌞 Light theme
   ThemeData _buildLightTheme() {
-    const primaryAccent = Color(0xFFD32F2F); // Netflix red
+    const primaryAccent = Color(0xFFD32F2F); // red
 
     return ThemeData(
       brightness: Brightness.light,
       primaryColor: primaryAccent,
-      scaffoldBackgroundColor: Colors.grey[80], // or 300
+      scaffoldBackgroundColor: Colors.grey[200],
       fontFamily: 'Poppins',
 
       appBarTheme: const AppBarTheme(
@@ -99,13 +102,18 @@ class CarPlatformApp extends StatelessWidget {
         ),
       ),
 
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryAccent,
+        brightness: Brightness.light,
+      ),
+
       inputDecorationTheme: const InputDecorationTheme(
-        filled: false, // ❌ no background fill
+        filled: false,
         enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.red), // red underline when enabled
+          borderSide: BorderSide(color: Colors.red),
         ),
         focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.red, width: 2), // thicker underline on focus
+          borderSide: BorderSide(color: Colors.red, width: 2),
         ),
         border: UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.red),
@@ -116,20 +124,19 @@ class CarPlatformApp extends StatelessWidget {
     );
   }
 
-  // 🌑 Dark theme (your existing one)
+  // 🌑 Dark theme
   ThemeData _buildDarkTheme() {
-    const primaryAccent = Color(0xFFD32F2F); // Netflix red
-    const abyssBlack = Color(0xFF0D0D0F);    // near-black
-    const abyssBlue = Color(0xFF0A0E1A);     // dark abyss blue
+    const primaryAccent = Color(0xFFD32F2F); // red
+    const darkBg = Color(0xFF121212);
 
     return ThemeData(
       brightness: Brightness.dark,
       primaryColor: primaryAccent,
-      scaffoldBackgroundColor: abyssBlack,
+      scaffoldBackgroundColor: darkBg,
       fontFamily: 'Poppins',
 
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.black,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
@@ -158,6 +165,7 @@ class CarPlatformApp extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       ),
 
+
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryAccent,
@@ -173,8 +181,13 @@ class CarPlatformApp extends StatelessWidget {
         ),
       ),
 
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryAccent,
+        brightness: Brightness.dark,
+      ),
+
       inputDecorationTheme: const InputDecorationTheme(
-        filled: false, // ❌ no background fill
+        filled: false,
         enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.redAccent),
         ),

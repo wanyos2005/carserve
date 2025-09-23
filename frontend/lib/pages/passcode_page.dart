@@ -10,11 +10,15 @@ class PasscodePage extends StatefulWidget {
 }
 
 class _PasscodePageState extends State<PasscodePage> {
+  final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
+
   bool _loading = false;
   String? _error;
 
   Future<void> _verifyCode() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _loading = true;
       _error = null;
@@ -39,51 +43,61 @@ class _PasscodePageState extends State<PasscodePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // ✅ get active theme (light/dark)
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Spacer(),
 
-              Text(
-                "Enter the Code",
-                style: theme.textTheme.titleLarge, // ✅ uses themed text
-                textAlign: TextAlign.start,
-              ),
-              const SizedBox(height: 24),
-
-              TextField(
-                controller: _codeController,
-                style: theme.textTheme.bodyLarge, // ✅ themed input text
-                decoration: const InputDecoration(
-                  labelText: "Passcode",
-                  // underline, focus color, etc. come from InputDecorationTheme
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              if (_error != null)
                 Text(
-                  _error!,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
+                  "Enter the Code",
+                  style: theme.textTheme.titleLarge,
+                  textAlign: TextAlign.start,
                 ),
+                const SizedBox(height: 24),
 
-              _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _verifyCode,
-                      child: const Text("Proceed"),
+                TextFormField(
+                  controller: _codeController,
+                  style: theme.textTheme.bodyLarge,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: "Passcode"),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return "Passcode required";
+                    }
+                    if (val.length != 6) {
+                      return "Enter a valid 6-digit code";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                if (_error != null)
+                  Text(
+                    _error!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
                     ),
+                  ),
 
-              const Spacer(),
-            ],
+                _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: _verifyCode,
+                        child: const Text("Proceed"),
+                      ),
+
+                const Spacer(),
+              ],
+            ),
           ),
         ),
       ),

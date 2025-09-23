@@ -10,11 +10,15 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+
   bool _loading = false;
   String? _error;
 
   Future<void> _sendCode() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _loading = true;
       _error = null;
@@ -38,51 +42,62 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // no need for backgroundColor — theme handles it
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Spacer(),
 
-              // ✅ uses theme
-              Text(
-                "Welcome Back 👋",
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontSize: 28),
-              ),
-              const SizedBox(height: 24),
-
-              // ✅ inherits inputDecorationTheme
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-              ),
-              const SizedBox(height: 16),
-
-              if (_error != null)
                 Text(
-                  _error!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                  "Welcome Back 👋",
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontSize: 28),
                 ),
+                const SizedBox(height: 24),
 
-              const SizedBox(height: 16),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: "Email"),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return "Email required";
+                    }
+                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                    if (!emailRegex.hasMatch(val.trim())) {
+                      return "Enter a valid email";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
 
-              _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _sendCode,
-                      child: const Text("Send Code"),
+                if (_error != null)
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                     ),
+                  ),
 
-              const Spacer(),
-            ],
+                const SizedBox(height: 16),
+
+                _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: _sendCode,
+                        child: const Text("Send Code"),
+                      ),
+
+                const Spacer(),
+              ],
+            ),
           ),
         ),
       ),

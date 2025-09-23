@@ -29,19 +29,6 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
     "Black", "White", "Silver", "Blue", "Red", "Grey", "Green", "Other"
   ];
 
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
-      enabledBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.blue, width: 1.5),
-      ),
-      focusedBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.blueAccent, width: 2),
-      ),
-    );
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
@@ -64,13 +51,16 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
     if (res != null) {
       Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Failed to add vehicle")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to add vehicle")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text("Add Vehicle")),
       body: SafeArea(
@@ -81,35 +71,46 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
             child: Column(
               children: [
                 TextFormField(
-                  decoration: _inputDecoration("Make"),
+                  decoration: const InputDecoration(labelText: "Make"),
                   onSaved: (val) => _make = val!.trim(),
                   validator: (val) =>
                       (val == null || val.isEmpty) ? "Enter vehicle make" : null,
                 ),
                 const SizedBox(height: 24),
+
                 TextFormField(
-                  decoration: _inputDecoration("Model"),
+                  decoration: const InputDecoration(labelText: "Model"),
                   onSaved: (val) => _model = val!.trim(),
                   validator: (val) =>
                       (val == null || val.isEmpty) ? "Enter vehicle model" : null,
                 ),
                 const SizedBox(height: 24),
+
                 TextFormField(
-                  decoration: _inputDecoration("Plate"),
+                  decoration: const InputDecoration(labelText: "Plate"),
                   onSaved: (val) => _plate = val!.trim().toUpperCase(),
                   validator: (val) =>
                       (val == null || val.isEmpty) ? "Enter vehicle plate" : null,
                 ),
                 const SizedBox(height: 24),
+
                 TextFormField(
-                  decoration: _inputDecoration("Mileage (km)"),
+                  decoration: const InputDecoration(labelText: "Mileage (km)"),
                   keyboardType: TextInputType.number,
-                  onSaved: (val) =>
-                      _mileage = int.tryParse(val!.trim()) ?? 0,
+                  onSaved: (val) => _mileage = int.tryParse(val!.trim()) ?? 0,
+                  validator: (val) {
+                    final mileage = int.tryParse(val ?? "");
+                    if (mileage == null || mileage < 0) {
+                      return "Enter valid mileage";
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 24),
+
                 TextFormField(
-                  decoration: _inputDecoration("Year of Manufacture"),
+                  decoration:
+                      const InputDecoration(labelText: "Year of Manufacture"),
                   keyboardType: TextInputType.number,
                   initialValue: DateTime.now().year.toString(),
                   onSaved: (val) =>
@@ -125,9 +126,10 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                   },
                 ),
                 const SizedBox(height: 24),
+
                 DropdownButtonFormField<String>(
                   value: _fuelType,
-                  decoration: _inputDecoration("Fuel Type"),
+                  decoration: const InputDecoration(labelText: "Fuel Type"),
                   items: _fuelTypes
                       .map((ft) =>
                           DropdownMenuItem(value: ft, child: Text(ft)))
@@ -135,26 +137,32 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                   onChanged: (val) => setState(() => _fuelType = val!),
                 ),
                 const SizedBox(height: 24),
+
                 DropdownButtonFormField<String>(
                   value: _transmission,
-                  decoration: _inputDecoration("Transmission"),
+                  decoration: const InputDecoration(labelText: "Transmission"),
                   items: _transmissions
                       .map((t) =>
                           DropdownMenuItem(value: t, child: Text(t)))
                       .toList(),
                   onChanged: (val) => setState(() => _transmission = val),
+                  validator: (val) =>
+                      val == null ? "Select transmission" : null,
                 ),
                 const SizedBox(height: 24),
+
                 DropdownButtonFormField<String>(
                   value: _color,
-                  decoration: _inputDecoration("Color"),
+                  decoration: const InputDecoration(labelText: "Color"),
                   items: _colors
                       .map((c) =>
                           DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (val) => setState(() => _color = val),
+                  validator: (val) => val == null ? "Select color" : null,
                 ),
                 const SizedBox(height: 40),
+
                 _loading
                     ? const Center(child: CircularProgressIndicator())
                     : SizedBox(
@@ -163,14 +171,17 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                           onPressed: _submit,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: Colors.red,
+                            backgroundColor:
+                                theme.colorScheme.primary, // theme-driven
+                            foregroundColor:
+                                theme.colorScheme.onPrimary, // text color
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                           child: const Text(
                             "Save Vehicle",
-                            style: TextStyle(fontSize: 16, color: Colors.white),
+                            style: TextStyle(fontSize: 16),
                           ),
                         ),
                       ),

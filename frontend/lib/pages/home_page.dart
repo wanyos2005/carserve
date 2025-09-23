@@ -9,68 +9,56 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       body: Stack(
         children: [
-          // Background gradient header (abyss + red)
+          // Plain color header
           Container(
             width: double.infinity,
             height: 280,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF0D0D0F), // abyss black
-                  Color(0xFF0A0E1A), // abyss blue undertone
-                  Color(0xFF8B0000), // red glow
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+            color: colorScheme.primary,
             padding: const EdgeInsets.only(top: 60, left: 20, right: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Icon(Icons.directions_car, color: Colors.white, size: 48),
-                SizedBox(height: 16),
+              children: [
+                Icon(Icons.directions_car,
+                    color: colorScheme.onPrimary, size: 48),
+                const SizedBox(height: 16),
                 Text(
                   "Welcome Back!",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colorScheme.onPrimary,
                   ),
                 ),
                 Text(
                   "Your car companion is here.",
-                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onPrimary.withOpacity(0.7),
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Scrollable bottom sheet content
+          // Bottom sheet
           DraggableScrollableSheet(
             initialChildSize: 0.65,
             minChildSize: 0.65,
             maxChildSize: 0.95,
             builder: (context, controller) {
               return Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFF0D0D0F), // abyss black
-                      Color(0xFF0A0E1A), // abyss blue undertone
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: [
                     BoxShadow(
                       blurRadius: 12,
-                      color: Colors.black87,
-                      offset: Offset(0, -4),
+                      color: Colors.black.withOpacity(0.4),
+                      offset: const Offset(0, -4),
                     ),
                   ],
                 ),
@@ -82,33 +70,39 @@ class HomePage extends StatelessWidget {
                     TextField(
                       decoration: InputDecoration(
                         hintText: "Search for services, providers...",
-                        prefixIcon: const Icon(Icons.search, color: Colors.redAccent),
+                        prefixIcon: Icon(Icons.search,
+                            color: colorScheme.primary),
                       ),
                     ),
                     const SizedBox(height: 20),
 
-                    // Quick navigation cards
+                    // Quick nav cards
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _navCard(
-                          context,
-                          "Service Providers",
-                          Icons.build_circle,
-                          Colors.redAccent,
-                          () => Navigator.push(
+                        Expanded(
+                          child: _navCard(
                             context,
-                            MaterialPageRoute(builder: (_) => const ServicesProvidersPage()),
+                            "Service Providers",
+                            Icons.build_circle,
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const ServicesProvidersPage()),
+                            ),
                           ),
                         ),
-                        _navCard(
-                          context,
-                          "My Vehicles",
-                          Icons.directions_car,
-                          Colors.white,
-                          () => Navigator.push(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _navCard(
                             context,
-                            MaterialPageRoute(builder: (_) => const VehicleListPage()),
+                            "My Vehicles",
+                            Icons.directions_car,
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const VehicleListPage()),
+                            ),
                           ),
                         ),
                       ],
@@ -119,19 +113,19 @@ class HomePage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.15),
+                        color: colorScheme.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
-                        children: const [
-                          Icon(Icons.local_offer, color: Colors.redAccent),
-                          SizedBox(width: 8),
+                        children: [
+                          Icon(Icons.local_offer, color: colorScheme.primary),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               "🔥 Special offer: 20% off on servicing this week!",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -142,26 +136,36 @@ class HomePage extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // Quick actions
-                    const Text(
+                    Text(
                       "Quick Actions",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: colorScheme.onSurface,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _quickAction(Icons.add_circle, "Book Service"),
-                        _quickAction(Icons.history, "History"),
-                        _quickAction(Icons.support_agent, "Support"),
-                        _quickAction(Icons.logout, "Logout", onTap: () {
-                          AuthService.logout().then((_) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LoginPage()),
-                            );
-                          });
-                        }),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _quickAction(context, "Book Service", Icons.add_circle),
+                          _quickAction(context, "History", Icons.history),
+                          _quickAction(context, "Support", Icons.support_agent),
+                          _quickAction(
+                            context,
+                            "Logout",
+                            Icons.logout,
+                            onTap: () {
+                              AuthService.logout().then((_) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const LoginPage()),
+                                );
+                              });
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -174,51 +178,85 @@ class HomePage extends StatelessWidget {
       // Footer
       bottomNavigationBar: Container(
         height: 50,
-        color: Colors.black,
+        color: colorScheme.surface,
         alignment: Alignment.center,
-        child: const Text(
+        child: Text(
           "© 2025 Car Platform - v1.0.0",
-          style: TextStyle(fontSize: 12, color: Colors.white54),
-        ),
-      ),
-    );
-  }
-
-  Widget _navCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Card(
-          elevation: 5,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-            child: Column(
-              children: [
-                Icon(icon, size: 32, color: color),
-                const SizedBox(height: 10),
-                Text(title, style: const TextStyle(fontSize: 14, color: Colors.white)),
-              ],
-            ),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
       ),
     );
   }
 
-  Widget _quickAction(IconData icon, String label, {VoidCallback? onTap}) {
+  // Nav card
+  Widget _navCard(
+      BuildContext context, String title, IconData icon, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: Colors.redAccent.withOpacity(0.2),
-            child: Icon(icon, color: Colors.redAccent),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: colorScheme.surface,
+        child: SizedBox(
+          height: 120,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 48, color: colorScheme.primary),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(color: colorScheme.onSurface),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70)),
-        ],
+        ),
+      ),
+    );
+  }
+
+  // Quick action
+  Widget _quickAction(BuildContext context, String label, IconData icon,
+      {VoidCallback? onTap}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 80,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 6,
+              color: Colors.black.withOpacity(0.1),
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: colorScheme.primary),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurface),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
