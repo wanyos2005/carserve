@@ -37,23 +37,11 @@ class _PasscodePageState extends State<PasscodePage> {
     }
   }
 
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      enabledBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey),
-      ),
-      focusedBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFFFF6F61), width: 2),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // ✅ get active theme (light/dark)
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -61,41 +49,37 @@ class _PasscodePageState extends State<PasscodePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              const Text(
+
+              Text(
                 "Enter the Code",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: theme.textTheme.titleLarge, // ✅ uses themed text
+                textAlign: TextAlign.start,
               ),
               const SizedBox(height: 24),
 
               TextField(
                 controller: _codeController,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDecoration("Passcode"),
+                style: theme.textTheme.bodyLarge, // ✅ themed input text
+                decoration: const InputDecoration(
+                  labelText: "Passcode",
+                  // underline, focus color, etc. come from InputDecorationTheme
+                ),
               ),
               const SizedBox(height: 16),
 
               if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(
+                  _error!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
 
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
                       onPressed: _verifyCode,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6F61),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "Proceed",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
+                      child: const Text("Proceed"),
                     ),
 
               const Spacer(),

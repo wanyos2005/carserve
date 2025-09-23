@@ -20,9 +20,7 @@ class _LoginPageState extends State<LoginPage> {
       _error = null;
     });
 
-    final success = await AuthService.sendCode(
-      _emailController.text.trim(),
-    );
+    final success = await AuthService.sendCode(_emailController.text.trim());
 
     setState(() => _loading = false);
 
@@ -37,23 +35,10 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      enabledBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Colors.grey),
-      ),
-      focusedBorder: const UnderlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFFFF6F61), width: 2),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      // no need for backgroundColor — theme handles it
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -61,41 +46,39 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              const Text(
+
+              // ✅ uses theme
+              Text(
                 "Welcome Back 👋",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontSize: 28),
               ),
               const SizedBox(height: 24),
 
+              // ✅ inherits inputDecorationTheme
               TextField(
                 controller: _emailController,
-                style: const TextStyle(color: Colors.white),
-                decoration: _inputDecoration("Email"),
+                decoration: const InputDecoration(labelText: "Email"),
               ),
               const SizedBox(height: 16),
 
               if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(
+                  _error!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+
+              const SizedBox(height: 16),
 
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
                       onPressed: _sendCode,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6F61),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "Send Code",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
+                      child: const Text("Send Code"),
                     ),
 
               const Spacer(),
