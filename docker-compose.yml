@@ -46,6 +46,25 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+  
+  vehicle-service:
+    build:
+      context: ./backend/vehicle_service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://user:password@postgres:5432/car_platform
+      - DB_HOST=postgres
+      - DB_NAME=car_platform
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   
   gateway:
