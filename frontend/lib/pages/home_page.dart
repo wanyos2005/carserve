@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:car_platform/services/auth_service.dart';
 import 'vehicle_list_page.dart';
 import 'services_providers_page.dart';
+import 'service_provider_management_page.dart';
 import 'login_page.dart';
+import 'history_page.dart';
+import 'booking_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -147,8 +150,28 @@ class HomePage extends StatelessWidget {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _quickAction(context, "Book Service", Icons.add_circle),
-                          _quickAction(context, "History", Icons.history),
+                          _quickAction(
+                            context,
+                            "Book Service",
+                            Icons.add_circle,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const BookingPage()),
+                              );
+                            },
+                          ),
+                          _quickAction(
+                            context,
+                            "History",
+                            Icons.history,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const HistoryPage()),
+                              );
+                            },
+                          ),
                           _quickAction(context, "Support", Icons.support_agent),
                           _quickAction(
                             context,
@@ -158,14 +181,22 @@ class HomePage extends StatelessWidget {
                               AuthService.logout().then((_) {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const LoginPage()),
+                                  MaterialPageRoute(builder: (_) => const LoginPage()),
                                 );
                               });
                             },
                           ),
+                          _quickAction(
+                            context,
+                            "Admin Functions",
+                            Icons.settings,
+                            onTap: () {
+                              Navigator.pushNamed(context, "/providers");
+                            },
+                          ),
                         ],
                       ),
+
                     ),
                   ],
                 ),

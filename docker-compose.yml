@@ -66,6 +66,27 @@ services:
       redis:
         condition: service_healthy
 
+  service-provider:
+    build:
+      context: ./backend/service_provider_service
+    env_file:
+      - ./backend/service_provider_service/.env
+    ports:
+      - "8003:8003"
+    depends_on:
+      - postgres
+
+  booking-service:
+    build:
+      context: ./backend/booking_service
+    
+    env_file:
+      - ./backend/booking_service/.env
+    ports:
+      - "8004:8004"
+    depends_on:
+      - postgres
+
   
   gateway:
     image: nginx:latest
@@ -75,9 +96,9 @@ services:
       - "8000:8000"
     depends_on:
       - user-service
-      #- vehicle-service
-      #- booking-service
-      #- service-provider
+      # - vehicle-service
+      # - booking-service
+      - service-provider
 
 volumes:
   postgres-data:

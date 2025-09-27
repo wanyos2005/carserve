@@ -1,24 +1,54 @@
+#backend/user_service/routes/users.py
 import random
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from fastapi_mail import FastMail, MessageSchema, MessageType
+from jose import jwt, JWTError
 
 from core.db import get_db
 from core.security import create_access_token
 from models.users import User, OTP
-from schemas.users import SendCodeRequest, VerifyCodeRequest, Token, EmailSchema
-from config import conf
+from schemas.users import (
+    SendCodeRequest,
+    VerifyCodeRequest,
+    Token,
+    EmailSchema,
+    UserRead,
+)
+from config import conf, settings  # ✅ import both
 
 router = APIRouter()
 
+# --------------------------
+# Auth dependencies
+# --------------------------
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/verify-code")
 
-# --------------------------
-# Helpers
-# --------------------------
+
 def generate_otp(length: int = 6) -> str:
-    return ''.join(str(random.randint(0, 9)) for _ in range(length))
+    return "".join(str(random.randint(0, 9)) for _ in range(length))
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+):
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 def send_email(email: EmailSchema, background_tasks: BackgroundTasks):
@@ -26,7 +56,7 @@ def send_email(email: EmailSchema, background_tasks: BackgroundTasks):
         subject=email.subject,
         recipients=[email.email],
         body=email.body,
-        subtype=MessageType.plain
+        subtype=MessageType.plain,
     )
     fm = FastMail(conf)
     background_tasks.add_task(fm.send_message, message)
@@ -39,7 +69,7 @@ def send_email(email: EmailSchema, background_tasks: BackgroundTasks):
 def send_code(
     req: SendCodeRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     # ensure user exists
     db_user = db.query(User).filter(User.email == req.email).first()
@@ -57,12 +87,15 @@ def send_code(
     otp_entry = OTP(email=req.email, code=code, expires_at=expires_at)
     db.add(otp_entry)
     db.commit()
-    #implement a feature to handle spamming.
 
     # send email
     send_email(
-        EmailSchema(email=req.email, subject="Your Login Code", body=f"Your code is: {code} and expires in 5 minutes."),
-        background_tasks
+        EmailSchema(
+            email=req.email,
+            subject="Your Login Code",
+            body=f"Your code is: {code} and expires in 5 minutes.",
+        ),
+        background_tasks,
     )
 
     return {"message": "OTP sent to email"}
@@ -100,3 +133,11 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
     # issue token
     token = create_access_token({"sub": str(db_user.id)})
     return {"access_token": token, "token_type": "bearer"}
+
+
+# --------------------------
+# Get current user
+# --------------------------
+@router.get("/me", response_model=UserRead)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user

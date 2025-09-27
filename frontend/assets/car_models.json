@@ -22,5 +22,7 @@
     "Porsche": ["Cayenne", "Macan", "911"],
     "Tesla": ["Model S", "Model 3", "Model X", "Model Y"],
     "Ferrari": ["488 GTB", "Portofino", "Roma"],
-    "Lamborghini": ["Huracan", "Aventador"]
+    "Lamborghini": ["Huracan", "Aventador"],
+    "Jaguar": ["F-Pace", "XE", "XF"],
+    "Isuzu": ["D-Max", "MU-X"]
 }

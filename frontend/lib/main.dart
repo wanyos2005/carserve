@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 // Pages
 import 'package:car_platform/pages/login_page.dart';
 import 'package:car_platform/pages/home_page.dart';
+import 'package:car_platform/pages/service_provider_management_page.dart';
 
 // Services
 import 'package:car_platform/services/auth_service.dart';
+
 
 const abyssBlue = Color(0xFF0A192F); // dark navy blue
 
@@ -28,6 +30,7 @@ class CarPlatformApp extends StatelessWidget {
       routes: {
         "/login": (context) => const LoginPage(),
         "/home": (context) => const HomePage(),
+        "/providers": (context) => const ServiceProviderManagementPage(),
       },
       home: FutureBuilder(
         future: AuthService.getMe(),
