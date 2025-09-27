@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  static const String baseUrl = "http://192.168.0.107:8000/users";
+  static const String baseUrl = "http://192.168.0.107:8000/users";//.107 -Kelly
 
   // Send OTP
   static Future<bool> sendCode(String email) async {
