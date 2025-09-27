@@ -3,9 +3,13 @@ import 'package:car_platform/services/auth_service.dart';
 import 'vehicle_list_page.dart';
 import 'services_providers_page.dart';
 import 'service_provider_management_page.dart';
+import 'expandable_footer_button.dart';
+
 import 'login_page.dart';
 import 'history_page.dart';
 import 'booking_page.dart';
+
+// ...imports remain unchanged...
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -18,7 +22,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Plain color header
+          // Header Section
           Container(
             width: double.infinity,
             height: 280,
@@ -46,10 +50,10 @@ class HomePage extends StatelessWidget {
             ),
           ),
 
-          // Bottom sheet
+          // Main Content Sheet
           DraggableScrollableSheet(
-            initialChildSize: 0.65,
-            minChildSize: 0.65,
+            initialChildSize: 0.85,
+            minChildSize: 0.35,
             maxChildSize: 0.95,
             builder: (context, controller) {
               return Container(
@@ -79,39 +83,6 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Quick nav cards
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _navCard(
-                            context,
-                            "Service Providers",
-                            Icons.build_circle,
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const ServicesProvidersPage()),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _navCard(
-                            context,
-                            "My Vehicles",
-                            Icons.directions_car,
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const VehicleListPage()),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
                     // Promotions
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -138,7 +109,76 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Quick actions
+                    // 6 Navigation Cards in 2 Rows
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _navCard(
+                          context,
+                          "My Vehicles",
+                          Icons.directions_car,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const VehicleListPage()),
+                          ),
+                        ),
+                        _navCard(
+                          context,
+                          "Book Service",
+                          Icons.build_circle,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const BookingPage()),
+                          ),
+                        ),
+                        _navCard(
+                          context,
+                          "Insurance",
+                          Icons.shield,
+                          () {
+                            // TODO: Implement insurance page
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Coming Soon")));
+                          },
+                        ),
+                        _navCard(
+                          context,
+                          "Expenses",
+                          Icons.shield,
+                          () {
+                            // TODO: Implement insurance page
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Coming Soon")));
+                          },
+                        ),
+                        _navCard(
+                          context,
+                          "Top Providers",
+                          Icons.star_rate,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ServicesProvidersPage()),
+                          ),
+                        ),
+                        _navCard(
+                          context,
+                          "Alerts & More",
+                          Icons.notifications,
+                          () {
+                            // TODO: Show alerts or other info
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("No alerts.")));
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+
+                    // Quick Actions Header
                     Text(
                       "Quick Actions",
                       style: theme.textTheme.titleLarge?.copyWith(
@@ -146,6 +186,8 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+
+                    // Horizontal Quick Actions
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -157,7 +199,8 @@ class HomePage extends StatelessWidget {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const BookingPage()),
+                                MaterialPageRoute(
+                                    builder: (_) => const BookingPage()),
                               );
                             },
                           ),
@@ -168,7 +211,8 @@ class HomePage extends StatelessWidget {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const HistoryPage()),
+                                MaterialPageRoute(
+                                    builder: (_) => const HistoryPage()),
                               );
                             },
                           ),
@@ -181,7 +225,8 @@ class HomePage extends StatelessWidget {
                               AuthService.logout().then((_) {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                                  MaterialPageRoute(
+                                      builder: (_) => const LoginPage()),
                                 );
                               });
                             },
@@ -196,7 +241,6 @@ class HomePage extends StatelessWidget {
                           ),
                         ],
                       ),
-
                     ),
                   ],
                 ),
@@ -221,7 +265,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Nav card
+  // Updated Nav Card (smaller height)
   Widget _navCard(
       BuildContext context, String title, IconData icon, VoidCallback onTap) {
     final theme = Theme.of(context);
@@ -229,31 +273,38 @@ class HomePage extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        color: colorScheme.surface,
-        child: SizedBox(
-          height: 120,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48, color: colorScheme.primary),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: theme.textTheme.bodyLarge
-                    ?.copyWith(color: colorScheme.onSurface),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+      child: Container(
+        width: MediaQuery.of(context).size.width / 3 - 28,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 6,
+              color: Colors.black.withOpacity(0.1),
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 32, color: colorScheme.primary),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurface),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // Quick action
+  // Quick Action
   Widget _quickAction(BuildContext context, String label, IconData icon,
       {VoidCallback? onTap}) {
     final theme = Theme.of(context);
