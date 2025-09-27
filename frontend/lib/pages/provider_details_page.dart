@@ -1,4 +1,4 @@
-// lib/pages/provider_details_page.dart
+//provider_details_page
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'booking_page.dart';
@@ -29,6 +29,21 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
     });
   }
 
+  Widget _buildInfoRow(IconData icon, String label, String? value,
+      {Color color = Colors.black}) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 6),
+          Flexible(child: Text("$label: $value")),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -37,46 +52,80 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
 
     final provider = _provider!;
     final services = provider["services"] ?? [];
+    final location = provider["location"] ?? {};
+    final contact = provider["contact_info"] ?? {};
 
     return Scaffold(
       appBar: AppBar(title: Text(provider["name"] ?? "Provider")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(provider["description"] ?? "",
-                style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 10),
-            if (provider["location"] != null)
-              Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.red),
-                  Text(provider["location"]["address"] ?? "Unknown location"),
-                ],
+            if (provider["description"] != null &&
+                provider["description"].toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  provider["description"],
+                  style: const TextStyle(fontSize: 16),
+                ),
               ),
-            const SizedBox(height: 5),
-            if (provider["contact_info"] != null)
-              Row(
-                children: [
-                  const Icon(Icons.phone, color: Colors.green),
-                  Text(provider["contact_info"]["phone"] ?? "No phone"),
-                ],
-              ),
-            const Divider(height: 30),
+
+            // 🔹 Location
+            if (location.isNotEmpty) ...[
+              const Text("Location",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              _buildInfoRow(Icons.location_on, "Address", location["address"],
+                  color: Colors.red),
+              _buildInfoRow(Icons.map, "Latitude", location["lat"]?.toString()),
+              _buildInfoRow(Icons.map, "Longitude", location["lng"]?.toString()),
+              const Divider(height: 30),
+            ],
+
+            // 🔹 Contact Info
+            if (contact.isNotEmpty) ...[
+              const Text("Contact Info",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              _buildInfoRow(Icons.phone, "Phone", contact["phone"],
+                  color: Colors.green),
+              _buildInfoRow(Icons.email, "Email", contact["email"],
+                  color: Colors.blue),
+              _buildInfoRow(Icons.language, "Website", contact["website"],
+                  color: Colors.purple),
+              const Divider(height: 30),
+            ],
+
+            // 🔹 Services
             const Text("Services",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            Expanded(
-              child: ListView.builder(
+            if (services.isEmpty)
+              const Text("No services listed",
+                  style: TextStyle(color: Colors.grey)),
+            if (services.isNotEmpty)
+              ListView.builder(
                 itemCount: services.length,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 itemBuilder: (context, index) {
                   final s = services[index];
                   return Card(
                     child: ListTile(
                       title: Text(s["name"] ?? ""),
-                      subtitle: Text(s["description"] ?? ""),
-                      trailing: Text(s["price_range"] ?? ""),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (s["description"] != null)
+                            Text(s["description"]),
+                          if (s["price_range"] != null)
+                            Text("Price: ${s["price_range"]}",
+                                style: const TextStyle(
+                                    fontStyle: FontStyle.italic)),
+                        ],
+                      ),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -92,7 +141,6 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
                   );
                 },
               ),
-            ),
           ],
         ),
       ),

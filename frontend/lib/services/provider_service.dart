@@ -10,6 +10,10 @@ class ProviderService {
   static Future<Map<String, dynamic>?> getProvider(String id) async {
     return await ApiService.get("/service-providers/$id");
   }
+  
+  static Future<Map<String, dynamic>?> getService(String id) async {
+    return await ApiService.get("/service-providers/services/$id");
+  }
 }
 
 

@@ -1,4 +1,4 @@
-services/vehicle_service/schemas/vehicles.py
+#vehicle_service/schemas/vehicles.py
 from pydantic import BaseModel
 from typing import Optional
 
