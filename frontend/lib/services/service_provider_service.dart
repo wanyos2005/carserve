@@ -74,6 +74,9 @@ class ServiceProviderService {
 
   /// ✅ Attach services by UUIDs
   static Future<dynamic> attachServicesToProvider(String providerId, List<String> serviceIds) async {
-    return await ApiService.post("/service-providers/$providerId/services", serviceIds);
+    return await ApiService.post("/service-providers/$providerId/services", {
+      "service_ids": serviceIds,
+    });
   }
+
 }
