@@ -106,6 +106,17 @@ class _ServiceProviderManagementPageState
     );
   }
 
+   Map<String, dynamic> _buildServiceForm(List<dynamic> serviceCategories) {
+      return {
+        "nameController": TextEditingController(),
+        "descController": TextEditingController(),
+        "priceController": TextEditingController(),
+        "durationController": TextEditingController(),
+        "selectedCategoryId": serviceCategories.isNotEmpty ? serviceCategories.first["id"] : null,
+        "bookingRequired": false,
+      };
+    }
+
   Future<void> _showAddProviderDialog(int categoryId) async {
   final nameController = TextEditingController();
   final descController = TextEditingController();
@@ -116,7 +127,7 @@ class _ServiceProviderManagementPageState
 
   final serviceCategories = await _fetchServiceCategories();
   final List<Map<String, dynamic>> serviceForms = [
-    _buildServiceForm(serviceCategories)
+    _buildServiceForm(serviceCategories) //error, the method _buildServiceForm is not defined
   ];
 
   await showDialog(
