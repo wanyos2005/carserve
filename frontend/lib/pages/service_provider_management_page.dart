@@ -115,8 +115,6 @@ class _ServiceProviderManagementPageState
   final websiteController = TextEditingController();
 
   final serviceCategories = await _fetchServiceCategories();
-
-  // 🔹 Each service = Map of controllers + state
   final List<Map<String, dynamic>> serviceForms = [
     _buildServiceForm(serviceCategories)
   ];
@@ -130,41 +128,17 @@ class _ServiceProviderManagementPageState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // --- Provider fields ---
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: "Provider Name"),
-              ),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(labelText: "Description"),
-                maxLines: 2,
-              ),
-              TextField(
-                controller: locationController,
-                decoration: const InputDecoration(labelText: "Location Address"),
-              ),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(labelText: "Phone"),
-                keyboardType: TextInputType.phone,
-              ),
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              TextField(
-                controller: websiteController,
-                decoration: const InputDecoration(labelText: "Website"),
-                keyboardType: TextInputType.url,
-              ),
+              // Provider fields
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: "Provider Name")),
+              TextField(controller: descController, decoration: const InputDecoration(labelText: "Description"), maxLines: 2),
+              TextField(controller: locationController, decoration: const InputDecoration(labelText: "Location Address")),
+              TextField(controller: phoneController, decoration: const InputDecoration(labelText: "Phone"), keyboardType: TextInputType.phone),
+              TextField(controller: emailController, decoration: const InputDecoration(labelText: "Email"), keyboardType: TextInputType.emailAddress),
+              TextField(controller: websiteController, decoration: const InputDecoration(labelText: "Website"), keyboardType: TextInputType.url),
               const Divider(height: 30),
 
-              // --- Service forms ---
-              const Text("Service Details",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-
+              // Service forms
+              const Text("Service Details", style: TextStyle(fontWeight: FontWeight.bold)),
               Column(
                 children: serviceForms.map((form) {
                   return Card(
@@ -173,65 +147,35 @@ class _ServiceProviderManagementPageState
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
                         children: [
-                          TextField(
-                            controller: form["nameController"],
-                            decoration: const InputDecoration(
-                                labelText: "Service Name"),
-                          ),
-                          TextField(
-                            controller: form["descController"],
-                            decoration: const InputDecoration(
-                                labelText: "Service Description"),
-                          ),
-                          TextField(
-                            controller: form["priceController"],
-                            decoration: const InputDecoration(
-                                labelText: "Price Range"),
-                          ),
+                          TextField(controller: form["nameController"], decoration: const InputDecoration(labelText: "Service Name")),
+                          TextField(controller: form["descController"], decoration: const InputDecoration(labelText: "Service Description")),
+                          TextField(controller: form["priceController"], decoration: const InputDecoration(labelText: "Price Range")),
                           DropdownButtonFormField<int>(
                             value: form["selectedCategoryId"],
                             items: serviceCategories
                                 .map<DropdownMenuItem<int>>((cat) =>
-                                    DropdownMenuItem<int>(
-                                        value: cat["id"], child: Text(cat["name"])))
+                                    DropdownMenuItem<int>(value: cat["id"], child: Text(cat["name"])))
                                 .toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                form["selectedCategoryId"] = val;
-                              });
-                            },
-                            decoration: const InputDecoration(
-                                labelText: "Service Category"),
+                            onChanged: (val) => setState(() => form["selectedCategoryId"] = val),
+                            decoration: const InputDecoration(labelText: "Service Category"),
                           ),
                           Row(
                             children: [
                               const Text("Booking Required"),
                               Switch(
                                 value: form["bookingRequired"],
-                                onChanged: (val) {
-                                  setState(() {
-                                    form["bookingRequired"] = val;
-                                  });
-                                },
+                                onChanged: (val) => setState(() => form["bookingRequired"] = val),
                               ),
                             ],
                           ),
-                          TextField(
-                            controller: form["durationController"],
-                            decoration: const InputDecoration(
-                                labelText: "Duration (e.g. 30min)"),
-                          ),
+                          TextField(controller: form["durationController"], decoration: const InputDecoration(labelText: "Duration (e.g. 30min)")),
                           Align(
                             alignment: Alignment.centerRight,
                             child: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  serviceForms.remove(form);
-                                });
-                              },
+                              onPressed: () => setState(() => serviceForms.remove(form)),
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -239,13 +183,9 @@ class _ServiceProviderManagementPageState
                 }).toList(),
               ),
 
-              // ➕ Add another service
+              // Add another service
               TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    serviceForms.add(_buildServiceForm(serviceCategories));
-                  });
-                },
+                onPressed: () => setState(() => serviceForms.add(_buildServiceForm(serviceCategories))),
                 icon: const Icon(Icons.add),
                 label: const Text("Add Another Service"),
               ),
@@ -253,26 +193,30 @@ class _ServiceProviderManagementPageState
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                final services = serviceForms.map((form) {
-                  return {
-                    "name": form["nameController"].text,
-                    "description": form["descController"].text,
-                    "price_range": form["priceController"].text,
-                    "category_id": form["selectedCategoryId"],
-                    "requirements": {
-                      "booking": form["bookingRequired"],
-                      "duration": form["durationController"].text
-                    }
-                  };
-                }).where((s) => (s["name"] as String).isNotEmpty).toList();
+                final List<String> serviceIds = [];
 
+                // 1️⃣ Create services globally
+                for (var form in serviceForms) {
+                  if (form["nameController"].text.isNotEmpty) {
+                    final service = await ServiceProviderService.createGlobalService({
+                      "name": form["nameController"].text,
+                      "description": form["descController"].text,
+                      "price_range": form["priceController"].text,
+                      "category_id": form["selectedCategoryId"],
+                      "requirements": {
+                        "booking": form["bookingRequired"],
+                        "duration": form["durationController"].text,
+                      }
+                    });
+                    if (service != null) serviceIds.add(service["id"]);
+                  }
+                }
+
+                // 2️⃣ Create provider with service IDs
                 await ServiceProviderService.createProvider({
                   "category_id": categoryId,
                   "name": nameController.text,
@@ -284,7 +228,7 @@ class _ServiceProviderManagementPageState
                     "website": websiteController.text,
                   },
                   "is_registered": true,
-                  "services": services,
+                  "services": serviceIds,
                 });
 
                 _reloadCategories();
@@ -299,21 +243,8 @@ class _ServiceProviderManagementPageState
   );
 }
 
-// 🔹 Helper to create a new service form
-Map<String, dynamic> _buildServiceForm(List<dynamic> serviceCategories) {
-  return {
-    "nameController": TextEditingController(),
-    "descController": TextEditingController(),
-    "priceController": TextEditingController(),
-    "durationController": TextEditingController(),
-    "bookingRequired": true,
-    "selectedCategoryId": serviceCategories.isNotEmpty ? serviceCategories.first["id"] : null,
-  };
-}
 
-
-
-  Future<void> _showAddServiceDialog(String providerId) async {
+    Future<void> _showAddServiceDialog(String providerId) async {
     final nameController = TextEditingController();
     final descController = TextEditingController();
     int? selectedCategoryId;
@@ -327,37 +258,36 @@ Map<String, dynamic> _buildServiceForm(List<dynamic> serviceCategories) {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: "Service Name")),
-            TextField(
-                controller: descController,
-                decoration: const InputDecoration(labelText: "Description")),
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: "Service Name")),
+            TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
             DropdownButtonFormField<int>(
               value: selectedCategoryId,
               items: serviceCategories
                   .map<DropdownMenuItem<int>>((cat) =>
                       DropdownMenuItem<int>(value: cat["id"], child: Text(cat["name"])))
                   .toList(),
-              onChanged: (val) {
-                selectedCategoryId = val;
-              },
+              onChanged: (val) => selectedCategoryId = val,
               decoration: const InputDecoration(labelText: "Service Category"),
             ),
           ],
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                await ServiceProviderService.createProviderService(providerId, {
+                // 1️⃣ Create service globally
+                final newService = await ServiceProviderService.createGlobalService({
                   "name": nameController.text,
                   "description": descController.text,
                   "category_id": selectedCategoryId,
                 });
+
+                // 2️⃣ Attach to provider
+                if (newService != null) {
+                  await ServiceProviderService.attachServicesToProvider(providerId, [newService["id"]]);
+                }
+
                 _reloadCategories();
                 Navigator.pop(ctx);
               }
@@ -368,7 +298,6 @@ Map<String, dynamic> _buildServiceForm(List<dynamic> serviceCategories) {
       ),
     );
   }
-
   // -------------------------
   // UI
   // -------------------------

@@ -41,6 +41,10 @@ class ServiceProviderService {
     return await ApiService.post("/service-providers/", data);
   }
 
+  static Future<dynamic> updateProvider(String id, Map<String, dynamic> data) async {
+    return await ApiService.put("/service-providers/$id", data);
+  }
+
   static Future<bool> deleteProvider(String id) async {
     return await ApiService.delete("/service-providers/$id");
   }
@@ -51,11 +55,25 @@ class ServiceProviderService {
     return res is List ? res : [];
   }
 
-  static Future<dynamic> createProviderService(String providerId, Map<String, dynamic> data) async {
-    return await ApiService.post("/service-providers/$providerId/services", data);
+  /// ✅ Global service creation
+  static Future<Map<String, dynamic>?> createGlobalService(Map<String, dynamic> data) async {
+    final res = await ApiService.post("/service-providers/services", data);
+    if (res is Map) {
+      return Map<String, dynamic>.from(res);
+    }
+    return null;
   }
 
-  static Future<bool> deleteProviderService(String providerId, String serviceId) async {
-    return await ApiService.delete("/service-providers/$providerId/services/$serviceId");
+  static Future<dynamic> updateService(String serviceId, Map<String, dynamic> data) async {
+    return await ApiService.put("/service-providers/services/$serviceId", data);
+  }
+
+  static Future<bool> deleteService(String serviceId) async {
+    return await ApiService.delete("/service-providers/services/$serviceId");
+  }
+
+  /// ✅ Attach services by UUIDs
+  static Future<dynamic> attachServicesToProvider(String providerId, List<String> serviceIds) async {
+    return await ApiService.post("/service-providers/$providerId/services", serviceIds);
   }
 }

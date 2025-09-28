@@ -5,9 +5,8 @@ from typing import Optional
 from uuid import UUID
 
 
-def create_service(db: Session, provider_id: UUID, service_in: ServiceCreate) -> Service:
+def create_service(db: Session, service_in: ServiceCreate) -> Service:
     service = Service(
-        provider_id=provider_id,
         category_id=service_in.category_id,
         name=service_in.name,
         description=service_in.description,
@@ -24,13 +23,11 @@ def get_service(db: Session, service_id: UUID) -> Optional[Service]:
     return db.query(Service).filter(Service.id == service_id).first()
 
 
-def delete_service(db: Session, service_id: UUID) -> bool:
-    s = db.query(Service).filter(Service.id == service_id).first()
-    if not s:
-        return False
-    db.delete(s)
-    db.commit()
-    return True
+def list_services(db: Session, category_id: Optional[int] = None, limit: int = 50, offset: int = 0):
+    q = db.query(Service)
+    if category_id:
+        q = q.filter(Service.category_id == category_id)
+    return q.offset(offset).limit(limit).all()
 
 
 def update_service(db: Session, service_id: UUID, updates: ServiceUpdate):
@@ -42,3 +39,12 @@ def update_service(db: Session, service_id: UUID, updates: ServiceUpdate):
     db.commit()
     db.refresh(s)
     return s
+
+
+def delete_service(db: Session, service_id: UUID) -> bool:
+    s = db.query(Service).filter(Service.id == service_id).first()
+    if not s:
+        return False
+    db.delete(s)
+    db.commit()
+    return True

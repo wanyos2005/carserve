@@ -58,13 +58,40 @@ def delete_provider(provider_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Provider not found")
     return {}
 
+@router.get("/{provider_id}/services", response_model=List[Service])
+def get_provider_services(provider_id: UUID, db: Session = Depends(get_db)):
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    if not provider.services:
+        return []
+
+    # Query all services that match the provider's stored service IDs
+    services = db.query(crud_service.Service).filter(
+        crud_service.Service.id.in_(provider.services)
+    ).all()
+
+    return services
 
 # -----------------------
 # Services
 # -----------------------
-@router.post("/{provider_id}/services", response_model=Service)
-def create_service(provider_id: UUID, payload: ServiceCreate, db: Session = Depends(get_db)):
-    return crud_service.create_service(db, provider_id, payload)
+@router.post("/{provider_id}/services", response_model=Provider)
+def attach_services_to_provider(
+    provider_id: UUID,
+    service_ids: List[UUID],
+    db: Session = Depends(get_db)
+):
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    provider.services = list(set(provider.services or []) | set(service_ids))
+    db.commit()
+    db.refresh(provider)
+    return provider
+
 
 
 @router.get("/services/{service_id}", response_model=Service)
@@ -112,3 +139,20 @@ def create_service_category(payload: ServiceCategoryCreate, db: Session = Depend
 @router.get("/categories/service-categories", response_model=List[ServiceCategory])
 def list_service_categories(db: Session = Depends(get_db)):
     return crud_category.list_service_categories(db)
+
+# -----------------------
+# Global Services
+# -----------------------
+@router.post("/services", response_model=Service)
+def create_service(payload: ServiceCreate, db: Session = Depends(get_db)):
+    return crud_service.create_service(db, payload)
+
+
+@router.get("/services", response_model=List[Service])
+def list_services(
+    category_id: Optional[int] = Query(None),
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    return crud_service.list_services(db=db, category_id=category_id, limit=limit, offset=offset)

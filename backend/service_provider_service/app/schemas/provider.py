@@ -44,11 +44,11 @@ class ProviderBase(BaseModel):
     contact_info: Optional[Dict] = None
     location: Optional[Dict] = None
     is_registered: Optional[bool] = False
+    services: Optional[List[UUID]] = []
 
 
 class ProviderCreate(ProviderBase):
     category_id: int
-    services: Optional[List[ServiceCreate]] = []
 
 
 class ProviderUpdate(BaseModel):
@@ -58,6 +58,8 @@ class ProviderUpdate(BaseModel):
     contact_info: Optional[Dict] = None
     location: Optional[Dict] = None
     is_registered: Optional[bool] = None
+    services: Optional[List[UUID]] = None  # can update services list
+
 
 
 class Provider(ProviderBase):
@@ -65,7 +67,6 @@ class Provider(ProviderBase):
     rating: Optional[float]
     created_at: Optional[datetime]
     category_id: int
-    services: List[Service] = []
 
     class Config:
         from_attributes = True

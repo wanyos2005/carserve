@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.models.provider import Provider, Service
-from app.schemas.provider import ProviderCreate, ServiceCreate, ProviderUpdate
+from app.models.provider import Provider
+from app.schemas.provider import ProviderCreate, ProviderUpdate
 from typing import List, Optional
 from uuid import UUID
 
@@ -12,22 +12,10 @@ def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
         description=provider_in.description,
         contact_info=provider_in.contact_info,
         location=provider_in.location,
-        is_registered=provider_in.is_registered
+        is_registered=provider_in.is_registered,
+        services=provider_in.services or []  # just store the UUIDs in JSON
     )
     db.add(provider)
-    db.flush()  # ensures provider.id is available
-
-    for sv in provider_in.services or []:
-        service = Service(
-            provider_id=provider.id,
-            category_id=sv.category_id,
-            name=sv.name,
-            description=sv.description,
-            price_range=sv.price_range,
-            requirements=sv.requirements or {}
-        )
-        db.add(service)
-
     db.commit()
     db.refresh(provider)
     return provider

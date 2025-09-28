@@ -1,8 +1,11 @@
 // lib/pages/booking_page.dart
+// lib/pages/booking_page.dart
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/booking_service.dart';
 import 'package:car_platform/services/vehicle_service.dart';
 import 'package:car_platform/services/auth_service.dart';
+import 'package:car_platform/services/provider_service.dart'; // to fetch providers
+import 'package:car_platform/services/service_catalog.dart'; // mock service list (repair, insurance, etc.)
 
 class BookingPage extends StatefulWidget {
   final Map<String, dynamic>? provider;
@@ -21,36 +24,45 @@ class BookingPage extends StatefulWidget {
 class _BookingPageState extends State<BookingPage> {
   List<dynamic> _vehicles = [];
   String? _selectedVehicleId;
+
   DateTime? _selectedDate;
   bool _loading = false;
   Map<String, dynamic>? _me;
 
-  late bool _isBookMode;
-  bool get _hasProviderAndService =>
-      widget.provider != null && widget.service != null;
-
-  // Log mode fields
-  final _logProviderController = TextEditingController();
-  final _logServiceController = TextEditingController();
-  final _logNotesController = TextEditingController();
+  // Service + provider fields
+  List<Map<String, dynamic>> _allProviders = [];
+  Map<String, dynamic>? _selectedProvider;
+  Map<String, dynamic>? _selectedService;
 
   @override
   void initState() {
     super.initState();
-    _isBookMode = _hasProviderAndService; // auto-detect mode
     _loadData();
   }
 
   Future<void> _loadData() async {
     final vehicles = await VehicleService.listVehicles();
     final me = await AuthService.getMe();
+    final providers = await ProviderService.listProviders(); // fetch from backend
 
     debugPrint("🔄 Vehicles fetched: ${vehicles.map((v) => v['id']).toList()}");
     debugPrint("👤 Current user: ${me?['id']}");
+    debugPrint("🏢 Providers fetched: ${providers.length}");
 
     setState(() {
       _vehicles = vehicles;
       _me = me;
+      _allProviders = providers.cast<Map<String, dynamic>>();
+
+      // If props were passed → pre-fill
+      if (widget.provider != null) {
+        _selectedProvider = widget.provider;
+      }
+      if (widget.service != null) {
+        _selectedService = widget.service;
+      }
+
+      // Default vehicle
       if (_vehicles.isNotEmpty && _selectedVehicleId == null) {
         _selectedVehicleId = _vehicles.first["id"].toString();
         debugPrint("✅ Auto-selected first vehicle: $_selectedVehicleId");
@@ -58,12 +70,17 @@ class _BookingPageState extends State<BookingPage> {
     });
   }
 
-
   Future<void> _book() async {
-    debugPrint("📌 Booking attempt with vehicle=$_selectedVehicleId date=$_selectedDate user=${_me?['id']}");
-    if (_selectedVehicleId == null || _selectedDate == null || _me == null) {
+    debugPrint(
+        "📌 Booking attempt with vehicle=$_selectedVehicleId date=$_selectedDate user=${_me?['id']} service=${_selectedService?['id']} provider=${_selectedProvider?['id']}");
+
+    if (_selectedVehicleId == null ||
+        _selectedDate == null ||
+        _me == null ||
+        _selectedService == null ||
+        _selectedProvider == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select vehicle and date")),
+        const SnackBar(content: Text("Please fill in all fields")),
       );
       return;
     }
@@ -73,8 +90,8 @@ class _BookingPageState extends State<BookingPage> {
     final bookingData = {
       "user_id": _me!["id"],
       "vehicle_id": _selectedVehicleId,
-      "provider_id": widget.provider!["id"],
-      "service_id": widget.service!["id"],
+      "provider_id": _selectedProvider!["id"],
+      "service_id": _selectedService!["id"],
       "scheduled_at": _selectedDate!.toIso8601String(),
     };
 
@@ -94,61 +111,11 @@ class _BookingPageState extends State<BookingPage> {
     }
   }
 
-  Future<void> _logService() async {
-    debugPrint("📌 Logging service with vehicle=$_selectedVehicleId user=${_me?['id']}");
-    if (_selectedVehicleId == null || _me == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select vehicle")),
-      );
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    final logData = {
-      "user_id": _me!["id"],
-      "vehicle_id": _selectedVehicleId,
-      "provider_name": _logProviderController.text.isNotEmpty
-          ? _logProviderController.text
-          : null,
-      "service_name": _logServiceController.text.isNotEmpty
-          ? _logServiceController.text
-          : null,
-      "service_details": _logNotesController.text.isNotEmpty
-          ? {"notes": _logNotesController.text}
-          : null,
-      "performed_at": DateTime.now().toIso8601String(),
-    };
-
-    final result = await BookingService.createServiceLog(logData);
-
-    setState(() => _loading = false);
-
-    if (result != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Service log saved successfully!")),
-      );
-      Navigator.pop(context, true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to save service log")),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _logProviderController.dispose();
-    _logServiceController.dispose();
-    _logNotesController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isBookMode ? "Confirm Booking" : "Log Service"),
+        title: const Text("Book Service"),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -157,27 +124,6 @@ class _BookingPageState extends State<BookingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_hasProviderAndService) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ChoiceChip(
-                          label: const Text("Book"),
-                          selected: _isBookMode,
-                          onSelected: (_) => setState(() => _isBookMode = true),
-                        ),
-                        const SizedBox(width: 10),
-                        ChoiceChip(
-                          label: const Text("Log"),
-                          selected: !_isBookMode,
-                          onSelected: (_) =>
-                              setState(() => _isBookMode = false),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
                   // Vehicle dropdown
                   DropdownButtonFormField<String>(
                     value: _selectedVehicleId,
@@ -196,79 +142,323 @@ class _BookingPageState extends State<BookingPage> {
                       border: OutlineInputBorder(),
                     ),
                   ),
-
                   const SizedBox(height: 20),
 
-                  // Book mode
-                  if (_isBookMode) ...[
-                    Text("Provider: ${widget.provider!["name"]}",
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text("Service: ${widget.service!["name"]}"),
-                    const SizedBox(height: 20),
+                  // Service dropdown (from catalog or backend)
+                  DropdownButtonFormField<Map<String, dynamic>>(
+                    value: _selectedService,
+                    items: ServiceCatalog.services
+                        .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s["name"]),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedService = val;
+                        _selectedProvider = null; // reset provider
+                      });
+                      debugPrint("🛠️ Service selected: ${val?['name']}");
+                    },
+                    decoration: const InputDecoration(
+                      labelText: "Select Service",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text(
-                        _selectedDate == null
-                            ? "Pick Date"
-                            : _selectedDate!
-                                .toLocal()
-                                .toString()
-                                .split(" ")[0],
-                      ),
-                      onPressed: () async {
-                        final now = DateTime.now();
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: now,
-                          firstDate: now,
-                          lastDate: now.add(const Duration(days: 60)),
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selectedDate = picked;
-                            debugPrint("📅 Date selected: $_selectedDate");
-                          });
-                        }
-                      },
+                  // Provider dropdown (filtered by service if selected)
+                  DropdownButtonFormField<Map<String, dynamic>>(
+                    value: _selectedProvider,
+                    items: _allProviders
+                        .where((p) => _selectedService == null ||
+                            (p["services"] as List)
+                                .contains(_selectedService!["id"]))
+                        .map((p) => DropdownMenuItem(
+                              value: p,
+                              child: Text(p["name"]),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() => _selectedProvider = val);
+                      debugPrint("🏢 Provider selected: ${val?['name']}");
+                    },
+                    decoration: const InputDecoration(
+                      labelText: "Select Provider",
+                      border: OutlineInputBorder(),
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 20),
 
-                  // Log mode
-                  if (!_isBookMode) ...[
-                    TextField(
-                      controller: _logProviderController,
-                      decoration: const InputDecoration(
-                        labelText: "Provider Name",
-                        border: OutlineInputBorder(),
-                      ),
+                  // Date picker
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      _selectedDate == null
+                          ? "Pick Date"
+                          : _selectedDate!
+                              .toLocal()
+                              .toString()
+                              .split(" ")[0],
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _logServiceController,
-                      decoration: const InputDecoration(
-                        labelText: "Service Name",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _logNotesController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: "Notes (optional)",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: now,
+                        firstDate: now,
+                        lastDate: now.add(const Duration(days: 60)),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedDate = picked;
+                          debugPrint("📅 Date selected: $_selectedDate");
+                        });
+                      }
+                    },
+                  ),
 
                   const Spacer(),
 
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isBookMode ? _book : _logService,
-                      child: Text(_isBookMode ? "Confirm Booking" : "Save Log"),
+                      onPressed: _book,
+                      child: const Text("Confirm Booking"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+// lib/pages/booking_page.dart
+import 'package:flutter/material.dart';
+import 'package:car_platform/services/booking_service.dart';
+import 'package:car_platform/services/vehicle_service.dart';
+import 'package:car_platform/services/auth_service.dart';
+import 'package:car_platform/services/provider_service.dart'; // to fetch providers
+import 'package:car_platform/services/service_catalog.dart'; // mock service list (repair, insurance, etc.)
+
+class BookingPage extends StatefulWidget {
+  final Map<String, dynamic>? provider;
+  final Map<String, dynamic>? service;
+
+  const BookingPage({
+    super.key,
+    this.provider,
+    this.service,
+  });
+
+  @override
+  State<BookingPage> createState() => _BookingPageState();
+}
+
+class _BookingPageState extends State<BookingPage> {
+  List<dynamic> _vehicles = [];
+  String? _selectedVehicleId;
+
+  DateTime? _selectedDate;
+  bool _loading = false;
+  Map<String, dynamic>? _me;
+
+  // Service + provider fields
+  List<Map<String, dynamic>> _allProviders = [];
+  Map<String, dynamic>? _selectedProvider;
+  Map<String, dynamic>? _selectedService;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final vehicles = await VehicleService.listVehicles();
+    final me = await AuthService.getMe();
+    final providers = await ProviderService.listProviders(); // fetch from backend
+
+    debugPrint("🔄 Vehicles fetched: ${vehicles.map((v) => v['id']).toList()}");
+    debugPrint("👤 Current user: ${me?['id']}");
+    debugPrint("🏢 Providers fetched: ${providers.length}");
+
+    setState(() {
+      _vehicles = vehicles;
+      _me = me;
+      _allProviders = providers.cast<Map<String, dynamic>>();
+
+      // If props were passed → pre-fill
+      if (widget.provider != null) {
+        _selectedProvider = widget.provider;
+      }
+      if (widget.service != null) {
+        _selectedService = widget.service;
+      }
+
+      // Default vehicle
+      if (_vehicles.isNotEmpty && _selectedVehicleId == null) {
+        _selectedVehicleId = _vehicles.first["id"].toString();
+        debugPrint("✅ Auto-selected first vehicle: $_selectedVehicleId");
+      }
+    });
+  }
+
+  Future<void> _book() async {
+    debugPrint(
+        "📌 Booking attempt with vehicle=$_selectedVehicleId date=$_selectedDate user=${_me?['id']} service=${_selectedService?['id']} provider=${_selectedProvider?['id']}");
+
+    if (_selectedVehicleId == null ||
+        _selectedDate == null ||
+        _me == null ||
+        _selectedService == null ||
+        _selectedProvider == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    final bookingData = {
+      "user_id": _me!["id"],
+      "vehicle_id": _selectedVehicleId,
+      "provider_id": _selectedProvider!["id"],
+      "service_id": _selectedService!["id"],
+      "scheduled_at": _selectedDate!.toIso8601String(),
+    };
+
+    final result = await BookingService.createBooking(bookingData);
+
+    setState(() => _loading = false);
+
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Booking successful!")),
+      );
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to create booking")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Book Service"),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Vehicle dropdown
+                  DropdownButtonFormField<String>(
+                    value: _selectedVehicleId,
+                    items: _vehicles
+                        .map((v) => DropdownMenuItem<String>(
+                              value: v["id"].toString(),
+                              child: Text(v["make"] ?? "Vehicle ${v["id"]}"),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      debugPrint("🚗 Vehicle selected: $val");
+                      setState(() => _selectedVehicleId = val);
+                    },
+                    decoration: const InputDecoration(
+                      labelText: "Select Vehicle",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Service dropdown (from catalog or backend)
+                  DropdownButtonFormField<Map<String, dynamic>>(
+                    value: _selectedService,
+                    items: ServiceCatalog.services
+                        .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s["name"]),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedService = val;
+                        _selectedProvider = null; // reset provider
+                      });
+                      debugPrint("🛠️ Service selected: ${val?['name']}");
+                    },
+                    decoration: const InputDecoration(
+                      labelText: "Select Service",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Provider dropdown (filtered by service if selected)
+                  DropdownButtonFormField<Map<String, dynamic>>(
+                    value: _selectedProvider,
+                    items: _allProviders
+                        .where((p) => _selectedService == null ||
+                            (p["services"] as List)
+                                .contains(_selectedService!["id"]))
+                        .map((p) => DropdownMenuItem(
+                              value: p,
+                              child: Text(p["name"]),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() => _selectedProvider = val);
+                      debugPrint("🏢 Provider selected: ${val?['name']}");
+                    },
+                    decoration: const InputDecoration(
+                      labelText: "Select Provider",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Date picker
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      _selectedDate == null
+                          ? "Pick Date"
+                          : _selectedDate!
+                              .toLocal()
+                              .toString()
+                              .split(" ")[0],
+                    ),
+                    onPressed: () async {
+                      final now = DateTime.now();
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: now,
+                        firstDate: now,
+                        lastDate: now.add(const Duration(days: 60)),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedDate = picked;
+                          debugPrint("📅 Date selected: $_selectedDate");
+                        });
+                      }
+                    },
+                  ),
+
+                  const Spacer(),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _book,
+                      child: const Text("Confirm Booking"),
                     ),
                   ),
                 ],
