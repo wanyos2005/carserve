@@ -22,7 +22,7 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
   }
 
   Future<void> _fetchProvider() async {
-    final data = await ProviderService.getProvider(widget.providerId);
+    final data = await ProviderService.getProviderDetails(widget.providerId);
     setState(() {
       _provider = data;
       _loading = false;

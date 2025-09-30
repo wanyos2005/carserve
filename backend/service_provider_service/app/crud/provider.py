@@ -13,7 +13,6 @@ def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
         contact_info=provider_in.contact_info,
         location=provider_in.location,
         is_registered=provider_in.is_registered,
-        services=provider_in.services or []  # just store the UUIDs in JSON
     )
     db.add(provider)
     db.commit()

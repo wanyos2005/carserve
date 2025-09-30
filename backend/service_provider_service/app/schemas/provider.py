@@ -1,7 +1,7 @@
 #backend/service_provider_service/app/schemas/provider.py
 
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from uuid import UUID
 
@@ -11,25 +11,24 @@ from uuid import UUID
 class ServiceBase(BaseModel):
     name: str
     description: Optional[str] = None
-    price_range: Optional[str] = None
     category_id: Optional[int] = None   # integer foreign key
 
 
 class ServiceCreate(ServiceBase):
-    requirements: Optional[Dict] = None
+    requirements: Optional[Dict[str, Any]] = None  # store the requirements schema
 
 
 class ServiceUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    price_range: Optional[str] = None
     category_id: Optional[int] = None
-    requirements: Optional[Dict] = None
-
+    
 
 class Service(ServiceBase):
     id: UUID
     created_at: Optional[datetime]
+    requirements: Optional[Dict[str, Any]] = None
+
 
     class Config:
         from_attributes = True
@@ -44,7 +43,6 @@ class ProviderBase(BaseModel):
     contact_info: Optional[Dict] = None
     location: Optional[Dict] = None
     is_registered: Optional[bool] = False
-    services: Optional[List[UUID]] = []
 
 
 class ProviderCreate(ProviderBase):
@@ -58,9 +56,28 @@ class ProviderUpdate(BaseModel):
     contact_info: Optional[Dict] = None
     location: Optional[Dict] = None
     is_registered: Optional[bool] = None
-    services: Optional[List[UUID]] = None  # can update services list
 
 
+class ProviderServiceBase(BaseModel):
+    provider_id: UUID
+    service_id: UUID
+    price: Optional[str] = None
+    duration: Optional[str] = None
+    booking_required: Optional[bool] = False
+    insurance: Optional[Dict] = None  # store provider-specific insurance details
+
+class ProviderServiceAttach(BaseModel):
+    service_id: UUID
+    price: Optional[str] = None
+    duration: Optional[str] = None
+    booking_required: Optional[bool] = False
+    extra_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None  # alias, deprecated
+
+    class Config:
+        fields = {
+            "extra_data": "metadata"  # allow "metadata" in JSON
+        }
 
 class Provider(ProviderBase):
     id: UUID

@@ -21,7 +21,7 @@ class _ServicesProvidersPageState extends State<ServicesProvidersPage> {
   }
 
   Future<void> _fetchProviders() async {
-    final data = await ProviderService.listProviders();
+    final data = await ProviderService.getProviders();
     setState(() {
       _providers = data;
       _loading = false;

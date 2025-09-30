@@ -11,3 +11,4 @@ pyjwt
 alembic
 pydantic
 pydantic-settings
+sqlalchemy

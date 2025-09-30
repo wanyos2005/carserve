@@ -31,7 +31,7 @@ class ApiService {
   }
 
   // Generic POST
-  static Future<dynamic> post(String path, Map<String, dynamic> body) async {
+static Future<dynamic> post(String path, dynamic body) async {
     final token = await _getToken();
     final response = await http.post(
       Uri.parse("$baseGatewayUrl$path"),
@@ -39,7 +39,7 @@ class ApiService {
         "Content-Type": "application/json",
         if (token != null) "Authorization": "Bearer $token",
       },
-      body: jsonEncode(body),
+      body: jsonEncode(body), // works for both Map and List
     );
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body);

@@ -1,14 +1,17 @@
-#backend/service_provider_service/app/routers/providers.py
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
 from app.core.db import get_db
-from app.schemas.provider import ProviderCreate, Provider, ProviderUpdate, Service, ServiceCreate, ServiceUpdate
+from app.schemas.provider import (
+    ProviderCreate, Provider, ProviderUpdate,
+    Service, ServiceCreate, ServiceUpdate,
+    ProviderServiceAttach
+)
 from app.schemas.category import (
     ProviderCategory, ProviderCategoryCreate,
-    ServiceCategory, ServiceCategoryCreate
+    ServiceCategory, ServiceCategoryCreate,
 )
 from app.crud import provider as crud_provider
 from app.crud import service as crud_service
@@ -16,82 +19,43 @@ from app.crud import category as crud_category
 
 router = APIRouter()
 
+# -----------------------
+# Categories
+# -----------------------
+@router.post("/categories/provider-categories", response_model=ProviderCategory)
+def create_provider_category(payload: ProviderCategoryCreate, db: Session = Depends(get_db)):
+    return crud_category.create_provider_category(db, payload.name)
+
+
+@router.get("/categories/provider-categories", response_model=List[ProviderCategory])
+def list_provider_categories(db: Session = Depends(get_db)):
+    return crud_category.list_provider_categories(db)
+
+
+@router.post("/categories/service-categories", response_model=ServiceCategory)
+def create_service_category(payload: ServiceCategoryCreate, db: Session = Depends(get_db)):
+    return crud_category.create_service_category(db, payload.name)
+
+
+@router.get("/categories/service-categories", response_model=List[ServiceCategory])
+def list_service_categories(db: Session = Depends(get_db)):
+    return crud_category.list_service_categories(db)
+
 
 # -----------------------
-# Providers
+# Global Services
 # -----------------------
-@router.post("/", response_model=Provider)
-def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
-    return crud_provider.create_provider(db, payload)
+@router.post("/services", response_model=Service)
+def create_service(payload: ServiceCreate, db: Session = Depends(get_db)):
+    return crud_service.create_service(db, payload)
 
 
-@router.get("/", response_model=List[Provider])
-def list_providers(
+@router.get("/services", response_model=List[Service])
+def list_services(
     category_id: Optional[int] = Query(None),
-    limit: int = 50,
-    offset: int = 0,
     db: Session = Depends(get_db)
 ):
-    return crud_provider.list_providers(db=db, category_id=category_id, limit=limit, offset=offset)
-
-
-@router.get("/{provider_id}", response_model=Provider)
-def get_provider(provider_id: UUID, db: Session = Depends(get_db)):
-    p = crud_provider.get_provider(db, provider_id)
-    if not p:
-        raise HTTPException(status_code=404, detail="Provider not found")
-    return p
-
-
-@router.put("/{provider_id}", response_model=Provider)
-def update_provider(provider_id: UUID, updates: ProviderUpdate, db: Session = Depends(get_db)):
-    p = crud_provider.update_provider(db, provider_id, updates)
-    if not p:
-        raise HTTPException(status_code=404, detail="Provider not found")
-    return p
-
-
-@router.delete("/{provider_id}", status_code=204)
-def delete_provider(provider_id: UUID, db: Session = Depends(get_db)):
-    ok = crud_provider.delete_provider(db, provider_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Provider not found")
-    return {}
-
-@router.get("/{provider_id}/services", response_model=List[Service])
-def get_provider_services(provider_id: UUID, db: Session = Depends(get_db)):
-    provider = crud_provider.get_provider(db, provider_id)
-    if not provider:
-        raise HTTPException(status_code=404, detail="Provider not found")
-
-    if not provider.services:
-        return []
-
-    # Query all services that match the provider's stored service IDs
-    services = db.query(crud_service.Service).filter(
-        crud_service.Service.id.in_(provider.services)
-    ).all()
-
-    return services
-
-# -----------------------
-# Services
-# -----------------------
-@router.post("/{provider_id}/services", response_model=Provider)
-def attach_services_to_provider(
-    provider_id: UUID,
-    service_ids: List[UUID],
-    db: Session = Depends(get_db)
-):
-    provider = crud_provider.get_provider(db, provider_id)
-    if not provider:
-        raise HTTPException(status_code=404, detail="Provider not found")
-
-    provider.services = list(set(provider.services or []) | set(service_ids))
-    db.commit()
-    db.refresh(provider)
-    return provider
-
+    return crud_service.list_services(db=db, category_id=category_id)
 
 
 @router.get("/services/{service_id}", response_model=Service)
@@ -119,40 +83,93 @@ def delete_service(service_id: UUID, db: Session = Depends(get_db)):
 
 
 # -----------------------
-# Categories
+# Providers
 # -----------------------
-@router.post("/categories/provider-categories", response_model=ProviderCategory)
-def create_provider_category(payload: ProviderCategoryCreate, db: Session = Depends(get_db)):
-    return crud_category.create_provider_category(db, payload.name)
+@router.post("/", response_model=Provider)
+def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
+    return crud_provider.create_provider(db, payload)
 
 
-@router.get("/categories/provider-categories", response_model=List[ProviderCategory])
-def list_provider_categories(db: Session = Depends(get_db)):
-    return crud_category.list_provider_categories(db)
-
-
-@router.post("/categories/service-categories", response_model=ServiceCategory)
-def create_service_category(payload: ServiceCategoryCreate, db: Session = Depends(get_db)):
-    return crud_category.create_service_category(db, payload.name)
-
-
-@router.get("/categories/service-categories", response_model=List[ServiceCategory])
-def list_service_categories(db: Session = Depends(get_db)):
-    return crud_category.list_service_categories(db)
-
-# -----------------------
-# Global Services
-# -----------------------
-@router.post("/services", response_model=Service)
-def create_service(payload: ServiceCreate, db: Session = Depends(get_db)):
-    return crud_service.create_service(db, payload)
-
-
-@router.get("/services", response_model=List[Service])
-def list_services(
+@router.get("/", response_model=List[Provider])
+def list_providers(
     category_id: Optional[int] = Query(None),
     limit: int = 50,
     offset: int = 0,
     db: Session = Depends(get_db)
 ):
-    return crud_service.list_services(db=db, category_id=category_id, limit=limit, offset=offset)
+    return crud_provider.list_providers(db=db, category_id=category_id, limit=limit, offset=offset)
+
+
+# -----------------------
+# Provider-specific routes (placed LAST to avoid collisions)
+# -----------------------
+@router.get("/{provider_id}", response_model=Provider)
+def get_provider(provider_id: UUID, db: Session = Depends(get_db)):
+    p = crud_provider.get_provider(db, provider_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    return p
+
+
+@router.put("/{provider_id}", response_model=Provider)
+def update_provider(provider_id: UUID, updates: ProviderUpdate, db: Session = Depends(get_db)):
+    p = crud_provider.update_provider(db, provider_id, updates)
+    if not p:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    return p
+
+
+@router.delete("/{provider_id}", status_code=204)
+def delete_provider(provider_id: UUID, db: Session = Depends(get_db)):
+    ok = crud_provider.delete_provider(db, provider_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    return {}
+
+
+@router.get("/{provider_id}/services", response_model=List[Service])
+def get_provider_services(provider_id: UUID, db: Session = Depends(get_db)):
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    if not provider.services:
+        return []
+
+    services = db.query(crud_service.Service).filter(
+        crud_service.Service.id.in_(provider.services)
+    ).all()
+
+    return services
+
+@router.post("/{provider_id}/services", response_model=List[dict])
+def attach_services_to_provider(
+    provider_id: UUID,
+    services: List[ProviderServiceAttach],
+    db: Session = Depends(get_db)
+):
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    created_or_updated = []
+    for s in services:
+        payload = {
+            "service_id": s.service_id,
+            "price": s.price_range or s.price_range,  # note naming: choose one field consistently
+            "duration": getattr(s, "duration", None),
+            "booking_required": getattr(s, "booking_required", False),
+            "metadata": s.requirements or s.metadata or {}
+        }
+        ps = crud_service.upsert_provider_service(db, provider_id, payload)
+        # craft a serializable dict to return
+        created_or_updated.append({
+            "id": str(ps.id),
+            "service_id": str(ps.service_id),
+            "price": ps.price,
+            "duration": ps.duration,
+            "booking_required": ps.booking_required,
+            "metadata": ps.metadata
+        })
+
+    return created_or_updated

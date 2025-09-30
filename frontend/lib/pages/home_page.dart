@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:car_platform/services/auth_service.dart';
 import 'vehicle_list_page.dart';
 import 'services_providers_page.dart';
-import 'service_provider_management_page.dart';
-import 'expandable_footer_button.dart';
-
 import 'login_page.dart';
 import 'history_page.dart';
 import 'booking_page.dart';
+import 'admin_panel_page.dart';
 
 // ...imports remain unchanged...
 
@@ -236,9 +234,13 @@ class HomePage extends StatelessWidget {
                             "Admin Functions",
                             Icons.settings,
                             onTap: () {
-                              Navigator.pushNamed(context, "/providers");
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const AdminPanelPage()),
+                              );
                             },
                           ),
+
                         ],
                       ),
                     ),

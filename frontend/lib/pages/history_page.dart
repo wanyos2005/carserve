@@ -50,12 +50,12 @@ class _HistoryPageState extends State<HistoryPage> {
             setState(() => _providers[b["provider_id"]] = provider["name"] ?? "Unknown");
           }
         }
-        if (b["service_id"] != null && !_services.containsKey(b["service_id"])) {
+        /* if (b["service_id"] != null && !_services.containsKey(b["service_id"])) {
           final service = await ProviderService.getService(b["service_id"]);
           if (service != null) {
             setState(() => _services[b["service_id"]] = service["name"] ?? "Unknown");
           }
-        }
+        } */
       }
     } else {
       setState(() => _loading = false);
