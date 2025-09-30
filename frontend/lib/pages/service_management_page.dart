@@ -60,20 +60,23 @@ class _ServiceManagementPageState extends State<ServiceManagementPage> {
     );
   }
 
-  Future<void> _showAddServiceDialog(int categoryId) async {
+Future<void> _showAddServiceDialog(int categoryId) async {
   final nameController = TextEditingController();
   final descController = TextEditingController();
 
-  // store requirements dynamically
-  final List<MapEntry<TextEditingController, TextEditingController>> requirementControllers = [];
+  // Each requirement: name, type, label, options
+  final List<Map<String, TextEditingController>> requirementControllers = [];
 
   void addRequirementField() {
-    requirementControllers.add(
-      MapEntry(TextEditingController(), TextEditingController()),
-    );
+    requirementControllers.add({
+      "name": TextEditingController(),
+      "label": TextEditingController(),
+      "type": TextEditingController(text: "string"), // default
+      "options": TextEditingController(),
+    });
   }
 
-  addRequirementField(); // start with one row by default
+  addRequirementField(); // start with one row
 
   await showDialog(
     context: context,
@@ -94,49 +97,85 @@ class _ServiceManagementPageState extends State<ServiceManagementPage> {
                   decoration: const InputDecoration(labelText: "Description"),
                 ),
                 const SizedBox(height: 16),
-                const Text("Requirements / Metadata",
+                const Text("Requirements",
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Column(
                   children: [
                     for (int i = 0; i < requirementControllers.length; i++)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: requirementControllers[i].key,
-                              decoration: const InputDecoration(
-                                  labelText: "Key (e.g. 'engine_type')"),
-                            ),
+                      Card(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            children: [
+                              TextField(
+                                controller: requirementControllers[i]["name"],
+                                decoration: const InputDecoration(
+                                    labelText: "Field name (e.g. policy)"),
+                              ),
+                              TextField(
+                                controller: requirementControllers[i]["label"],
+                                decoration: const InputDecoration(
+                                    labelText: "Field label (user friendly)"),
+                              ),
+                              DropdownButtonFormField<String>(
+                                value: requirementControllers[i]["type"]!.text,
+                                items: const [
+                                  DropdownMenuItem(
+                                      value: "string", child: Text("String")),
+                                  DropdownMenuItem(
+                                      value: "number", child: Text("Number")),
+                                  DropdownMenuItem(
+                                      value: "boolean", child: Text("Boolean")),
+                                  DropdownMenuItem(
+                                      value: "textarea",
+                                      child: Text("Textarea")),
+                                  DropdownMenuItem(
+                                      value: "select", child: Text("Select")),
+                                ],
+                                onChanged: (v) {
+                                  setState(() {
+                                    requirementControllers[i]["type"]!.text =
+                                        v ?? "string";
+                                  });
+                                },
+                                decoration:
+                                    const InputDecoration(labelText: "Type"),
+                              ),
+                              if (requirementControllers[i]["type"]!.text ==
+                                  "select")
+                                TextField(
+                                  controller: requirementControllers[i]
+                                      ["options"],
+                                  decoration: const InputDecoration(
+                                    labelText:
+                                        "Options (comma separated: A,B,C)",
+                                  ),
+                                ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: IconButton(
+                                  icon: const Icon(Icons.delete,
+                                      color: Colors.red),
+                                  onPressed: () {
+                                    setState(() {
+                                      requirementControllers.removeAt(i);
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: requirementControllers[i].value,
-                              decoration: const InputDecoration(
-                                  labelText: "Value (e.g. 'V8')"),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                requirementControllers.removeAt(i);
-                              });
-                            },
-                          )
-                        ],
+                        ),
                       ),
                     const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.add),
-                        label: const Text("Add Requirement"),
-                        onPressed: () {
-                          setState(() => addRequirementField());
-                        },
-                      ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text("Add Requirement"),
+                      onPressed: () {
+                        setState(() => addRequirementField());
+                      },
                     ),
                   ],
                 ),
@@ -151,13 +190,22 @@ class _ServiceManagementPageState extends State<ServiceManagementPage> {
             ElevatedButton(
               onPressed: () async {
                 if (nameController.text.isNotEmpty) {
-                  // collect requirements
-                  final requirements = <String, dynamic>{};
+                  final fields = [];
                   for (var entry in requirementControllers) {
-                    final key = entry.key.text.trim();
-                    final value = entry.value.text.trim();
-                    if (key.isNotEmpty) {
-                      requirements[key] = value;
+                    final name = entry["name"]!.text.trim();
+                    final label = entry["label"]!.text.trim();
+                    final type = entry["type"]!.text.trim();
+                    final optionsRaw = entry["options"]!.text.trim();
+
+                    if (name.isNotEmpty && type.isNotEmpty) {
+                      fields.add({
+                        "name": name,
+                        "label": label.isNotEmpty ? label : name,
+                        "type": type,
+                        "options": optionsRaw.isNotEmpty
+                            ? optionsRaw.split(",").map((s) => s.trim()).toList()
+                            : null,
+                      });
                     }
                   }
 
@@ -165,7 +213,8 @@ class _ServiceManagementPageState extends State<ServiceManagementPage> {
                     "name": nameController.text,
                     "description": descController.text,
                     "category_id": categoryId,
-                    "requirements": requirements.isNotEmpty ? requirements : null,
+                    "requirements":
+                        fields.isNotEmpty ? {"fields": fields} : null,
                   });
 
                   _reloadServiceCategories();
@@ -180,8 +229,6 @@ class _ServiceManagementPageState extends State<ServiceManagementPage> {
     ),
   );
 }
-
-
   // -------------------------
   // UI
   // -------------------------

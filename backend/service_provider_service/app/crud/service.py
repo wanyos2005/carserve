@@ -7,16 +7,28 @@ from uuid import UUID
 
 
 def create_service(db: Session, service_in: ServiceCreate) -> Service:
+    req = service_in.requirements or {}
+    # normalize to always have "fields"
+    if "fields" not in req:
+        # assume service_in.requirements is a dict of {name: label}
+        req = {
+            "fields": [
+                {"name": k, "type": "string", "label": str(v)}
+                for k, v in req.items()
+            ]
+        }
+
     service = Service(
         category_id=service_in.category_id,
         name=service_in.name,
         description=service_in.description,
-        requirements=service_in.requirements
+        requirements=req
     )
     db.add(service)
     db.commit()
     db.refresh(service)
     return service
+
 
 
 def get_service(db: Session, service_id: UUID) -> Optional[Service]:
@@ -34,8 +46,23 @@ def update_service(db: Session, service_id: UUID, updates: ServiceUpdate):
     s = db.query(Service).filter(Service.id == service_id).first()
     if not s:
         return None
-    for k, v in updates.dict(exclude_unset=True).items():
+
+    update_data = updates.dict(exclude_unset=True)
+
+    if "requirements" in update_data and update_data["requirements"] is not None:
+        req = update_data["requirements"]
+        if "fields" not in req:
+            req = {
+                "fields": [
+                    {"name": k, "type": "string", "label": str(v)}
+                    for k, v in req.items()
+                ]
+            }
+        update_data["requirements"] = req
+
+    for k, v in update_data.items():
         setattr(s, k, v)
+
     db.commit()
     db.refresh(s)
     return s

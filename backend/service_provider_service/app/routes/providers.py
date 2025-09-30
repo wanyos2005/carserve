@@ -133,7 +133,7 @@ def get_provider_services(provider_id: UUID, db: Session = Depends(get_db)):
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
 
-    if not provider.services:
+    if not provider.provider_services:
         return []
 
     services = db.query(crud_service.Service).filter(

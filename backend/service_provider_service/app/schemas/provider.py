@@ -14,21 +14,26 @@ class ServiceBase(BaseModel):
     category_id: Optional[int] = None   # integer foreign key
 
 
+class RequirementField(BaseModel):
+    name: str
+    type: str  # "string", "number", "boolean", "textarea", "select"
+    label: Optional[str] = None
+    options: Optional[List[str]] = None  # only for select
+class Requirements(BaseModel):
+    fields: List[RequirementField]
 class ServiceCreate(ServiceBase):
-    requirements: Optional[Dict[str, Any]] = None  # store the requirements schema
-
-
+    requirements: Optional[Requirements] = None
 class ServiceUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     category_id: Optional[int] = None
+    requirements: Optional[Requirements] = None
     
 
 class Service(ServiceBase):
     id: UUID
     created_at: Optional[datetime]
-    requirements: Optional[Dict[str, Any]] = None
-
+    requirements: Optional[Requirements] = None
 
     class Config:
         from_attributes = True
