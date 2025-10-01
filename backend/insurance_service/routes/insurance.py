@@ -1,4 +1,4 @@
-# vehicle_service/routes/vehicles.py
+# insurance_service/routes/insurance.py
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -9,7 +9,7 @@ from schemas.insurance import InsurancePolicyCreate, InsurancePolicyRead, Insura
 
 router = APIRouter()
 
-@router.post("/create-insurance-policy", response_model=InsurancePolicyCreate, status_code=status.HTTP_201_CREATED)
+@router.post("/create-insurance-policy", response_model=InsurancePolicyRead, status_code=status.HTTP_201_CREATED)
 def create_insurance_policy(
     payload: InsurancePolicyCreate,
     db: Session = Depends(get_db),

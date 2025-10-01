@@ -1,3 +1,4 @@
+#schemas/insurance.py 
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
@@ -14,9 +15,14 @@ class InsurancePolicyBase(BaseModel):
 class InsurancePolicyCreate(InsurancePolicyBase):
     pass
 
-class InsurancePolicyRead(InsurancePolicyBase):
+class InsurancePolicyRead(BaseModel):
     id: str
     owner_id: int
+    vehicle_id: str
+    provider_id: str
+    insurance_type: str
+    commencement_date: Optional[datetime]
+    expiry_date: Optional[datetime]
     created_at: datetime
 
     class Config:
