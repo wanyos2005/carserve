@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, UUID
+from typing import Optional
+from uuid import UUID
 
 class InsurancePolicyBase(BaseModel):
     owner_id: int
