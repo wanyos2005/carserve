@@ -22,12 +22,15 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
   }
 
   Future<void> _fetchProvider() async {
-    final data = await ProviderService.getProviderDetails(widget.providerId);
-    setState(() {
-      _provider = data;
-      _loading = false;
-    });
-  }
+  final data = await ProviderService.getProviderDetails(widget.providerId);
+  final serviceList = await ProviderService.getProviderServices(widget.providerId);
+
+  setState(() {
+    _provider = {...?data, "services": serviceList};
+    _loading = false;
+  });
+}
+
 
   Widget _buildInfoRow(IconData icon, String label, String? value,
       {Color color = Colors.black}) {

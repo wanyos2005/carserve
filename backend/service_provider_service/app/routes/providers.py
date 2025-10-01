@@ -8,7 +8,7 @@ from app.schemas.provider import (
     ProviderCreate, Provider, ProviderUpdate,
     Service as ServiceSchema,  # ✅ alias schema
     ServiceCreate, ServiceUpdate,
-    ProviderServiceAttach
+    ProviderServiceAttach, ProviderServiceCreate  # ✅ new schema
 )
 from app.schemas.category import (
     ProviderCategory, ProviderCategoryCreate,
@@ -61,7 +61,7 @@ def list_services(
 
 
 @router.get("/services/{service_id}", response_model=ServiceSchema)
-def get_service(service_id: UUID, db: Session = Depends(get_db)):
+def get_service(service_id: str, db: Session = Depends(get_db)):
     s = crud_service.get_service(db, service_id)
     if not s:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -69,7 +69,7 @@ def get_service(service_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.put("/services/{service_id}", response_model=ServiceSchema)
-def update_service(service_id: UUID, updates: ServiceUpdate, db: Session = Depends(get_db)):
+def update_service(service_id: str, updates: ServiceUpdate, db: Session = Depends(get_db)):
     s = crud_service.update_service(db, service_id, updates)
     if not s:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -77,7 +77,7 @@ def update_service(service_id: UUID, updates: ServiceUpdate, db: Session = Depen
 
 
 @router.delete("/services/{service_id}", status_code=204)
-def delete_service(service_id: UUID, db: Session = Depends(get_db)):
+def delete_service(service_id: str, db: Session = Depends(get_db)):
     ok = crud_service.delete_service(db, service_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -106,7 +106,7 @@ def list_providers(
 # Provider-specific routes (placed LAST to avoid collisions)
 # -----------------------
 @router.get("/{provider_id}", response_model=Provider)
-def get_provider(provider_id: UUID, db: Session = Depends(get_db)):
+def get_provider(provider_id: str, db: Session = Depends(get_db)):
     provider = crud_provider.get_provider(db, provider_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
@@ -121,7 +121,7 @@ def get_provider(provider_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.put("/{provider_id}", response_model=Provider)
-def update_provider(provider_id: UUID, updates: ProviderUpdate, db: Session = Depends(get_db)):
+def update_provider(provider_id: str, updates: ProviderUpdate, db: Session = Depends(get_db)):
     p = crud_provider.update_provider(db, provider_id, updates)
     if not p:
         raise HTTPException(status_code=404, detail="Provider not found")
@@ -129,7 +129,7 @@ def update_provider(provider_id: UUID, updates: ProviderUpdate, db: Session = De
 
 
 @router.delete("/{provider_id}", status_code=204)
-def delete_provider(provider_id: UUID, db: Session = Depends(get_db)):
+def delete_provider(provider_id: str, db: Session = Depends(get_db)):
     ok = crud_provider.delete_provider(db, provider_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Provider not found")
@@ -137,7 +137,7 @@ def delete_provider(provider_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.get("/{provider_id}/services", response_model=List[ServiceSchema])
-def get_provider_services(provider_id: UUID, db: Session = Depends(get_db)):
+def get_provider_services(provider_id: str, db: Session = Depends(get_db)):
     provider = crud_provider.get_provider(db, provider_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
@@ -150,10 +150,10 @@ def get_provider_services(provider_id: UUID, db: Session = Depends(get_db)):
     return services
 
 
-@router.post("/{provider_id}/services", response_model=List[dict])
+@router.post("/{provider_id}/services", response_model=List[ProviderServiceAttach])
 def attach_services_to_provider(
-    provider_id: UUID,
-    services: List[ProviderServiceAttach],
+    provider_id: str,
+    services: List[ProviderServiceCreate],   # <-- INPUT
     db: Session = Depends(get_db)
 ):
     provider = crud_provider.get_provider(db, provider_id)
@@ -167,16 +167,9 @@ def attach_services_to_provider(
             "price": s.price,
             "duration": s.duration,
             "booking_required": s.booking_required,
-            "extra_data": s.extra_data or s.metadata or {}
+            "extra_data": s.extra_data or {}
         }
         ps = crud_service.upsert_provider_service(db, provider_id, payload)
-        created_or_updated.append({
-            "id": str(ps.id),
-            "service_id": str(ps.service_id),
-            "price": ps.price,
-            "duration": ps.duration,
-            "booking_required": ps.booking_required,
-            "metadata": ps.extra_data
-        })
+        created_or_updated.append(ps)
 
     return created_or_updated

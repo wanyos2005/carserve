@@ -30,7 +30,7 @@ def create_service(db: Session, service_in: ServiceCreate) -> Service:
     return service
 
 
-def get_service(db: Session, service_id: UUID) -> Optional[Service]:
+def get_service(db: Session, service_id: str) -> Optional[Service]:
     return db.query(Service).filter(Service.id == service_id).first()
 
 
@@ -41,7 +41,7 @@ def list_services(db: Session, category_id: Optional[int] = None, limit: int = 5
     return q.offset(offset).limit(limit).all()
 
 
-def update_service(db: Session, service_id: UUID, updates: ServiceUpdate):
+def update_service(db: Session, service_id: str, updates: ServiceUpdate):
     s = db.query(Service).filter(Service.id == service_id).first()
     if not s:
         return None
@@ -67,7 +67,7 @@ def update_service(db: Session, service_id: UUID, updates: ServiceUpdate):
     return s
 
 
-def delete_service(db: Session, service_id: UUID) -> bool:
+def delete_service(db: Session, service_id: str) -> bool:
     s = db.query(Service).filter(Service.id == service_id).first()
     if not s:
         return False
@@ -75,7 +75,7 @@ def delete_service(db: Session, service_id: UUID) -> bool:
     db.commit()
     return True
 
-def create_provider_service(db: Session, provider_id: UUID, payload: Dict) -> ProviderService:
+def create_provider_service(db: Session, provider_id: str, payload: Dict) -> ProviderService:
     ps = ProviderService(
         provider_id=provider_id,
         service_id=payload.get("service_id"),
@@ -89,10 +89,10 @@ def create_provider_service(db: Session, provider_id: UUID, payload: Dict) -> Pr
     db.refresh(ps)
     return ps
 
-def get_provider_services(db: Session, provider_id: UUID) -> List[ProviderService]:
+def get_provider_services(db: Session, provider_id: str) -> List[ProviderService]:
     return db.query(ProviderService).filter(ProviderService.provider_id == provider_id).all()
 
-def upsert_provider_service(db: Session, provider_id: UUID, payload: Dict):
+def upsert_provider_service(db: Session, provider_id: str, payload: Dict):
     # payload contains service_id and metadata, price etc.
     q = db.query(ProviderService).filter(
         ProviderService.provider_id == provider_id,

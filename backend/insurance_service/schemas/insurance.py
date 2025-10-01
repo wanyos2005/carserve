@@ -1,13 +1,12 @@
-#schemas/insurance.py 
+#backend/insurance_service/schemas/insurance.py
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
 class InsurancePolicyBase(BaseModel):
     owner_id: int
-    vehicle_id: UUID
-    provider_id: UUID
+    vehicle_id: str
+    provider_id: str
     insurance_type: str
     commencement_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
@@ -28,8 +27,9 @@ class InsurancePolicyRead(BaseModel):
     class Config:
         from_attributes = True
 
-class InsurancePolicyUpdate(BaseModel):    
+class InsurancePolicyUpdate(BaseModel):
     insurance_type: Optional[str] = None
     provider_id: Optional[str] = None
     commencement_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
+

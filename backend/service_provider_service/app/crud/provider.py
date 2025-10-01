@@ -20,7 +20,7 @@ def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
     return provider
 
 
-def get_provider(db: Session, provider_id: UUID) -> Optional[Provider]:
+def get_provider(db: Session, provider_id: str) -> Optional[Provider]:
     return db.query(Provider).filter(Provider.id == provider_id).first()
 
 
@@ -31,7 +31,7 @@ def list_providers(db: Session, category_id: Optional[int] = None, limit: int = 
     return q.offset(offset).limit(limit).all()
 
 
-def delete_provider(db: Session, provider_id: UUID):
+def delete_provider(db: Session, provider_id: str):
     p = db.query(Provider).filter(Provider.id == provider_id).first()
     if not p:
         return False
@@ -40,7 +40,7 @@ def delete_provider(db: Session, provider_id: UUID):
     return True
 
 
-def update_provider(db: Session, provider_id: UUID, updates: ProviderUpdate):
+def update_provider(db: Session, provider_id: str, updates: ProviderUpdate):
     p = db.query(Provider).filter(Provider.id == provider_id).first()
     if not p:
         return None

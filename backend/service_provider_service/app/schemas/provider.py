@@ -1,46 +1,44 @@
 #backend/service_provider_service/app/schemas/provider.py
-
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from uuid import UUID
 
 # -----------------------
-# Service Schemas
+# Services
 # -----------------------
-class ServiceBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    category_id: Optional[int] = None   # integer foreign key
-
 
 class RequirementField(BaseModel):
     name: str
-    type: str  # "string", "number", "boolean", "textarea", "select"
-    label: Optional[str] = None
-    options: Optional[List[str]] = None  # only for select
+    label: str
+    type: str
+    options: Optional[List[str]] = None
+
 class Requirements(BaseModel):
     fields: List[RequirementField]
-class ServiceCreate(ServiceBase):
+
+class ServiceBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    category_id: Optional[int] = None
     requirements: Optional[Requirements] = None
+
+class ServiceCreate(ServiceBase):
+    pass
+
 class ServiceUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     category_id: Optional[int] = None
-    requirements: Optional[Requirements] = None
-    
 
 class Service(ServiceBase):
-    id: UUID
+    id: str
     created_at: Optional[datetime]
-    requirements: Optional[Requirements] = None
 
     class Config:
         from_attributes = True
 
-
 # -----------------------
-# Provider Schemas
+# Providers
 # -----------------------
 class ProviderBase(BaseModel):
     name: str
@@ -49,10 +47,8 @@ class ProviderBase(BaseModel):
     location: Optional[Dict] = None
     is_registered: Optional[bool] = False
 
-
 class ProviderCreate(ProviderBase):
     category_id: int
-
 
 class ProviderUpdate(BaseModel):
     name: Optional[str] = None
@@ -62,34 +58,36 @@ class ProviderUpdate(BaseModel):
     location: Optional[Dict] = None
     is_registered: Optional[bool] = None
 
-
-class ProviderServiceBase(BaseModel):
-    provider_id: UUID
-    service_id: UUID
-    price: Optional[str] = None
-    duration: Optional[str] = None
-    booking_required: Optional[bool] = False
-    insurance: Optional[Dict] = None  # store provider-specific insurance details
-
-class ProviderServiceAttach(BaseModel):
-    service_id: UUID
+# For request payload (input)
+class ProviderServiceCreate(BaseModel):
+    service_id: str
     price: Optional[str] = None
     duration: Optional[str] = None
     booking_required: Optional[bool] = False
     extra_data: Optional[Dict[str, Any]] = None
-    metadata: Optional[Dict[str, Any]] = None  # alias, deprecated
+    class Config:
+        fields = {"extra_data": "metadata"}
+
+# For response payload (output)        
+class ProviderServiceAttach(BaseModel):
+    service_id: str
+    price: Optional[str] = None
+    duration: Optional[str] = None
+    booking_required: Optional[bool] = False
+    extra_data: Optional[Dict[str, Any]] = {}
 
     class Config:
-        fields = {
-            "extra_data": "metadata"  # allow "metadata" in JSON
-        }
+        orm_mode = True   # ✅ important
+        from_attributes = True
+
 
 class Provider(ProviderBase):
-    id: UUID
+    id: str
     rating: Optional[float]
     created_at: Optional[datetime]
     category_id: int
-    services: Optional[List[ProviderServiceAttach]] = []
+    provider_services: Optional[List[ProviderServiceAttach]] = []
 
     class Config:
+        orm_mode = True   # ✅ important
         from_attributes = True
