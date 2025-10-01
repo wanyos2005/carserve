@@ -14,4 +14,10 @@ class VehicleService {
   static Future<bool> deleteVehicle(String id) async {
     return await ApiService.delete("/vehicles/$id");
   }
+
+  //Get vehicle by id
+  static Future<Map<String, dynamic>?> getVehicleById(String id) async {
+    return await ApiService.get("/vehicles/$id");
+  }
+  
 }
