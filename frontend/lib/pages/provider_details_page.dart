@@ -22,14 +22,34 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
   }
 
   Future<void> _fetchProvider() async {
-  final data = await ProviderService.getProviderDetails(widget.providerId);
-  final serviceList = await ProviderService.getProviderServices(widget.providerId);
+  final provider = await ProviderService.getProviderDetails(widget.providerId);
+  final services = await ProviderService.getProviderServices(widget.providerId);
 
-  setState(() {
-    _provider = {...?data, "services": serviceList};
-    _loading = false;
-  });
-}
+  // Build a lookup from provider_services (for prices, duration, etc.)
+  final providerServices = provider?["provider_services"] ?? [];
+  final serviceWithPricing = services.map((s) {
+    final match = providerServices.firstWhere(
+      (ps) => ps["service_id"] == s["id"],
+      orElse: () => null,
+    );
+    if (match != null) {
+      return {
+        ...s,
+        "price": match["price"],
+        "duration": match["duration"],
+        "booking_required": match["booking_required"],
+        "extra_data": match["extra_data"],
+      };
+    }
+    return s;
+  }).toList();
+
+    setState(() {
+      _provider = {...?provider, "services": serviceWithPricing};
+      _loading = false;
+    });
+  }
+
 
 
   Widget _buildInfoRow(IconData icon, String label, String? value,
