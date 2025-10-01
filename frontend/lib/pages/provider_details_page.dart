@@ -25,23 +25,28 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
   final provider = await ProviderService.getProviderDetails(widget.providerId);
   final services = await ProviderService.getProviderServices(widget.providerId);
 
-  // Build a lookup from provider_services (for prices, duration, etc.)
-  final providerServices = provider?["provider_services"] ?? [];
+  final providerServices = (provider?["provider_services"] as List?) ?? [];
+
   final serviceWithPricing = services.map((s) {
+    final service = Map<String, dynamic>.from(s as Map); // 🔹 force correct typing
+
     final match = providerServices.firstWhere(
-      (ps) => ps["service_id"] == s["id"],
+      (ps) => ps["service_id"] == service["id"],
       orElse: () => null,
     );
+
     if (match != null) {
+      final matchMap = Map<String, dynamic>.from(match as Map); // 🔹 cast too
       return {
-        ...s,
-        "price": match["price"],
-        "duration": match["duration"],
-        "booking_required": match["booking_required"],
-        "extra_data": match["extra_data"],
+        ...service,
+        "price": matchMap["price"],
+        "duration": matchMap["duration"],
+        "booking_required": matchMap["booking_required"],
+        "extra_data": matchMap["extra_data"],
       };
     }
-    return s;
+
+    return service;
   }).toList();
 
     setState(() {
@@ -143,8 +148,8 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
                         children: [
                           if (s["description"] != null)
                             Text(s["description"]),
-                          if (s["price_range"] != null)
-                            Text("Price: ${s["price_range"]}",
+                          if (s["price"] != null)
+                            Text("Price: ${s["price"]}",
                                 style: const TextStyle(
                                     fontStyle: FontStyle.italic)),
                         ],
