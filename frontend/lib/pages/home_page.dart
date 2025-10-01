@@ -141,7 +141,7 @@ class HomePage extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                   builder: (_) => const InsurancePolicyPage()),
-                            );
+                            ),
                           ),
                         _navCard(
                           context,

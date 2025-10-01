@@ -1,12 +1,12 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, UUID
 
 class InsurancePolicyBase(BaseModel):
     owner_id: int
-    vehicle_id: str
+    vehicle_id: UUID
+    provider_id: UUID
     insurance_type: str
-    provider_id: str
     commencement_date: Optional[datetime] = None
     expiry_date: Optional[datetime] = None
 

@@ -75,13 +75,13 @@ class _InsurancePolicyPageState extends State<InsurancePolicyPage> {
     final ownerId = me?["id"];
 
     final payload = {
-    "owner_id": ownerId,
-    "vehicle_id": _selectedVehicle,
-    "provider_id": _selectedProvider,
-    "insurance_type": _insuranceType,
-    "commencement_date": _commencementDate?.toUtc().toIso8601String(),
-    "expiry_date": _expiryDate?.toUtc().toIso8601String(),
-  };
+      "owner_id": ownerId,
+      "vehicle_id": _selectedVehicle,
+      "provider_id": _selectedProvider,
+      "insurance_type": _insuranceType,
+      "commencement_date": _commencementDate?.toUtc().toIso8601String(),
+      "expiry_date": _expiryDate?.toUtc().toIso8601String(),
+    };
 
   final res = await InsuranceService.createPolicy(payload);
 
@@ -128,7 +128,9 @@ Widget _buildMyPoliciesList() {
     builder: (context, snapshot) {
       if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-      final ownerId = snapshot.data?["id"];
+      final me = snapshot.data as Map<String, dynamic>; // ✅ cast
+      final ownerId = me["id"];
+
       return FutureBuilder(
         future: InsuranceService.getPoliciesByOwner(ownerId),
         builder: (context, snap) {
@@ -142,19 +144,28 @@ Widget _buildMyPoliciesList() {
           return ListView.builder(
             itemCount: policies.length,
             itemBuilder: (context, i) {
-              final p = policies[i];
+              final p = policies[i] as Map<String, dynamic>;
 
-              // ✅ find vehicle by ID
-              final vehicle = _vehicles.firstWhere(
-                (v) => v["id"].toString() == p["vehicle_id"].toString(),
-                orElse: () => null,
-              );
+              // ✅ Use try/catch instead of null return
+              dynamic vehicle;
+              try {
+                vehicle = _vehicles.firstWhere(
+                  (v) => v["id"].toString() == p["vehicle_id"].toString(),
+                  orElse: () => null,
+                );
+                } catch (_) {
+                vehicle = null;
+              }
 
-              // ✅ find provider by ID
-              final provider = _providers.firstWhere(
-                (pr) => pr["id"].toString() == p["provider_id"].toString(),
-                orElse: () => null,
-              );
+              dynamic provider;
+              try {
+                provider = _providers.firstWhere(
+                  (pr) => pr["id"].toString() == p["provider_id"].toString(),
+                  orElse: () => null,
+                );
+              } catch (_) {
+                provider = null;
+              }
 
               final vehicleName = vehicle != null
                   ? "${vehicle["plate"] ?? ""} ${vehicle["make"] ?? ""} ${vehicle["model"] ?? ""}".trim()
@@ -313,5 +324,4 @@ Widget _buildAddPolicyForm() {
       ),
     ),
   );
-}
-
+}}
