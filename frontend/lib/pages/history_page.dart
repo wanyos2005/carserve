@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/booking_service.dart';
 import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/provider_service.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});

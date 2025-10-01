@@ -14,10 +14,10 @@ class EditProviderPage extends StatefulWidget {
 class _EditProviderPageState extends State<EditProviderPage> {
   Map<String, dynamic>? _provider;
   List<dynamic> _allServices = [];
-  Map<String, Map<String, TextEditingController>> _serviceFieldControllers = {}; 
-  Map<String, TextEditingController> _priceControllers = {};
-  Set<String> _selectedServiceIds = {};
-  Map<String, dynamic> _serviceDetails = {};
+  final Map<String, Map<String, TextEditingController>> _serviceFieldControllers = {}; 
+  final Map<String, TextEditingController> _priceControllers = {};
+  final Set<String> _selectedServiceIds = {};
+  final Map<String, dynamic> _serviceDetails = {};
 
   @override
   void initState() {
@@ -87,7 +87,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
           decoration: InputDecoration(labelText: label),
         );
       case "boolean":
-        bool current = (controller.text?.toLowerCase() == 'true');
+        bool current = (controller.text.toLowerCase() == 'true');
         return CheckboxListTile(
           value: current,
           title: Text(label),
@@ -100,7 +100,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
         final options = List<String>.from(fieldDef["options"] ?? []);
         String current = controller.text.isNotEmpty ? controller.text : (options.isNotEmpty ? options[0] : "");
         return DropdownButtonFormField<String>(
-          value: current.isNotEmpty ? current : null,
+          initialValue: current.isNotEmpty ? current : null,
           items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
           onChanged: (v) {
             controller.text = v ?? "";
@@ -210,7 +210,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
 
             const SizedBox(height: 20),
             ElevatedButton(onPressed: _save, child: const Text("Save")),

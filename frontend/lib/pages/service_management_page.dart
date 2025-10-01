@@ -120,7 +120,7 @@ Future<void> _showAddServiceDialog(int categoryId) async {
                                     labelText: "Field label (user friendly)"),
                               ),
                               DropdownButtonFormField<String>(
-                                value: requirementControllers[i]["type"]!.text,
+                                initialValue: requirementControllers[i]["type"]!.text,
                                 items: const [
                                   DropdownMenuItem(
                                       value: "string", child: Text("String")),

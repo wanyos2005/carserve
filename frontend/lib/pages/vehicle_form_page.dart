@@ -233,7 +233,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
 
                 // === Fuel Type ===
                 DropdownButtonFormField<String>(
-                  value: _fuelType,
+                  initialValue: _fuelType,
                   decoration: const InputDecoration(labelText: "Fuel Type"),
                   items: _fuelTypes
                       .map((ft) => DropdownMenuItem(value: ft, child: Text(ft)))
@@ -244,7 +244,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
 
                 // === Transmission ===
                 DropdownButtonFormField<String>(
-                  value: _transmission,
+                  initialValue: _transmission,
                   decoration: const InputDecoration(labelText: "Transmission"),
                   items: _transmissions
                       .map((t) => DropdownMenuItem(value: t, child: Text(t)))
@@ -256,7 +256,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
 
                 // === Color ===
                 DropdownButtonFormField<String>(
-                  value: _color,
+                  initialValue: _color,
                   decoration: const InputDecoration(labelText: "Color"),
                   items: _colors
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))

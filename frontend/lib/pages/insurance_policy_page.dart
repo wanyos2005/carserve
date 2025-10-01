@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 // Services
-import 'package:car_platform/services/api_service.dart';
 import 'package:car_platform/services/auth_service.dart';
 import 'package:car_platform/services/vehicle_service.dart';
 import 'package:car_platform/services/provider_service.dart';
@@ -120,78 +119,6 @@ Widget build(BuildContext context) {
         ],
       ),
     ),
-  );
-}
-Widget _buildMyPoliciesList() {
-  return FutureBuilder(
-    future: AuthService.getMe(),
-    builder: (context, snapshot) {
-      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-      final me = snapshot.data as Map<String, dynamic>; // ✅ cast
-      final ownerId = me["id"];
-
-      return FutureBuilder(
-        future: InsuranceService.getPoliciesByOwner(ownerId),
-        builder: (context, snap) {
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-
-          final policies = snap.data as List<dynamic>;
-          if (policies.isEmpty) {
-            return const Center(child: Text("No policies found"));
-          }
-
-          return ListView.builder(
-            itemCount: policies.length,
-            itemBuilder: (context, i) {
-              final p = policies[i] as Map<String, dynamic>;
-
-              // ✅ Use try/catch instead of null return
-              dynamic vehicle;
-              try {
-                vehicle = _vehicles.firstWhere(
-                  (v) => v["id"].toString() == p["vehicle_id"].toString(),
-                  orElse: () => null,
-                );
-                } catch (_) {
-                vehicle = null;
-              }
-
-              dynamic provider;
-              try {
-                provider = _providers.firstWhere(
-                  (pr) => pr["id"].toString() == p["provider_id"].toString(),
-                  orElse: () => null,
-                );
-              } catch (_) {
-                provider = null;
-              }
-
-              final vehicleName = vehicle != null
-                  ? "${vehicle["plate"] ?? ""} ${vehicle["make"] ?? ""} ${vehicle["model"] ?? ""}".trim()
-                  : "Unknown Vehicle";
-
-              final providerName = provider != null
-                  ? provider["name"] ?? "Unknown Provider"
-                  : "Unknown Provider";
-
-              return Card(
-                margin: const EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text("${p["insurance_type"].toString().toUpperCase()} Policy"),
-                  subtitle: Text(
-                    "Vehicle: $vehicleName\n"
-                    "Provider: $providerName\n"
-                    "Valid: ${DateFormat.yMMMd().format(DateTime.parse(p["commencement_date"]))}"
-                    " → ${DateFormat.yMMMd().format(DateTime.parse(p["expiry_date"]))}",
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      );
-    },
   );
 }
 
@@ -324,4 +251,88 @@ Widget _buildAddPolicyForm() {
       ),
     ),
   );
-}}
+}
+Widget _buildMyPoliciesList() {
+  return FutureBuilder(
+    future: _loadPoliciesWithDetails(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snapshot.hasError) {
+        return Center(child: Text("Error: ${snapshot.error}"));
+      }
+      final policies = snapshot.data as List<Map<String, dynamic>>;
+      if (policies.isEmpty) {
+        return const Center(child: Text("No policies found."));
+      }
+
+      return ListView.builder(
+        itemCount: policies.length,
+        itemBuilder: (context, index) {
+          final policy = policies[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: ListTile(
+              title: Text(
+                "${policy["vehicle"]?["plate"] ?? "Unknown"} - ${policy["vehicle"]?["make"] ?? ""} ${policy["vehicle"]?["model"] ?? ""}",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Provider: ${policy["provider"]?["name"] ?? "Unknown"}"),
+                  Text("Type: ${policy["insurance_type"] ?? "-"}"),
+                  Text(
+                    "Start: ${policy["commencement_date"] != null ? DateFormat.yMMMd().format(DateTime.parse(policy["commencement_date"])) : "-"}",
+                  ),
+                  Text(
+                    "Expiry: ${policy["expiry_date"] != null ? DateFormat.yMMMd().format(DateTime.parse(policy["expiry_date"])) : "-"}",
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+/// Fetches policies and enriches with vehicle + provider details
+Future<List<Map<String, dynamic>>> _loadPoliciesWithDetails() async {
+  final me = await AuthService.getMe();
+  final ownerId = me?["id"];
+  if (ownerId == null) return [];
+
+  final policies = await InsuranceService.getPoliciesByOwner(ownerId.toString());
+
+  List<Map<String, dynamic>> enriched = [];
+
+  for (var policy in policies) {
+    Map<String, dynamic>? vehicle;
+    Map<String, dynamic>? provider;
+
+    if (policy["vehicle_id"] != null) {
+      try {
+        final v = await VehicleService.getByVehicleId(policy["vehicle_id"].toString());
+        if (v is Map<String, dynamic>) vehicle = v; 
+      } catch (_) {}
+    }
+
+    if (policy["provider_id"] != null) {
+      try {
+        provider = await ProviderService.getProviderDetails(policy["provider_id"].toString());
+      } catch (_) {}
+    }
+
+    enriched.add({
+      ...policy,
+      "vehicle": vehicle,
+      "provider": provider,
+    });
+  }
+
+  return enriched;
+}
+}

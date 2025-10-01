@@ -70,7 +70,7 @@ class AdminPanelPage extends StatelessWidget {
         width: MediaQuery.of(context).size.width / 2 - 30,
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant,
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

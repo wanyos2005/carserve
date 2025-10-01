@@ -63,8 +63,8 @@ class _BookingPageState extends State<BookingPage> {
         GlobalServiceApi.getAllGlobalServices(), // see snippet below to add this method
       ]);
 
-      final providers = results[0] as List<dynamic>;
-      final services = results[1] as List<dynamic>;
+      final providers = results[0];
+      final services = results[1];
 
       setState(() {
         _vehicles = vehicles;
@@ -201,7 +201,7 @@ class _BookingPageState extends State<BookingPage> {
                       itemCount: filtered.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, i) {
-                        final s = filtered[i] as Map<String, dynamic>;
+                        final s = filtered[i];
                         final subtitle = [
                           if (s["price_range"] != null) s["price_range"],
                           if (s["requirements"] != null && s["requirements"]["duration"] != null)
@@ -271,7 +271,7 @@ class _BookingPageState extends State<BookingPage> {
                             itemCount: filtered.length,
                             separatorBuilder: (_, __) => const Divider(height: 1),
                             itemBuilder: (context, i) {
-                              final p = filtered[i] as Map<String, dynamic>;
+                              final p = filtered[i];
                               return ListTile(
                                 title: Text(p["name"] ?? "Provider"),
                                 subtitle: Text(p["description"] ?? ""),
@@ -407,7 +407,7 @@ class _BookingPageState extends State<BookingPage> {
           children: [
             // Vehicle selector
             DropdownButtonFormField<String>(
-              value: _selectedVehicleId,
+              initialValue: _selectedVehicleId,
               items: _vehicles
                   .map((v) => DropdownMenuItem<String>(
                         value: v["id"].toString(),
@@ -459,7 +459,7 @@ class _BookingPageState extends State<BookingPage> {
                     : _selectedCard(
                         icon: Icons.business,
                         title: _selectedProvider!["name"] ?? "Provider",
-                        subtitle: _selectedProvider!["description"] ?? null,
+                        subtitle: _selectedProvider!["description"],
                         onTap: _showProviderSelector,
                       ),
             const SizedBox(height: 12),
@@ -471,7 +471,7 @@ class _BookingPageState extends State<BookingPage> {
                   child: ElevatedButton.icon(
                     onPressed: _pickDate,
                     icon: const Icon(Icons.calendar_today),
-                    label: Text(_selectedDate == null ? "Pick date" : "${_selectedDate!.toLocal().toString().split(' ')[0]}"),
+                    label: Text(_selectedDate == null ? "Pick date" : _selectedDate!.toLocal().toString().split(' ')[0]),
                   ),
                 ),
                 const SizedBox(width: 12),

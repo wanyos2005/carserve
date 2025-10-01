@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 // Pages
 import 'package:car_platform/pages/login_page.dart';
 import 'package:car_platform/pages/home_page.dart';
-import 'package:car_platform/pages/provider_management_page.dart';
-import 'package:car_platform/pages/service_management_page.dart';
-import 'package:car_platform/pages/admin_panel_page.dart';
 import 'package:car_platform/pages/insurance_policy_page.dart';
 
 // Services

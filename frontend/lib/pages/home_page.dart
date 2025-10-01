@@ -280,7 +280,7 @@ class HomePage extends StatelessWidget {
         width: MediaQuery.of(context).size.width / 3 - 28,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant,
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -320,7 +320,7 @@ class HomePage extends StatelessWidget {
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant,
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
