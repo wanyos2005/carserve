@@ -10,13 +10,13 @@ from jose import jwt, JWTError
 
 from core.db import get_db
 from core.security import create_access_token
-from models.users import User, OTP
+from models.users import User, Roles, OTP
 from schemas.users import (
     SendCodeRequest,
     VerifyCodeRequest,
     Token,
     EmailSchema,
-    UserRead,
+    UserRead,Role
 )
 from config import conf, settings  # ✅ import both
 
@@ -63,7 +63,7 @@ def send_email(email: EmailSchema, background_tasks: BackgroundTasks):
 
 
 # --------------------------
-# Send OTP
+# Send OTP  ##create user if user does not exist
 # --------------------------
 @router.post("/send-code")
 def send_code(
@@ -141,3 +141,24 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserRead)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+# --------------------------
+# Send OTP  ##create user if user does not exist
+# --------------------------
+@router.post("/create-role")
+def create_role(
+    req: Role,
+    db: Session = Depends(get_db),
+):
+    # ensure user exists
+    db_role = db.query(Roles).filter(Roles.name == req.name).first()
+    if not db_role:
+        db_role = Roles(name=req.name)
+        db.add(db_role)
+        db.commit()
+        db.refresh(db_role)
+
+
+    return {"message": "Inserted"}
+

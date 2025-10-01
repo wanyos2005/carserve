@@ -1,7 +1,12 @@
 # backend/user_service/models/users.py
-from sqlalchemy import Column, String, TIMESTAMP, Integer, Boolean, func
+
+from sqlalchemy import Column, Integer, String, Text, JSON, Numeric, TIMESTAMP, func, ForeignKey, Boolean
+
 from datetime import datetime
 from core.db import Base
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+from sqlalchemy.orm import relationship
 
 class User(Base):
     __tablename__ = "tbl_auth"
@@ -10,11 +15,12 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, index=True, nullable=True)
     phone = Column(String, index=True, nullable=True)
-    role = Column(String, index=True, default="user")
+    # role = Column(String, index=True, default="user")
     auth_provider = Column(String, index=True, default="email")
     verified = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    roles = relationship("User_Roles", back_populates="user", uselist=True)
 
 
 
@@ -27,5 +33,24 @@ class OTP(Base):
     code = Column(String, nullable=False)
     expires_at = Column(TIMESTAMP, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+class Roles(Base):
+    __tablename__ = "tbl_roles"
+    __table_args__ = {"schema": "users"}
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, index=True, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+class User_Roles(Base):
+    __tablename__ = "tbl_auth_roles"
+    __table_args__ = {"schema": "users"}
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Integer, ForeignKey("users.tbl_auth.id"))
+    role_id = Column(String, nullable=False)
+    active = Column(Boolean, default=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    user = relationship("User", back_populates="roles")
 
 

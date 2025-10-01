@@ -17,11 +17,23 @@ class _EditProviderPageState extends State<EditProviderPage> {
   Map<String, Map<String, TextEditingController>> _serviceFieldControllers = {}; 
   Map<String, TextEditingController> _priceControllers = {};
   Set<String> _selectedServiceIds = {};
+  Map<String, dynamic> _serviceDetails = {};
 
   @override
   void initState() {
     super.initState();
     _loadAll();
+  }
+
+  Future<void> _loadServiceDetails(String serviceId) async {
+    if (_serviceDetails.containsKey(serviceId)) return; // already loaded
+
+    final details = await GlobalServiceApi.getGlobalService(serviceId);
+    if (details != null) {
+      setState(() {
+        _serviceDetails[serviceId] = details;
+      });
+    }
   }
 
   Future<void> _loadAll() async {
@@ -167,6 +179,11 @@ class _EditProviderPageState extends State<EditProviderPage> {
                       Expanded(child: Text(srv["name"] ?? "")),
                     ],
                   ),
+                  onExpansionChanged: (expanded) {
+                    if (expanded) {
+                      _loadServiceDetails(sid);
+                    }
+                  },
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -180,10 +197,11 @@ class _EditProviderPageState extends State<EditProviderPage> {
                               keyboardType: TextInputType.number,
                             ),
                             const SizedBox(height: 8),
-                            // render requirement-defined fields
-                            if (srv["requirements"] != null)
+                            // ✅ render requirement-defined fields (from lazy-loaded details)
+                            if (_serviceDetails[sid]?["requirements"] != null)
                               ...List<Widget>.from(
-                                (srv["requirements"]["fields"] as List<dynamic>? ?? []).map((f) => _buildField(sid, f as Map<String,dynamic>))
+                                (_serviceDetails[sid]["requirements"]["fields"] as List<dynamic>? ?? [])
+                                    .map((f) => _buildField(sid, f as Map<String, dynamic>))
                               ),
                           ],
                         ],
