@@ -13,7 +13,7 @@ class Insurance_Policy(Base):
     
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    owner_id = Column(String, index=True)
+    owner_id = Column(Integer, index=True)
     vehicle_id = Column(UUID(as_uuid=True), index=True)
     provider_id = Column(UUID(as_uuid=True), index=True)
     insurance_type = Column(String, index=True)

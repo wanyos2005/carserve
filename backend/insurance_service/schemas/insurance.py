@@ -16,7 +16,7 @@ class InsurancePolicyCreate(InsurancePolicyBase):
 
 class InsurancePolicyRead(InsurancePolicyBase):
     id: str
-    owner_id: str
+    owner_id: int
     created_at: datetime
 
     class Config:
