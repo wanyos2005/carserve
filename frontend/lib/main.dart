@@ -7,6 +7,7 @@ import 'package:car_platform/pages/home_page.dart';
 import 'package:car_platform/pages/provider_management_page.dart';
 import 'package:car_platform/pages/service_management_page.dart';
 import 'package:car_platform/pages/admin_panel_page.dart';
+import 'package:car_platform/pages/insurance_policy_page.dart';
 
 // Services
 import 'package:car_platform/services/auth_service.dart';
@@ -32,6 +33,7 @@ class CarPlatformApp extends StatelessWidget {
       routes: {
         "/login": (context) => const LoginPage(),
         "/home": (context) => const HomePage(),
+        "/insurance": (context) => const InsurancePolicyPage(),
         
       },
       home: FutureBuilder(

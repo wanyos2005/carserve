@@ -89,6 +89,7 @@ class Provider(ProviderBase):
     rating: Optional[float]
     created_at: Optional[datetime]
     category_id: int
+    services: Optional[List[ProviderServiceAttach]] = []
 
     class Config:
         from_attributes = True

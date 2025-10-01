@@ -7,10 +7,10 @@ from uuid import UUID
 
 
 def create_service(db: Session, service_in: ServiceCreate) -> Service:
-    req = service_in.requirements or {}
-    # normalize to always have "fields"
+    # ensure it's always a dict
+    req = service_in.requirements.dict() if service_in.requirements else {}
+
     if "fields" not in req:
-        # assume service_in.requirements is a dict of {name: label}
         req = {
             "fields": [
                 {"name": k, "type": "string", "label": str(v)}
@@ -28,7 +28,6 @@ def create_service(db: Session, service_in: ServiceCreate) -> Service:
     db.commit()
     db.refresh(service)
     return service
-
 
 
 def get_service(db: Session, service_id: UUID) -> Optional[Service]:

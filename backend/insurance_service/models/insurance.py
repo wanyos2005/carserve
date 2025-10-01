@@ -16,7 +16,7 @@ class Insurance_Policy(Base):
     owner_id = Column(String, index=True)
     vehicle_id = Column(String, index=True)
     insurance_type = Column(String, index=True)
-    insurer_id = Column(String, index=True)
+    provider_id = Column(String, index=True)
     commencement_date =  Column(TIMESTAMP(timezone=True), nullable=True)
     expiry_date = Column(TIMESTAMP(timezone=True), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

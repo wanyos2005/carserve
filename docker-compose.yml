@@ -86,6 +86,21 @@ services:
       - "8004:8004"
     depends_on:
       - postgres
+  
+  insurance-service:
+    build:
+      context: ./backend/insurance_service
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://user:password@postgres:5432/car_platform
+      - DB_HOST=postgres
+      - DB_NAME=car_platform
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres
 
   
   gateway:

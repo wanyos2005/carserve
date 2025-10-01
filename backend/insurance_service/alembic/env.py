@@ -1,40 +1,57 @@
-from alembic import context
-from sqlalchemy import engine_from_config, pool
+# backend/insurance_service/alembic/env.py
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from logging.config import fileConfig
-import sys, os
 
-# Add parent directory so core can be found
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.db import Base
-from models.insurance import Insurance_Policy
+from sqlalchemy import engine_from_config, pool
+from alembic import context
+from models import insurance # 👈 import your models here
+from core.db import Base  
 
+# This is the Alembic Config object
 config = context.config
+
+# Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# --- 🔹 2. Set the target metadata (SQLAlchemy Base) ---k
 target_metadata = Base.metadata
-SERVICE_SCHEMA = "insurance"
+
+# --- 🔹 3. Change this per service (schema name) ---
+SERVICE_SCHEMA = "insurance"   # 👈 change per service
+
 
 def include_object(object, name, type_, reflected, compare_to):
+    """Only include this service’s schema objects in migrations."""
     if type_ == "table" and object.schema != SERVICE_SCHEMA:
         return False
     return True
 
+
 def run_migrations_offline():
+    """Run migrations in 'offline' mode."""
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=config.get_main_option("sqlalchemy.url"),
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+
+        # 👇 isolate version tracking per schema
         version_table="alembic_version",
         version_table_schema=SERVICE_SCHEMA,
         include_schemas=True,
         include_object=include_object,
     )
+
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online():
+    """Run migrations in 'online' mode."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
@@ -45,16 +62,18 @@ def run_migrations_online():
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+
+            # 👇 isolate version tracking per schema
             version_table="alembic_version",
             version_table_schema=SERVICE_SCHEMA,
             include_schemas=True,
             include_object=include_object,
         )
 
-        # ✅ Only run actual migrations if this is NOT a stamp command
-        if getattr(config.cmd_opts, "cmd", None) != "stamp":
-            with context.begin_transaction():
-                context.run_migrations()
+        with context.begin_transaction():
+            context.run_migrations()
+
+
 if context.is_offline_mode():
     run_migrations_offline()
 else:

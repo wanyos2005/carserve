@@ -6,6 +6,7 @@ import 'login_page.dart';
 import 'history_page.dart';
 import 'booking_page.dart';
 import 'admin_panel_page.dart';
+import 'insurance_policy_page.dart';
 
 // ...imports remain unchanged...
 
@@ -136,12 +137,12 @@ class HomePage extends StatelessWidget {
                           context,
                           "Insurance",
                           Icons.shield,
-                          () {
-                            // TODO: Implement insurance page
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Coming Soon")));
-                          },
-                        ),
+                          () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const InsurancePolicyPage()),
+                            );
+                          ),
                         _navCard(
                           context,
                           "Expenses",
