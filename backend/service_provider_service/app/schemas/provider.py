@@ -47,6 +47,8 @@ class ProviderBase(BaseModel):
     location: Optional[Dict] = None
     is_registered: Optional[bool] = False
 
+
+
 class ProviderCreate(ProviderBase):
     category_id: int
 
@@ -61,6 +63,7 @@ class ProviderUpdate(BaseModel):
 # For request payload (input)
 class ProviderServiceCreate(BaseModel):
     service_id: str
+    display_name: Optional[str] = None
     price: Optional[str] = None
     duration: Optional[str] = None
     booking_required: Optional[bool] = False
@@ -71,6 +74,7 @@ class ProviderServiceCreate(BaseModel):
 # For response payload (output)        
 class ProviderServiceAttach(BaseModel):
     service_id: str
+    display_name: Optional[str] = None
     price: Optional[str] = None
     duration: Optional[str] = None
     booking_required: Optional[bool] = False
@@ -79,7 +83,6 @@ class ProviderServiceAttach(BaseModel):
     class Config:
         orm_mode = True   # ✅ important
         from_attributes = True
-
 
 class Provider(ProviderBase):
     id: str
@@ -91,3 +94,43 @@ class Provider(ProviderBase):
     class Config:
         orm_mode = True   # ✅ important
         from_attributes = True
+# -----------------------
+# Templates for Providers
+# -----------------------
+
+# A single item inside a template (links template ↔ service)
+class ServiceTemplateItemBase(BaseModel):
+    service_id: str
+
+
+class ServiceTemplateItemCreate(ServiceTemplateItemBase):
+    pass
+
+
+class ServiceTemplateItemRead(ServiceTemplateItemBase):
+    id: str
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+# The template itself
+class ServiceTemplateBase(BaseModel):
+    name: str  # e.g., "Standard Oil Service"
+
+
+class ServiceTemplateCreate(ServiceTemplateBase):
+    provider_id: str
+    items: List[ServiceTemplateItemCreate]  # ✅ use item objects instead of raw strings
+
+
+class ServiceTemplateRead(ServiceTemplateBase):
+    id: str
+    provider_id: str
+    items: List[ServiceTemplateItemRead] = []  # ✅ expanded list of items
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/services/global_service_api.dart';
+import 'manage_templates_page.dart';
 
 class EditProviderPage extends StatefulWidget {
   final String providerId;
@@ -15,6 +16,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
   Map<String, dynamic>? _provider;
   List<dynamic> _allServices = [];
   final Map<String, Map<String, TextEditingController>> _serviceFieldControllers = {}; 
+  final Map<String, TextEditingController> _displayNameControllers = {};
   final Map<String, TextEditingController> _priceControllers = {};
   final Set<String> _selectedServiceIds = {};
   final Map<String, dynamic> _serviceDetails = {};
@@ -46,13 +48,19 @@ class _EditProviderPageState extends State<EditProviderPage> {
       _allServices = services;
     });
 
-    // mark selected and prefill metadata
     for (var a in attached) {
       final sid = a["service_id"] ?? a["service"]["id"] ?? a["id"];
       if (sid != null) {
         _selectedServiceIds.add(sid);
-        _priceControllers.putIfAbsent(sid, () => TextEditingController(text: a["price"]?.toString() ?? ""));
-        // prepare field controllers from metadata
+
+        _priceControllers.putIfAbsent(
+          sid, () => TextEditingController(text: a["price"]?.toString() ?? "")
+        );
+
+        _displayNameControllers.putIfAbsent(
+          sid, () => TextEditingController(text: a["display_name"] ?? "")
+        );
+
         final meta = a["metadata"] ?? a["requirements"] ?? {};
         _serviceFieldControllers.putIfAbsent(sid, () {
           final map = <String, TextEditingController>{};
@@ -126,6 +134,9 @@ class _EditProviderPageState extends State<EditProviderPage> {
 
       payload.add({
         "service_id": sid,
+        "display_name": _displayNameControllers[sid]?.text.trim().isNotEmpty == true
+          ? _displayNameControllers[sid]?.text.trim()
+          : null,
         "price": _priceControllers[sid]?.text,
         "metadata": metadata
       });
@@ -138,7 +149,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
     }
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     if (_provider == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -193,8 +204,16 @@ class _EditProviderPageState extends State<EditProviderPage> {
                           if (isSelected) ...[
                             TextField(
                               controller: _priceControllers[sid],
-                              decoration: const InputDecoration(labelText: "Price"),
-                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(labelText: "Price", prefixText:"\KSH "),
+                              keyboardType: TextInputType.textarea,
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _displayNameControllers[sid],
+                              decoration: const InputDecoration(
+                                labelText: "Custom Display Name (optional)",
+                                hintText: "e.g., Premium Castrol Oil Change",
+                              ),
                             ),
                             const SizedBox(height: 8),
                             // ✅ render requirement-defined fields (from lazy-loaded details)
@@ -213,10 +232,29 @@ class _EditProviderPageState extends State<EditProviderPage> {
             }),
 
             const SizedBox(height: 20),
+
+            // ✅ Manage Templates button
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManageTemplatesPage(providerId: widget.providerId),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+              child: const Text("Manage Templates"),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Existing Save button
             ElevatedButton(onPressed: _save, child: const Text("Save")),
           ],
         ),
       ),
     );
   }
+
 }

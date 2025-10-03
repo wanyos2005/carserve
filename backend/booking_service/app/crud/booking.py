@@ -8,15 +8,19 @@ from typing import List, Optional
 from uuid import UUID
 
 
-def create_service_log(db: Session, payload: ServiceLogCreate) -> ServiceLog:
+def create_service_log(db: Session, payload: ServiceLogCreate):
     log = ServiceLog(**payload.dict())
     db.add(log)
     db.commit()
     db.refresh(log)
     return log
 
+def list_service_logs_for_user(db: Session, user_id: int):
+    return db.query(ServiceLog).filter(ServiceLog.user_id == user_id).all()
 
-def list_service_logs_for_user(db: Session, user_id: UUID):
+
+
+def list_service_logs_for_user(db: Session, user_id: int):
     return db.query(ServiceLog).filter(ServiceLog.user_id == user_id).all()
 
 
@@ -35,10 +39,10 @@ def create_booking(db: Session, payload: BookingCreate) -> Booking:
     db.refresh(b)
     return b
 
-def get_booking(db: Session, booking_id: UUID) -> Optional[Booking]:
+def get_booking(db: Session, booking_id: str) -> Optional[Booking]:
     return db.query(Booking).filter(Booking.id == booking_id).first()
 
-def update_booking(db: Session, booking_id: UUID, updates: BookingUpdate):
+def update_booking(db: Session, booking_id: str, updates: BookingUpdate):
     b = db.query(Booking).filter(Booking.id == booking_id).first()
     if not b:
         return None
@@ -48,7 +52,7 @@ def update_booking(db: Session, booking_id: UUID, updates: BookingUpdate):
     db.refresh(b)
     return b
 
-def delete_booking(db: Session, booking_id: UUID):
+def delete_booking(db: Session, booking_id: str):
     b = db.query(Booking).filter(Booking.id == booking_id).first()
     if not b:
         return False

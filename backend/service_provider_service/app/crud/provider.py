@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.models.provider import Provider
-from app.schemas.provider import ProviderCreate, ProviderUpdate
+from app.models.provider import Provider, ServiceTemplate, ServiceTemplateItem
+from app.schemas.provider import ProviderCreate, ProviderUpdate, ServiceTemplateCreate
 from typing import List, Optional
 from uuid import UUID
 
@@ -49,3 +49,27 @@ def update_provider(db: Session, provider_id: str, updates: ProviderUpdate):
     db.commit()
     db.refresh(p)
     return p
+
+def create_service_template(db: Session, payload: ServiceTemplateCreate):
+    # Create template
+    template = ServiceTemplate(
+        provider_id=payload.provider_id,
+        name=payload.name,
+    )
+    db.add(template)
+    db.flush()  # ensures template.id is available before inserting items
+
+    # Create items
+    items = [ServiceTemplateItem(template_id=template.id, service_id=item.service_id) for item in payload.items]
+    db.add_all(items)
+    db.commit()
+    db.refresh(template)
+    return template
+
+
+def get_service_templates_by_provider(db: Session, provider_id: str):
+    return (
+        db.query(ServiceTemplate)
+        .filter(ServiceTemplate.provider_id == provider_id)
+        .all()
+    )

@@ -10,20 +10,14 @@ class Booking(Base):
     __tablename__ = "bookings"
     __table_args__ = {"schema": "bookings"}
 
-    id = Column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        unique=True,
-        nullable=False,
-    )
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # ✅ user_id should be int since users table uses integers
     user_id = Column(Integer, nullable=False)
 
-    vehicle_id = Column(UUID(as_uuid=True), nullable=False)
-    provider_id = Column(UUID(as_uuid=True), nullable=False)
-    service_id = Column(UUID(as_uuid=True), nullable=True)
+    vehicle_id = Column(String, index=True)
+    provider_id = Column(String, index=True)
+    service_id = Column(String, index=True)
 
     status = Column(String(50), default="pending")
     scheduled_at = Column(TIMESTAMP(timezone=True), nullable=True)
@@ -36,20 +30,38 @@ class ServiceLog(Base):
     __tablename__ = "service_logs"
     __table_args__ = {"schema": "bookings"}
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
-    # ✅ user_id should be int here too
+    # User & Vehicle
     user_id = Column(Integer, nullable=False)
+    vehicle_id = Column(String, index=True)
 
-    vehicle_id = Column(UUID(as_uuid=True), nullable=True)
-
-    provider_id = Column(UUID(as_uuid=True), nullable=True)
-    service_id = Column(UUID(as_uuid=True), nullable=True)
-
+    # Provider details (nullable if user logs manually)
+    provider_id = Column(String, index=True)
     provider_name = Column(String(255), nullable=True)
     provider_contact = Column(JSON, nullable=True)
-    service_name = Column(String(255), nullable=True)
-    service_details = Column(JSON, nullable=True)
 
+    # Service details
+    service_id = Column(String, index=True)
+    service_name = Column(String(255), nullable=True)
+
+    # Items checked/changed
+    service_items = Column(JSON, nullable=True)  
+
+    mileage_km = Column(Integer, nullable=True)
     performed_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    # Next service info
+    next_service_km = Column(Integer, nullable=True)
+    next_service_date = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    # Mechanic info
+    mechanic_name = Column(String(255), nullable=True)
+    mechanic_contact = Column(String(255), nullable=True)
+
+    # NEW → Who logged this (user vs provider vs system)
+    logged_by = Column(String(50), default="user")  # "user", "provider", "system"
+
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+

@@ -7,9 +7,9 @@ from typing import Union
 
 class BookingCreate(BaseModel):
     user_id: int
-    vehicle_id: UUID
-    provider_id: UUID
-    service_id: Optional[UUID] = None
+    vehicle_id: str
+    provider_id: str
+    service_id: Optional[str] = None
     scheduled_at: Optional[datetime] = None
     location: Optional[dict] = None
     meta: Optional[dict] = None
@@ -21,7 +21,7 @@ class BookingUpdate(BaseModel):
     meta: Optional[dict] = None
 
 class BookingOut(BookingCreate):
-    id: UUID   # 🔄 fix: should be UUID, not int
+    id: str
     status: str
     created_at: Optional[datetime]
 
@@ -34,23 +34,27 @@ class BookingOut(BookingCreate):
 
 class ServiceLogBase(BaseModel):
     user_id: int
-    vehicle_id: Optional[UUID] = None
-    provider_id: Optional[UUID] = None
-    service_id: Optional[UUID] = None
-    provider_name: Optional[str] = None
-    provider_contact: Optional[Dict] = None
-    service_name: Optional[str] = None
-    service_details: Optional[Dict] = None
-    performed_at: Optional[datetime] = None
-
+    vehicle_id: Optional[str]
+    provider_id: Optional[str]
+    provider_name: Optional[str]
+    provider_contact: Optional[dict]
+    service_id: Optional[str]
+    service_name: Optional[str]
+    service_items: Optional[Dict[str, str]]
+    mileage_km: Optional[int]
+    performed_at: Optional[datetime]
+    next_service_km: Optional[int]
+    next_service_date: Optional[datetime]
+    mechanic_name: Optional[str]
+    mechanic_contact: Optional[str]
+    logged_by: Optional[str] = "user"  # default "user"
 
 class ServiceLogCreate(ServiceLogBase):
     pass
 
-
 class ServiceLog(ServiceLogBase):
-    id: UUID
+    id: str
     created_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True

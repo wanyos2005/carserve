@@ -26,21 +26,21 @@ def create(payload: BookingCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{booking_id}", response_model=BookingOut)
-def get_one(booking_id: UUID, db: Session = Depends(get_db)):
+def get_one(booking_id: str, db: Session = Depends(get_db)):
     b = get_booking(db, booking_id)
     if not b:
         raise HTTPException(status_code=404, detail="Booking not found")
     return b
 
 @router.put("/{booking_id}", response_model=BookingOut)
-def update(booking_id: UUID, updates: BookingUpdate, db: Session = Depends(get_db)):
+def update(booking_id: str, updates: BookingUpdate, db: Session = Depends(get_db)):
     b = update_booking(db, booking_id, updates)
     if not b:
         raise HTTPException(status_code=404, detail="Booking not found")
     return b
 
 @router.delete("/{booking_id}", status_code=204)
-def delete(booking_id: UUID, db: Session = Depends(get_db)):
+def delete(booking_id: str, db: Session = Depends(get_db)):
     ok = delete_booking(db, booking_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Booking not found")

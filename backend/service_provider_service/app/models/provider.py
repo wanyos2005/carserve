@@ -64,6 +64,7 @@ class ProviderService(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     provider_id = Column(String, ForeignKey("service_providers.providers.id"))
     service_id = Column(String, ForeignKey("service_providers.services.id"))
+    display_name = Column(String(255), nullable=True)  # provider-specific alias
     price = Column(String(50))
     duration = Column(String(50))
     booking_required = Column(Boolean, default=False)
@@ -72,3 +73,26 @@ class ProviderService(Base):
     provider = relationship("Provider", back_populates="provider_services")
     service = relationship("Service", back_populates="provider_services")
 
+
+class ServiceTemplate(Base):
+    __tablename__ = "service_templates"
+    __table_args__ = {"schema": "service_providers"}
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    provider_id = Column(String, ForeignKey("service_providers.providers.id"))
+    name = Column(String(255), nullable=False)  # e.g., "Standard Oil Service"
+
+    # Instead of raw JSON items, make it a relationship
+    items = relationship("ServiceTemplateItem", back_populates="template")
+
+
+class ServiceTemplateItem(Base):
+    __tablename__ = "service_template_items"
+    __table_args__ = {"schema": "service_providers"}
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    template_id = Column(String, ForeignKey("service_providers.service_templates.id"))
+    service_id = Column(String, ForeignKey("service_providers.services.id"))
+
+    template = relationship("ServiceTemplate", back_populates="items")
+    service = relationship("Service")

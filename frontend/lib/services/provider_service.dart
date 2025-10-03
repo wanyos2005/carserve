@@ -43,6 +43,13 @@ class ProviderService {
       return await ApiService.post("/service-providers/categories/provider-categories", data);
     
   }
+  static Future<List<dynamic>> getServiceTemplates(String providerId) async {
+    final res = await ApiService.get("/service-providers/$providerId/templates");
+    return res is List ? res : [];
+  }
+  static Future<dynamic> createServiceTemplate(String providerId, Map<String, dynamic> data) async {
+    return await ApiService.post("/service-providers/$providerId/templates", data);
+  }
 
 
 }

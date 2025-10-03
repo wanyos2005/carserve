@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/booking_service.dart';
 import 'package:car_platform/services/auth_service.dart';
+import 'package:car_platform/services/provider_service.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -16,7 +17,7 @@ class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> _serviceLogs = [];
   Map<String, dynamic>? _me;
 
-  // Caches for name lookups
+  // Lookup caches
   final Map<String, String> _providers = {};
   final Map<String, String> _services = {};
 
@@ -34,28 +35,38 @@ class _HistoryPageState extends State<HistoryPage> {
       final bookings = await BookingService.listBookingsForUser(me["id"]);
       final logs = await BookingService.listServiceLogsForUser(me["id"]);
 
+      // ✅ Fetch all providers using ProviderService
+      final providers = await ProviderService.getProviders();
+
+      final Map<String, String> providerMap = {};
+      final Map<String, String> serviceMap = {};
+
+      for (final p in providers) {
+        providerMap[p["id"]] = p["name"] ?? "Unknown";
+
+        final services = p["services"] as List? ?? [];
+        final providerServices = p["provider_services"] as List? ?? [];
+
+        for (final s in services) {
+          if (s is Map && s["id"] != null) {
+            final matched = providerServices.firstWhere(
+              (ps) => ps["service_id"] == s["id"],
+              orElse: () => null,
+            );
+            // For now we only keep service name, but matched has price/duration
+            serviceMap[s["id"]] = s["name"] ?? "Unknown";
+          }
+        }
+      }
+
       setState(() {
         _me = me;
         _bookings = bookings;
         _serviceLogs = logs;
+        _providers.addAll(providerMap);
+        _services.addAll(serviceMap);
         _loading = false;
       });
-
-      // Enrich booking names
-      for (final b in bookings) {
-        if (b["provider_id"] != null && !_providers.containsKey(b["provider_id"])) {
-          final provider = await BookingService.getProvider(b["provider_id"]);
-          if (provider != null) {
-            setState(() => _providers[b["provider_id"]] = provider["name"] ?? "Unknown");
-          }
-        }
-        /* if (b["service_id"] != null && !_services.containsKey(b["service_id"])) {
-          final service = await ProviderService.getService(b["service_id"]);
-          if (service != null) {
-            setState(() => _services[b["service_id"]] = service["name"] ?? "Unknown");
-          }
-        } */
-      }
     } else {
       setState(() => _loading = false);
     }
@@ -99,16 +110,26 @@ class _HistoryPageState extends State<HistoryPage> {
       itemCount: _bookings.length,
       itemBuilder: (context, i) {
         final b = _bookings[i];
-        final providerName = _providers[b["provider_id"]] ?? "Loading...";
-        final serviceName = b["service_id"] != null
-            ? _services[b["service_id"]] ?? "Loading..."
-            : "N/A";
+
+        final providerName = _providers[b["provider_id"]] ?? "Unknown";
+
+        // Handle multi-service bookings
+        String serviceName;
+        if (b.containsKey("service_ids") && b["service_ids"] is List) {
+          final ids = (b["service_ids"] as List).cast<String>();
+          final names = ids.map((id) => _services[id] ?? "Unknown").toList();
+          serviceName = names.isNotEmpty ? names.join(", ") : "Unknown";
+        } else if (b["service_id"] != null) {
+          serviceName = _services[b["service_id"]] ?? "Unknown";
+        } else {
+          serviceName = "N/A";
+        }
 
         return Card(
           child: ListTile(
             title: Text("Provider: $providerName"),
             subtitle: Text(
-              "Service: $serviceName\n"
+              "Services: $serviceName\n"
               "Status: ${b["status"]}\n"
               "Scheduled: ${b["scheduled_at"] ?? "N/A"}",
             ),

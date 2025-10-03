@@ -8,13 +8,13 @@ from app.schemas.provider import (
     ProviderCreate, Provider, ProviderUpdate,
     Service as ServiceSchema,  # ✅ alias schema
     ServiceCreate, ServiceUpdate,
-    ProviderServiceAttach, ProviderServiceCreate  # ✅ new schema
+    ProviderServiceAttach, ProviderServiceCreate, ServiceTemplateCreate, ServiceTemplateRead
 )
 from app.schemas.category import (
     ProviderCategory, ProviderCategoryCreate,
     ServiceCategory, ServiceCategoryCreate,
 )
-from app.models.provider import Service  # ✅ ORM model
+from app.models.provider import Service, ServiceTemplate
 from app.crud import provider as crud_provider
 from app.crud import service as crud_service
 from app.crud import category as crud_category
@@ -164,6 +164,7 @@ def attach_services_to_provider(
     for s in services:
         payload = {
             "service_id": s.service_id,
+            "display_name": s.display_name,
             "price": s.price,
             "duration": s.duration,
             "booking_required": s.booking_required,
@@ -173,3 +174,39 @@ def attach_services_to_provider(
         created_or_updated.append(ps)
 
     return created_or_updated
+
+# -----------------------
+# Provider Templates
+# -----------------------
+
+@router.post("/{provider_id}/templates", response_model=ServiceTemplateRead)
+def create_service_template_for_provider(
+    provider_id: str,
+    payload: ServiceTemplateCreate,
+    db: Session = Depends(get_db)
+):
+    # Ensure provider exists
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    # Ensure provider consistency
+    if provider_id != payload.provider_id:
+        raise HTTPException(status_code=400, detail="Provider ID mismatch in payload")
+
+    template = crud_provider.create_service_template(db, payload)
+    return template
+
+
+@router.get("/{provider_id}/templates", response_model=List[ServiceTemplateRead])
+def list_service_templates_for_provider(
+    provider_id: str,
+    db: Session = Depends(get_db)
+):
+    # Ensure provider exists
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    templates = crud_provider.get_service_templates_by_provider(db, provider_id)
+    return templates
