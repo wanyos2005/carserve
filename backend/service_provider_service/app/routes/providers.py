@@ -209,15 +209,48 @@ def list_service_templates_for_provider(
 
 @router.get("/", response_model=List[ProviderOut])
 def list_providers(
-    category_id: Optional[int] = None,
-    service_id: Optional[str] = None,
+    category_id: Optional[int] = Query(None),
+    service_ids: Optional[List[str]] = Query(None),
+    match_all: bool = Query(False, description="If true, provider must offer ALL services (AND). If false, ANY (OR)."),
     db: Session = Depends(get_db)
 ):
     query = db.query(Provider)
 
     if category_id:
         query = query.filter(Provider.category_id == category_id)
-    if service_id:
-        query = query.join(Provider.provider_services).filter(ProviderService.service_id == service_id)
 
-    return query.all()
+    if service_ids:
+        query = query.join(Provider.provider_services)
+        if match_all:
+            for sid in service_ids:
+                query = query.filter(
+                    Provider.provider_services.any(ProviderService.service_id == sid)
+                )
+        else:
+            query = query.filter(
+                Provider.provider_services.any(ProviderService.service_id.in_(service_ids))
+            )
+
+    providers = query.distinct().all()
+
+    # Populate enriched ProviderServiceOut
+    result = []
+    for p in providers:
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "location": p.location,
+            "services": [
+                {
+                    "service_id": ps.service_id,
+                    "display_name": ps.display_name,
+                    "price": ps.price,
+                    "duration": ps.duration,
+                    "booking_required": ps.booking_required,
+                    "extra_data": ps.extra_data,
+                    "service": ps.service
+                }
+                for ps in p.provider_services
+            ]
+        })
+    return result

@@ -92,7 +92,7 @@ class ProviderOut(BaseModel):
     id: str
     name: str
     location: Optional[str] = None
-    services: List[Service] = []
+    services: List[ProviderServiceAttach] = []
 
     class Config:
         orm_mode = True

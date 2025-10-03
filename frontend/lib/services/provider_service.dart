@@ -1,24 +1,9 @@
 import 'package:car_platform/services/api_service.dart';
 
 class ProviderService {
-  // 🔹 Providers
-  static Future<List<dynamic>> getProviders({
-    int? categoryId,
-    String? serviceId,
-  }) async {
-    // Build query string dynamically
-    final queryParams = <String, String>{};
-    if (categoryId != null) queryParams['category_id'] = categoryId.toString();
-    if (serviceId != null) queryParams['service_id'] = serviceId;
-
-    final queryString = queryParams.entries
-        .map((e) => "${e.key}=${Uri.encodeComponent(e.value)}")
-        .join("&");
-
-    final url = queryString.isNotEmpty
-        ? "/service-providers/?$queryString"
-        : "/service-providers";
-
+  
+  /// 🔹 Fetch providers by a full URL (used for multi-service filtering)
+  static Future<List<dynamic>> getProvidersByUrl(String url) async {
     final res = await ApiService.get(url);
     return res is List ? res : [];
   }
