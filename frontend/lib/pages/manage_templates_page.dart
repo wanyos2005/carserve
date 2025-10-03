@@ -44,7 +44,7 @@ class _ManageTemplatesPageState extends State<ManageTemplatesPage> {
     final payload = {
       "provider_id": widget.providerId,
       "name": name,
-      "items": _selectedServiceIds.toList(), // ✅ service_ids
+      "items": _selectedServiceIds.map((id) => {"service_id": id}).toList(),
     };
 
     await ProviderService.createServiceTemplate(widget.providerId, payload);

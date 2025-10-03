@@ -100,35 +100,6 @@ class _BookingPageState extends State<BookingPage> {
     }
   }
 
-  // Ensure each provider has a 'services' list (fetch details when missing).
-  Future<void> _ensureProvidersHaveServicesIfNeeded() async {
-    final needFetch = _allProviders.any((p) => p["services"] == null);
-    if (!needFetch) return;
-
-    try {
-      final futures = _allProviders.map((p) async {
-        if (p["id"] != null) {
-          // fetch services
-          final services = await ProviderService.getProviderServices(p["id"].toString());
-          p["services"] = services;
-
-          // also keep provider_services if not already there
-          if (p["provider_services"] == null) {
-            final details = await ProviderService.getProviderDetails(p["id"].toString());
-            p["provider_services"] = details?["provider_services"] ?? [];
-          }
-        }
-      }).toList();
-
-      await Future.wait(futures);
-    } catch (e) {
-      debugPrint("Failed to enrich provider data: $e");
-      for (var p in _allProviders) {
-        p["services"] = p["services"] ?? [];
-        p["provider_services"] = p["provider_services"] ?? [];
-      }
-    }
-  }
 
   // Apply filter: providers that offer `service`
   Future<void> _applyServiceFilter(Map<String, dynamic> service) async {
@@ -139,46 +110,44 @@ class _BookingPageState extends State<BookingPage> {
     });
 
     try {
-      // Ensure each provider has its services and provider_services
-      await _ensureProvidersHaveServicesIfNeeded();
+      final serviceId = service["id"].toString(); // global service id
 
-      final serviceId = service["id"];
+      // Fetch provider services directly for each provider
+      final futures = _allProviders.map((provider) async {
+        final pid = provider["id"]?.toString();
+        if (pid == null) return null;
 
-      final filtered = _allProviders.map((provider) {
-        final services = provider["services"] as List? ?? [];
-        final providerServices = provider["provider_services"] as List? ?? [];
+        final providerServices = await ProviderService.getProviderServices(pid);
 
-        // Merge provider_services info into each service
-        final enrichedServices = services.map((s) {
-          if (s is! Map) return s;
+        // check if provider offers this service
+        final hasService = providerServices.any((ps) {
+          final sid = ps["service_id"]?.toString();
+          return sid == serviceId;
+        });
 
-          final matched = providerServices.firstWhere(
-            (ps) => ps["service_id"] == s["id"],
-            orElse: () => null,
-          );
+        if (!hasService) return null;
 
-          if (matched != null) {
-            return {
-              ...s,
-              "price": matched["price"],
-              "duration": matched["duration"],
-              "booking_required": matched["booking_required"],
-              "extra_data": matched["extra_data"] ?? {},
-            };
-          }
-
-          return s;
+        // enrich services for UI
+        final services = providerServices.map((ps) {
+          final base = ps["service"] ?? {};
+          return {
+            ...base,
+            "display_name": ps["display_name"],
+            "price": ps["price"],
+            "duration": ps["duration"],
+            "booking_required": ps["booking_required"],
+            "extra_data": ps["extra_data"] ?? {},
+          };
         }).toList();
-
-        // Only keep provider if it offers the selected service
-        final serviceIds = enrichedServices.map((s) => s["id"]).toList();
-        if (!serviceIds.contains(serviceId)) return null;
 
         return {
           ...provider,
-          "services": enrichedServices,
+          "services": services,
         };
-      }).whereType<Map<String, dynamic>>().toList();
+      }).toList();
+
+      final results = await Future.wait(futures);
+      final filtered = results.whereType<Map<String, dynamic>>().toList();
 
       setState(() {
         _filteredProviders = filtered;
@@ -189,12 +158,13 @@ class _BookingPageState extends State<BookingPage> {
           const SnackBar(content: Text("No providers offer the selected service")),
         );
       }
-    } catch (e) {
-      debugPrint("Error filtering/enriching providers: $e");
+    } catch (e, st) {
+      debugPrint("Error filtering providers: $e\n$st");
     } finally {
       setState(() => _providersLoading = false);
     }
   }
+
 
   // Show searchable modal to pick a service
   Future<void> _showServiceSelector() async {

@@ -142,16 +142,17 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
                   final s = services[index];
                   return Card(
                     child: ListTile(
-                      title: Text(s["name"] ?? ""),
+                      title: Text(
+                        s["display_name"] ?? s["service"]?["name"] ?? "Unnamed Service"
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (s["description"] != null)
-                            Text(s["description"]),
+                          if (s["service"]?["description"] != null)
+                            Text(s["service"]["description"]),
                           if (s["price"] != null)
                             Text("Price: ${s["price"]}",
-                                style: const TextStyle(
-                                    fontStyle: FontStyle.italic)),
+                                style: const TextStyle(fontStyle: FontStyle.italic)),
                         ],
                       ),
                       onTap: () {
