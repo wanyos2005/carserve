@@ -205,7 +205,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
                             TextField(
                               controller: _priceControllers[sid],
                               decoration: const InputDecoration(labelText: "Price", prefixText:"\KSH "),
-                              keyboardType: TextInputType.textarea,
+                              keyboardType: TextInputType.text,
                             ),
                             const SizedBox(height: 8),
                             TextField(

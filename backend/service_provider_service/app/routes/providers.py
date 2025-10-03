@@ -136,18 +136,14 @@ def delete_provider(provider_id: str, db: Session = Depends(get_db)):
     return {}
 
 
-@router.get("/{provider_id}/services", response_model=List[ServiceSchema])
+@router.get("/{provider_id}/services", response_model=List[ProviderServiceAttach])
 def get_provider_services(provider_id: str, db: Session = Depends(get_db)):
     provider = crud_provider.get_provider(db, provider_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
 
-    if not provider.provider_services:
-        return []
+    return provider.provider_services  # includes both provider-specific fields + service
 
-    service_ids = [ps.service_id for ps in provider.provider_services]
-    services = db.query(Service).filter(Service.id.in_(service_ids)).all()  # ✅ ORM model
-    return services
 
 
 @router.post("/{provider_id}/services", response_model=List[ProviderServiceAttach])

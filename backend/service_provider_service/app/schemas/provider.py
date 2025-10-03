@@ -80,6 +80,10 @@ class ProviderServiceAttach(BaseModel):
     booking_required: Optional[bool] = False
     extra_data: Optional[Dict[str, Any]] = {}
 
+    
+    # 🔹 include nested service details
+    service: Optional[Service] = None   
+
     class Config:
         orm_mode = True   # ✅ important
         from_attributes = True

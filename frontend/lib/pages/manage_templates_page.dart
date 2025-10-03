@@ -44,7 +44,7 @@ class _ManageTemplatesPageState extends State<ManageTemplatesPage> {
     final payload = {
       "provider_id": widget.providerId,
       "name": name,
-      "items": _selectedServiceIds.toList(),
+      "items": _selectedServiceIds.toList(), // ✅ service_ids
     };
 
     await ProviderService.createServiceTemplate(widget.providerId, payload);
@@ -98,13 +98,16 @@ class _ManageTemplatesPageState extends State<ManageTemplatesPage> {
             const SizedBox(height: 8),
             ..._attachedServices.map((srv) {
               final sid = srv["service_id"];
-              final  customName= srv["display_name"];
-              final globalName = srv["service"]?["name"] ?? "Unnamed";
-              final displayName = customName?.isNotEmpty == true ? customName : globalName;
+              final alias = srv["display_name"]; // ✅ correct field
+              final globalName = srv["service"]?["name"] ?? "Unnamed Service";
+              final displayName = (alias != null && alias.isNotEmpty) ? alias : globalName;
 
               return CheckboxListTile(
                 value: _selectedServiceIds.contains(sid),
                 title: Text(displayName),
+                subtitle: alias != null && alias.isNotEmpty
+                    ? Text("Global: $globalName", style: const TextStyle(fontSize: 12, color: Colors.grey))
+                    : null,
                 onChanged: (v) {
                   setState(() {
                     if (v == true) {
