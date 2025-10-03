@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from core.db import get_db
-from backend.expenses_service.models.expense import Expense
-from backend.expenses_service.schemas.expense import ExpenseCreate, ExpenseRead, ExpenseUpdate
+from models.expense import Expense
+from schemas.expense import ExpenseCreate, ExpenseRead, ExpenseUpdate
 
 router = APIRouter()
 

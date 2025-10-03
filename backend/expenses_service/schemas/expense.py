@@ -12,7 +12,7 @@ class ExpenseBase(BaseModel):
     cost:int
     
 
-class ExpenseCreate(ExpenseBaseBase):
+class ExpenseCreate(ExpenseBase):
     pass
 
 class ExpenseRead(BaseModel):

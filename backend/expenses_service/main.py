@@ -5,8 +5,8 @@ import logging
 
 from core.db import Base, engine
 from core.config import ALLOWED_ORIGINS
-from backend.expenses_service.routes.expense import router as insurance_router
-from backend.expenses_service.models import expense as _models  # ensure model is imported before create_all
+from routes.expense import router as expense_router
+from models import expense as _models  # ensure model is imported before create_all
 
 app = FastAPI(title="Expenses", version="1.0.0")
 
@@ -26,8 +26,8 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     return response
 
-app.include_router(insurance_router, prefix="/insurance", tags=["insurance"])
+app.include_router(expense_router, prefix="/expense", tags=["expense"])
 
-@app.get("/insurance/health")
+@app.get("/expense/health")
 def health():
-    return {"status": "insurance-service healthy"}
+    return {"status": "expense-service healthy"}
