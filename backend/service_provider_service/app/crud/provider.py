@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from app.models.provider import Provider, ServiceTemplate, ServiceTemplateItem
+from sqlalchemy.orm import Session, joinedload
+from app.models.provider import Provider, ServiceTemplate, ServiceTemplateItem, ProviderService
 from app.schemas.provider import ProviderCreate, ProviderUpdate, ServiceTemplateCreate
 from typing import List, Optional
 from uuid import UUID
@@ -71,5 +71,14 @@ def get_service_templates_by_provider(db: Session, provider_id: str):
     return (
         db.query(ServiceTemplate)
         .filter(ServiceTemplate.provider_id == provider_id)
+        .all()
+    )
+
+def get_providers_by_service(db: Session, service_id: str):
+    return (
+        db.query(Provider)
+        .join(Provider.provider_services)  # inner join
+        .filter(ProviderService.service_id == service_id)
+        .options(joinedload(Provider.provider_services).joinedload(ProviderService.service))
         .all()
     )

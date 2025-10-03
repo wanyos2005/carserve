@@ -88,6 +88,16 @@ class ProviderServiceAttach(BaseModel):
         orm_mode = True   # ✅ important
         from_attributes = True
 
+class ProviderOut(BaseModel):
+    id: str
+    name: str
+    location: Optional[str] = None
+    services: List[Service] = []
+
+    class Config:
+        orm_mode = True
+
+
 class Provider(ProviderBase):
     id: str
     rating: Optional[float]

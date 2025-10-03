@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.core.db import get_db
 from app.schemas.provider import (
-    ProviderCreate, Provider, ProviderUpdate,
+    ProviderCreate, Provider, ProviderUpdate, ProviderOut,
     Service as ServiceSchema,  # ✅ alias schema
     ServiceCreate, ServiceUpdate,
     ProviderServiceAttach, ProviderServiceCreate, ServiceTemplateCreate, ServiceTemplateRead
@@ -14,7 +14,7 @@ from app.schemas.category import (
     ProviderCategory, ProviderCategoryCreate,
     ServiceCategory, ServiceCategoryCreate,
 )
-from app.models.provider import Service, ServiceTemplate
+from app.models.provider import Service, ServiceTemplate, ProviderService
 from app.crud import provider as crud_provider
 from app.crud import service as crud_service
 from app.crud import category as crud_category
@@ -206,3 +206,18 @@ def list_service_templates_for_provider(
 
     templates = crud_provider.get_service_templates_by_provider(db, provider_id)
     return templates
+
+@router.get("/", response_model=List[ProviderOut])
+def list_providers(
+    category_id: Optional[int] = None,
+    service_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Provider)
+
+    if category_id:
+        query = query.filter(Provider.category_id == category_id)
+    if service_id:
+        query = query.join(Provider.provider_services).filter(ProviderService.service_id == service_id)
+
+    return query.all()

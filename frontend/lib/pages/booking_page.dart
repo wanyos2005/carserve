@@ -110,50 +110,14 @@ class _BookingPageState extends State<BookingPage> {
     });
 
     try {
-      final serviceId = service["id"].toString(); // global service id
-
-      // Fetch provider services directly for each provider
-      final futures = _allProviders.map((provider) async {
-        final pid = provider["id"]?.toString();
-        if (pid == null) return null;
-
-        final providerServices = await ProviderService.getProviderServices(pid);
-
-        // check if provider offers this service
-        final hasService = providerServices.any((ps) {
-          final sid = ps["service_id"]?.toString();
-          return sid == serviceId;
-        });
-
-        if (!hasService) return null;
-
-        // enrich services for UI
-        final services = providerServices.map((ps) {
-          final base = ps["service"] ?? {};
-          return {
-            ...base,
-            "display_name": ps["display_name"],
-            "price": ps["price"],
-            "duration": ps["duration"],
-            "booking_required": ps["booking_required"],
-            "extra_data": ps["extra_data"] ?? {},
-          };
-        }).toList();
-
-        return {
-          ...provider,
-          "services": services,
-        };
-      }).toList();
-
-      final results = await Future.wait(futures);
-      final filtered = results.whereType<Map<String, dynamic>>().toList();
+      final serviceId = service["id"].toString();
+      final filtered = await ProviderService.getProviders(serviceId: serviceId);
 
       setState(() {
-        _filteredProviders = filtered;
+        _filteredProviders = filtered.cast<Map<String, dynamic>>();
       });
 
-      if (filtered.isEmpty) {
+      if (_filteredProviders.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("No providers offer the selected service")),
         );
