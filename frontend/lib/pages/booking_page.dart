@@ -60,7 +60,7 @@ class _BookingPageState extends State<BookingPage> {
       // fetch providers and global services concurrently
       final results = await Future.wait([
         ProviderService.getProviders(),
-        GlobalServiceApi.getAllGlobalServices(), // see snippet below to add this method
+        GlobalServiceApi.getAllGlobalServices(), 
       ]);
 
       final providers = results[0];
@@ -106,24 +106,26 @@ class _BookingPageState extends State<BookingPage> {
     if (!needFetch) return;
 
     try {
-      // fetch details for providers missing services
       final futures = _allProviders.map((p) async {
-        if (p["services"] == null && p["id"] != null) {
-          final details = await ProviderService.getProviderDetails(p["id"].toString());
-          if (details != null && details["services"] != null) {
-            p["services"] = details["services"];
-          } else {
-            p["services"] = [];
+        if (p["id"] != null) {
+          // fetch services
+          final services = await ProviderService.getProviderServices(p["id"].toString());
+          p["services"] = services;
+
+          // also keep provider_services if not already there
+          if (p["provider_services"] == null) {
+            final details = await ProviderService.getProviderDetails(p["id"].toString());
+            p["provider_services"] = details?["provider_services"] ?? [];
           }
         }
       }).toList();
 
       await Future.wait(futures);
     } catch (e) {
-      debugPrint("Failed to enrich provider data with services: $e");
-      // non-fatal: we'll treat missing services as empty lists
+      debugPrint("Failed to enrich provider data: $e");
       for (var p in _allProviders) {
         p["services"] = p["services"] ?? [];
+        p["provider_services"] = p["provider_services"] ?? [];
       }
     }
   }
@@ -137,17 +139,46 @@ class _BookingPageState extends State<BookingPage> {
     });
 
     try {
+      // Ensure each provider has its services and provider_services
       await _ensureProvidersHaveServicesIfNeeded();
 
       final serviceId = service["id"];
-      final filtered = _allProviders.where((p) {
-        final sList = p["services"];
-        if (sList is List) {
-          // services stored as list of strings/uuids
-          return sList.contains(serviceId);
-        }
-        return false;
-      }).cast<Map<String, dynamic>>().toList();
+
+      final filtered = _allProviders.map((provider) {
+        final services = provider["services"] as List? ?? [];
+        final providerServices = provider["provider_services"] as List? ?? [];
+
+        // Merge provider_services info into each service
+        final enrichedServices = services.map((s) {
+          if (s is! Map) return s;
+
+          final matched = providerServices.firstWhere(
+            (ps) => ps["service_id"] == s["id"],
+            orElse: () => null,
+          );
+
+          if (matched != null) {
+            return {
+              ...s,
+              "price": matched["price"],
+              "duration": matched["duration"],
+              "booking_required": matched["booking_required"],
+              "extra_data": matched["extra_data"] ?? {},
+            };
+          }
+
+          return s;
+        }).toList();
+
+        // Only keep provider if it offers the selected service
+        final serviceIds = enrichedServices.map((s) => s["id"]).toList();
+        if (!serviceIds.contains(serviceId)) return null;
+
+        return {
+          ...provider,
+          "services": enrichedServices,
+        };
+      }).whereType<Map<String, dynamic>>().toList();
 
       setState(() {
         _filteredProviders = filtered;
@@ -159,7 +190,7 @@ class _BookingPageState extends State<BookingPage> {
         );
       }
     } catch (e) {
-      debugPrint("Error filtering providers: $e");
+      debugPrint("Error filtering/enriching providers: $e");
     } finally {
       setState(() => _providersLoading = false);
     }
