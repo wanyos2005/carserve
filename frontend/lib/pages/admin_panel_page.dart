@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'provider_management_page.dart';
 import 'service_management_page.dart';
+import 'ProviderPages/provider_homepage.dart';
+import 'admin/provider_user_link_page.dart';
 
 
 class AdminPanelPage extends StatelessWidget {
@@ -42,6 +44,17 @@ class AdminPanelPage extends StatelessWidget {
                         builder: (_) => ProviderManagementPage()),
                   ),
                 ),
+                
+                _adminCard(
+                  context,
+                  "Link Users to Providers",
+                  Icons.link,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProviderUserLinkPage()),
+                  ),
+                ),
+
                 _adminCard(
                   context,
                   "Manage Services",

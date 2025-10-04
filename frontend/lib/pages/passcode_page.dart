@@ -72,7 +72,7 @@ class _PasscodePageState extends State<PasscodePage> {
                     if (val == null || val.trim().isEmpty) {
                       return "Passcode required";
                     }
-                    if (val.length != 6) {
+                    if (val.length != 4) {
                       return "Enter a valid 6-digit code";
                     }
                     return null;

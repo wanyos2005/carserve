@@ -63,4 +63,24 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");
   }
+  // Fetch all users (for admin)
+  static Future<List<dynamic>> getAllUsers() async {
+    final response = await http.get(Uri.parse("$baseUrl/all"));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return [];
+  }
+
+  // Link user to provider
+  static Future<bool> linkUserToProvider(int userId, String providerId) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/link-user-provider"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"user_id": userId, "provider_id": providerId}),
+    );
+
+    return response.statusCode == 200;
+  }
+
 }
