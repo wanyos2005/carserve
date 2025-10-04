@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'provider_management_page.dart';
 import 'service_management_page.dart';
-import 'booking_page_advanced.dart';
+
 
 class AdminPanelPage extends StatelessWidget {
   const AdminPanelPage({super.key});
@@ -40,16 +40,6 @@ class AdminPanelPage extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                         builder: (_) => ProviderManagementPage()),
-                  ),
-                ),
-                _adminCard(
-                  context,
-                  "Advanced Booking page test",
-                  Icons.build,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const BookingPage()),
                   ),
                 ),
                 _adminCard(

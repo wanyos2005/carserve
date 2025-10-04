@@ -1,4 +1,3 @@
-//booking_page.dart
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/booking_service.dart';
 import 'package:car_platform/services/vehicle_service.dart';
@@ -6,37 +5,37 @@ import 'package:car_platform/services/auth_service.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/services/global_service_api.dart';
 
+// Helpers
+import 'package:car_platform/BookingPageHelpers/service_selector.dart';
+import 'package:car_platform/BookingPageHelpers/provider_selector.dart';
+
 class BookingPage extends StatefulWidget {
   final Map<String, dynamic>? provider;
   final Map<String, dynamic>? service;
 
-  const BookingPage({
-    super.key,
-    this.provider,
-    this.service,
-  });
+  const BookingPage({super.key, this.provider, this.service});
 
   @override
   State<BookingPage> createState() => _BookingPageState();
 }
 
 class _BookingPageState extends State<BookingPage> {
-  // Data stores
+  // User & vehicles
   List<dynamic> _vehicles = [];
   String? _selectedVehicleId;
-
   Map<String, dynamic>? _me;
 
   // Services & Providers
   List<Map<String, dynamic>> _allServices = [];
-  Map<String, dynamic>? _selectedService;
-
-  List<Map<String, dynamic>> _allProviders = [];
-  List<Map<String, dynamic>> _filteredProviders = [];
+  List<Map<String, dynamic>> _selectedServices = [];
+  List<Map<String, dynamic>> _matchedProviders = [];
   Map<String, dynamic>? _selectedProvider;
 
+  // Recommendation toggle (matches backend "match_all")
+  bool _recommendedOnly = true;
+
   // Date/time
-  DateTime? _selectedDate; // contains both date+time once both are chosen
+  DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
   // Loading flags
@@ -56,42 +55,30 @@ class _BookingPageState extends State<BookingPage> {
     try {
       final vehicles = await VehicleService.listVehicles();
       final me = await AuthService.getMe();
-
-      // fetch providers and global services concurrently
-      final results = await Future.wait([
-        ProviderService.getProviders(),
-        GlobalServiceApi.getAllGlobalServices(), 
-      ]);
-
-      final providers = results[0];
-      final services = results[1];
+      final services = await GlobalServiceApi.getAllGlobalServices();
 
       setState(() {
         _vehicles = vehicles;
         _me = me;
-        _allProviders = providers.cast<Map<String, dynamic>>();
         _allServices = services.cast<Map<String, dynamic>>();
+        if (_vehicles.isNotEmpty && _selectedVehicleId == null) {
+          _selectedVehicleId = _vehicles.first["id"].toString();
+        }
 
-        // prefill from navigation props (if provided)
+        // If navigation passed in defaults
         if (widget.service != null) {
-          _selectedService = Map<String, dynamic>.from(widget.service!);
+          _selectedServices = [Map<String, dynamic>.from(widget.service!)];
         }
         if (widget.provider != null) {
           _selectedProvider = Map<String, dynamic>.from(widget.provider!);
         }
-
-        // default vehicle
-        if (_vehicles.isNotEmpty && _selectedVehicleId == null) {
-          _selectedVehicleId = _vehicles.first["id"].toString();
-        }
       });
 
-      // If a service was pre-selected, compute filtered providers now.
-      if (_selectedService != null) {
-        await _applyServiceFilter(_selectedService!);
+      if (_selectedServices.isNotEmpty) {
+        await _fetchMatchedProviders();
       }
     } catch (e, st) {
-      debugPrint("Error loading initial booking data: $e\n$st");
+      debugPrint("Error loading booking data: $e\n$st");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to load booking data.")),
       );
@@ -100,267 +87,156 @@ class _BookingPageState extends State<BookingPage> {
     }
   }
 
+  Future<void> _fetchMatchedProviders() async {
+    if (_selectedServices.isEmpty) return;
 
-  // Apply filter: providers that offer `service`
-  Future<void> _applyServiceFilter(Map<String, dynamic> service) async {
     setState(() {
       _providersLoading = true;
-      _filteredProviders = [];
+      _matchedProviders = [];
       _selectedProvider = null;
     });
 
     try {
-      final serviceId = service["id"].toString();
-      final filtered = await ProviderService.getProviders(serviceId: serviceId);
+      final serviceIds = _selectedServices.map((s) => s["id"].toString()).toList();
+      final providers = await ProviderService.getProviders(
+        serviceId: null, // We'll pass multiple ids through query params
+      );
+
+      // 🔹 Use backend multi-service filtering directly
+      final queryString = serviceIds.map((id) => "service_ids=$id").join("&");
+      final matchAll = _recommendedOnly ? "true" : "false";
+      final url = "/service-providers/?$queryString&match_all=$matchAll";
+      final filtered = await ProviderService.getProvidersByUrl(url);
 
       setState(() {
-        _filteredProviders = filtered.cast<Map<String, dynamic>>();
+        _matchedProviders = filtered.cast<Map<String, dynamic>>();
       });
 
-      if (_filteredProviders.isEmpty) {
+      if (filtered.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No providers offer the selected service")),
+          const SnackBar(content: Text("No providers match selected services")),
         );
       }
-    } catch (e, st) {
-      debugPrint("Error filtering providers: $e\n$st");
+    } catch (e) {
+      debugPrint("Failed to fetch matched providers: $e");
     } finally {
       setState(() => _providersLoading = false);
     }
   }
 
-
-  // Show searchable modal to pick a service
   Future<void> _showServiceSelector() async {
-    String query = "";
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          final filtered = _allServices.where((s) {
-            final name = (s["name"] ?? "").toString().toLowerCase();
-            final q = query.toLowerCase();
-            return name.contains(q);
-          }).toList();
-
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: "Search services...",
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                      onChanged: (v) => setModalState(() => query = v),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 360,
-                    child: ListView.separated(
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, i) {
-                        final s = filtered[i];
-                        final subtitle = [
-                          if (s["price_range"] != null) s["price_range"],
-                          if (s["requirements"] != null && s["requirements"]["duration"] != null)
-                            "${s["requirements"]["duration"]}"
-                        ].join(" • ");
-                        return ListTile(
-                          title: Text(s["name"] ?? "Unnamed"),
-                          subtitle: subtitle.isEmpty ? null : Text(subtitle),
-                          trailing: _selectedService != null && _selectedService!["id"] == s["id"]
-                              ? const Icon(Icons.check, color: Colors.green)
-                              : null,
-                          onTap: () async {
-                            Navigator.pop(ctx);
-                            setState(() => _selectedService = Map<String, dynamic>.from(s));
-                            await _applyServiceFilter(_selectedService!);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          );
+      builder: (ctx) => ServiceSelector(
+        allServices: _allServices,
+        selectedServices: _selectedServices,
+        onConfirm: (services) async {
+          setState(() => _selectedServices = services);
+          await _fetchMatchedProviders();
         },
       ),
     );
   }
 
-  // Show searchable modal to pick a provider (uses filtered list)
   Future<void> _showProviderSelector() async {
-    String query = "";
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          final listSource = _selectedService == null ? _allProviders : _filteredProviders;
-          final filtered = listSource.where((p) {
-            final name = (p["name"] ?? "").toString().toLowerCase();
-            final q = query.toLowerCase();
-            return name.contains(q);
-          }).toList();
-
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: "Search providers...",
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                      onChanged: (v) => setModalState(() => query = v),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 360,
-                    child: _providersLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.separated(
-                            itemCount: filtered.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
-                            itemBuilder: (context, i) {
-                              final p = filtered[i];
-                              return ListTile(
-                                title: Text(p["name"] ?? "Provider"),
-                                subtitle: Text(p["description"] ?? ""),
-                                trailing: _selectedProvider != null && _selectedProvider!["id"] == p["id"]
-                                    ? const Icon(Icons.check, color: Colors.green)
-                                    : null,
-                                onTap: () {
-                                  Navigator.pop(ctx);
-                                  setState(() => _selectedProvider = Map<String, dynamic>.from(p));
-                                },
-                              );
-                            },
-                          ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          );
-        },
+      builder: (ctx) => ProviderSelector(
+        filteredProviders: _matchedProviders,
+        selectedServices: _selectedServices,
+        recommendedOnly: _recommendedOnly,
+        selectedProvider: _selectedProvider,
+        onSelect: (p) => setState(() => _selectedProvider = p),
       ),
     );
   }
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final pickedDate = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: now,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
     );
-    if (pickedDate != null) {
+    if (picked != null) {
       setState(() {
-        _selectedDate = DateTime(pickedDate.year, pickedDate.month, pickedDate.day,
-            _selectedTime?.hour ?? 9, _selectedTime?.minute ?? 0);
+        _selectedDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          _selectedTime?.hour ?? 9,
+          _selectedTime?.minute ?? 0,
+        );
       });
     }
   }
 
   Future<void> _pickTime() async {
-    final t = await showTimePicker(context: context, initialTime: _selectedTime ?? const TimeOfDay(hour: 9, minute: 0));
+    final t = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? const TimeOfDay(hour: 9, minute: 0),
+    );
     if (t != null) {
       setState(() {
         _selectedTime = t;
         if (_selectedDate != null) {
-          _selectedDate = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day, t.hour, t.minute);
+          _selectedDate = DateTime(
+            _selectedDate!.year,
+            _selectedDate!.month,
+            _selectedDate!.day,
+            t.hour,
+            t.minute,
+          );
         }
       });
     }
   }
 
   Future<void> _book() async {
-    if (_me == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("User not loaded")));
-      return;
-    }
-    if (_selectedVehicleId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Select a vehicle")));
-      return;
-    }
-    if (_selectedService == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Select a service")));
-      return;
-    }
-    if (_selectedProvider == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Select a provider")));
-      return;
-    }
-    if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Select date and optionally time")));
+    if (_me == null ||
+        _selectedVehicleId == null ||
+        _selectedServices.isEmpty ||
+        _selectedProvider == null ||
+        _selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please complete all fields")),
+      );
       return;
     }
 
     setState(() => _loading = true);
-
     try {
-      final bookingData = {
-        "user_id": _me!["id"],
-        "vehicle_id": _selectedVehicleId,
-        "provider_id": _selectedProvider!["id"],
-        "service_id": _selectedService!["id"],
-        "scheduled_at": _selectedDate!.toUtc().toIso8601String(),
-      };
-
-      final res = await BookingService.createBooking(bookingData);
-      if (res != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Booking successful!")));
-        Navigator.pop(context, true);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to create booking")));
+      for (var service in _selectedServices) {
+        await BookingService.createBooking({
+          "user_id": _me!["id"],
+          "vehicle_id": _selectedVehicleId,
+          "provider_id": _selectedProvider!["id"],
+          "service_id": service["id"],
+          "scheduled_at": _selectedDate!.toUtc().toIso8601String(),
+        });
       }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Booking(s) successful!")));
+      Navigator.pop(context, true);
     } catch (e, st) {
       debugPrint("Booking failed: $e\n$st");
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Booking failed")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Booking failed")));
     } finally {
       setState(() => _loading = false);
     }
   }
 
-  Widget _selectedCard({
-    required IconData icon,
-    required String title,
-    required String? subtitle,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return Card(
-      child: ListTile(
-        leading: Icon(icon, size: 36),
-        title: Text(title),
-        subtitle: subtitle == null ? null : Text(subtitle),
-        trailing: IconButton(icon: const Icon(Icons.edit), onPressed: onTap),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     if (_initialLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text("Book Service")),
-        body: Center(child: CircularProgressIndicator()),
+        appBar: AppBar(title: const Text("Book Service")),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -370,9 +246,8 @@ class _BookingPageState extends State<BookingPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Vehicle selector
             DropdownButtonFormField<String>(
-              initialValue: _selectedVehicleId,
+              value: _selectedVehicleId,
               items: _vehicles
                   .map((v) => DropdownMenuItem<String>(
                         value: v["id"].toString(),
@@ -387,56 +262,45 @@ class _BookingPageState extends State<BookingPage> {
             ),
             const SizedBox(height: 12),
 
-            // Service selector (opens modal)
-            _selectedService == null
-                ? ElevatedButton.icon(
-                    onPressed: _showServiceSelector,
-                    icon: const Icon(Icons.build_circle),
-                    label: const Text("Choose Service"),
-                  )
-                : _selectedCard(
-                    icon: Icons.build_circle,
-                    title: _selectedService!["name"] ?? "Service",
-                    subtitle: ((_selectedService!["price_range"] ?? "") +
-                            ((_selectedService!["requirements"] != null && _selectedService!["requirements"]["duration"] != null)
-                                ? " • ${_selectedService!["requirements"]["duration"]}"
-                                : ""))
-                        .trim(),
-                    onTap: _showServiceSelector,
+            ElevatedButton.icon(
+              onPressed: _showServiceSelector,
+              icon: const Icon(Icons.build_circle),
+              label: Text(_selectedServices.isEmpty
+                  ? "Choose Services"
+                  : "Selected: ${_selectedServices.map((s) => s["name"]).join(", ")}"),
+            ),
+            const SizedBox(height: 12),
+
+            SwitchListTile(
+              title: const Text("Show Recommended Providers"),
+              value: _recommendedOnly,
+              onChanged: (v) async {
+                setState(() => _recommendedOnly = v);
+                await _fetchMatchedProviders();
+              },
+            ),
+            const SizedBox(height: 12),
+
+            _providersLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton.icon(
+                    onPressed: _matchedProviders.isEmpty ? null : _showProviderSelector,
+                    icon: const Icon(Icons.business),
+                    label: Text(_selectedProvider == null
+                        ? "Choose Provider"
+                        : _selectedProvider!["name"] ?? "Provider"),
                   ),
             const SizedBox(height: 12),
 
-            // Provider selector
-            _providersLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _selectedProvider == null
-                    ? ElevatedButton.icon(
-                        onPressed: _filteredProviders.isEmpty && _selectedService != null
-                            ? () {
-                                // if user selected a service but no providers found
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(const SnackBar(content: Text("No providers available for this service")));
-                              }
-                            : _showProviderSelector,
-                        icon: const Icon(Icons.business),
-                        label: Text(_selectedService == null ? "Choose Provider" : "Choose Provider (for selected service)"),
-                      )
-                    : _selectedCard(
-                        icon: Icons.business,
-                        title: _selectedProvider!["name"] ?? "Provider",
-                        subtitle: _selectedProvider!["description"],
-                        onTap: _showProviderSelector,
-                      ),
-            const SizedBox(height: 12),
-
-            // Date & time pickers
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: _pickDate,
                     icon: const Icon(Icons.calendar_today),
-                    label: Text(_selectedDate == null ? "Pick date" : _selectedDate!.toLocal().toString().split(' ')[0]),
+                    label: Text(_selectedDate == null
+                        ? "Pick Date"
+                        : _selectedDate!.toLocal().toString().split(" ")[0]),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -444,19 +308,26 @@ class _BookingPageState extends State<BookingPage> {
                   child: ElevatedButton.icon(
                     onPressed: _pickTime,
                     icon: const Icon(Icons.access_time),
-                    label: Text(_selectedTime == null ? "Pick time" : _selectedTime!.format(context)),
+                    label: Text(_selectedTime == null
+                        ? "Pick Time"
+                        : _selectedTime!.format(context)),
                   ),
                 ),
               ],
             ),
-
             const Spacer(),
 
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _loading ? null : _book,
-                child: _loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text("Confirm Booking"),
+                child: _loading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text("Confirm Booking"),
               ),
             ),
           ],
