@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/services/booking_service.dart';
 import 'package:car_platform/services/vehicle_service.dart';
+import 'package:car_platform/services/auth_service.dart';
+
 
 class ProviderLogServicePage extends StatefulWidget {
   final String providerId;
@@ -108,86 +110,76 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
 
   Future<void> _submitLog() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_services.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No services available.')));
-      return;
-    }
-
-    final completed = _services.where((s) => s['done'] == true).toList();
-    if (completed.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mark at least one service as done.')));
-      return;
-    }
+    if (_services.isEmpty) return;
 
     setState(() => _loading = true);
 
     try {
-      // 1️⃣ Create guest vehicle first
+      // 1️⃣ Create guest user first
+      final guestUser = await AuthService.createGuestUser(
+        email: _guestContactController.text.contains("@")
+            ? _guestContactController.text.trim()
+            : null,
+        phone: !_guestContactController.text.contains("@")
+            ? _guestContactController.text.trim()
+            : null,
+        name: "Guest User",
+        providerId: widget.providerId,
+      );
+
+      if (guestUser == null) throw Exception("Failed to create guest user");
+      final guestId = guestUser["id"];
+
+      // 2️⃣ Create vehicle
       final guestVehiclePayload = {
+        "owner_id": guestId,
         "plate": _vehiclePlateController.text.trim(),
         "make": _vehicleMakeController.text.trim(),
         "model": _vehicleModelController.text.trim(),
         "mileage": int.tryParse(_mileageController.text) ?? 0,
         "yom": int.tryParse(_yomController.text) ?? 0,
         "fuel_type": _fuelTypeController.text.trim(),
-        "guest_owner_email": _guestContactController.text.trim(),
-        "guest_owner_phone": _guestContactController.text.trim(),
         "created_by_provider_id": widget.providerId,
       };
 
-      final createdVehicle =
-          await VehicleService.createGuestVehicle(guestVehiclePayload);
-
-      if (createdVehicle == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to create guest vehicle.')),
-        );
-        setState(() => _loading = false);
-        return;
-      }
+      final createdVehicle = await VehicleService.createGuestVehicle(guestVehiclePayload);
+      if (createdVehicle == null) throw Exception("Failed to create guest vehicle");
 
       final vehicleId = createdVehicle["id"];
-      final guestId = createdVehicle["owner_id"];
-
-      // 2️⃣ Prepare service logs payload using the created vehicle + guest user
-      final logsPayload = completed.map((s) {
-        return {
-          "provider_id": widget.providerId,
-          "vehicle_id": vehicleId,
-          "user_id": guestId,
-          "mileage_km": int.tryParse(_mileageController.text) ?? 0,
-          "service_id": s["service_id"],
-          "service_name": s["display_name"],
-          "performed_at": _performedAt?.toIso8601String(),
-          "next_service_km": int.tryParse(_nextServiceKmController.text) ?? 0,
-          "next_service_date": _nextServiceDate?.toIso8601String(),
-          "mechanic_name": _mechanicNameController.text.trim(),
-          "mechanic_contact": _mechanicContactController.text.trim(),
-          "notes": s["notes"],
-          "logged_by": "provider",
-        };
-      }).toList();
-
-      debugPrint("📦 Creating guest vehicle: $guestVehiclePayload");
-      debugPrint("🧾 Submitting logs: $logsPayload");
 
       // 3️⃣ Log the completed services
+      final completed = _services.where((s) => s["done"] == true).toList();
+      final logsPayload = completed.map((s) => {
+        "provider_id": widget.providerId,
+        "vehicle_id": vehicleId,
+        "user_id": guestId,
+        "service_id": s["service_id"],
+        "service_name": s["display_name"],
+        "performed_at": _performedAt?.toIso8601String(),
+        "next_service_km": int.tryParse(_nextServiceKmController.text) ?? 0,
+        "next_service_date": _nextServiceDate?.toIso8601String(),
+        "mileage_km": int.tryParse(_mileageController.text) ?? 0,
+        "mechanic_name": _mechanicNameController.text.trim(),
+        "mechanic_contact": _mechanicContactController.text.trim(),
+        "notes": s["notes"],
+        "logged_by": "provider",
+      }).toList();
+
       final response = await BookingService.createBulkServiceLogs(logsPayload);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Logged ${response.length} services successfully!')),
+        SnackBar(content: Text("Logged ${response.length} services successfully!")),
       );
       Navigator.pop(context);
     } catch (e) {
       debugPrint("❌ Error submitting logs: $e");
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Failed to submit logs.')));
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       setState(() => _loading = false);
     }
   }
+
 
 
   @override
