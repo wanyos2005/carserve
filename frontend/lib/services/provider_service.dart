@@ -70,6 +70,7 @@ class ProviderService {
   static Future<dynamic> createServiceTemplate(String providerId, Map<String, dynamic> data) async {
     return await ApiService.post("/service-providers/$providerId/templates", data);
   }
+  
 
 
 }

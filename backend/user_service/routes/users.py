@@ -10,15 +10,17 @@ from jose import jwt, JWTError
 
 from core.db import get_db
 from core.security import create_access_token
-from models.users import User, Roles, OTP
+from models.users import User, Roles, OTP, ProviderUserLink
 from schemas.users import (
     SendCodeRequest,
     VerifyCodeRequest,
+    LinkUserToProviderRequest,
     Token,
     EmailSchema,
     UserRead,Role
 )
-from config import conf, settings  # ✅ import both
+from core.config import DATABASE_URL, SECRET_KEY, ALGORITHM
+from mailconfig import conf
 
 router = APIRouter()
 
@@ -37,7 +39,7 @@ def get_current_user(
 ):
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            token, SECRET_KEY, algorithms=[ALGORITHM]
         )
         user_id: str = payload.get("sub")
         if user_id is None:
@@ -80,7 +82,7 @@ def send_code(
         db.refresh(db_user)
 
     # generate OTP
-    code = generate_otp(6)
+    code = generate_otp(4)
     expires_at = datetime.utcnow() + timedelta(minutes=5)
 
     # save OTP in DB
@@ -128,6 +130,21 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
     db_user.verified = True
+
+    # ✅ Link user to provider if provided and not already linked
+    if req.provider_id:
+        existing_link = (
+            db.query(ProviderUserLink)
+            .filter(
+                ProviderUserLink.user_id == db_user.id,
+                ProviderUserLink.provider_id == req.provider_id,
+            )
+            .first()
+        )
+        if not existing_link:
+            link = ProviderUserLink(user_id=db_user.id, provider_id=req.provider_id)
+            db.add(link)
+
     db.commit()
 
     # issue token
@@ -135,12 +152,110 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 
+
 # --------------------------
 # Get current user
 # --------------------------
 @router.get("/me", response_model=UserRead)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
+def read_users_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check if user is linked to any provider
+    provider_link = db.query(ProviderUserLink).filter(
+        ProviderUserLink.user_id == current_user.id
+    ).first()
+
+    user_data = {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "phone": current_user.phone,
+        "provider_id": provider_link.provider_id if provider_link else None
+    }
+
+    return user_data
+
+# --------------------------
+# Get all users (Admin only)
+# --------------------------
+@router.get("/all", response_model=list[UserRead])
+def get_all_users(db: Session = Depends(get_db)):
+    users = db.query(User).all()
+
+    result = []
+    for user in users:
+        provider_link = db.query(ProviderUserLink).filter(
+            ProviderUserLink.user_id == user.id
+        ).first()
+
+        result.append({
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "phone": user.phone,
+            "provider_id": provider_link.provider_id if provider_link else None
+        })
+
+    return result
+
+@router.post("/link-user-provider")
+def link_user_to_provider(req: LinkUserToProviderRequest, db: Session = Depends(get_db)):
+    existing_link = (
+        db.query(ProviderUserLink)
+        .filter(
+            ProviderUserLink.user_id == req.user_id,
+            ProviderUserLink.provider_id == req.provider_id
+        )
+        .first()
+    )
+
+    if existing_link:
+        raise HTTPException(status_code=400, detail="User already linked to this provider")
+
+    link = ProviderUserLink(user_id=req.user_id, provider_id=req.provider_id)
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+
+    return {"message": "User linked to provider successfully"}
+
+@router.post("/guest", response_model=UserRead)
+def create_or_get_guest_user(
+    email: str | None = None,
+    phone: str | None = None,
+    name: str | None = None,
+    provider_id: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Called by providers to create a 'guest' user record.
+    If the user already exists, returns the existing one.
+    """
+    if not email and not phone:
+        raise HTTPException(status_code=400, detail="Email or phone required")
+
+    query = db.query(User)
+    if email:
+        user = query.filter(User.email == email).first()
+    elif phone:
+        user = query.filter(User.phone == phone).first()
+    else:
+        user = None
+
+    if user:
+        return user
+
+    guest = User(
+        email=email,
+        phone=phone,
+        name=name,
+        is_guest=True,
+        created_by_provider_id=provider_id,
+        verified=False,
+    )
+    db.add(guest)
+    db.commit()
+    db.refresh(guest)
+    return guest
+
 
 
 # --------------------------

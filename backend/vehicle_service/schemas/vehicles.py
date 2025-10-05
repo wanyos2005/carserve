@@ -11,6 +11,11 @@ class VehicleBase(BaseModel):
     fuel_type: str
     transmission: Optional[str] = None
     color: Optional[str] = None
+    # 🔹 NEW: guest vehicle metadata
+    guest_owner_name: Optional[str] = None
+    guest_owner_email: Optional[str] = None
+    guest_owner_phone: Optional[str] = None
+    created_by_provider_id: Optional[str] = None
 
 class VehicleCreate(VehicleBase):
     pass

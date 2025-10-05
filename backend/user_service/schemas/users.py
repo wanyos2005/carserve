@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -9,10 +10,18 @@ class SendCodeRequest(UserBase):
 class VerifyCodeRequest(BaseModel):
     email: EmailStr
     code: str
+    provider_id: Optional[str] = None  # ✅ NEW FIELD
 
 class UserRead(UserBase):
     id: int
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    provider_id: Optional[str] = None  # ✅ NEW FIELD
     model_config = {"from_attributes": True}
+
+class LinkUserToProviderRequest(BaseModel):
+    user_id: int
+    provider_id: str
 
 class Token(BaseModel):
     access_token: str
@@ -25,3 +34,9 @@ class EmailSchema(BaseModel):
 
 class Role(BaseModel):
     name: str
+    
+class GuestUserSchema(BaseModel):
+    name: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    provider_id: str

@@ -97,7 +97,7 @@ class AuthService {
   }
 
   // Link user to provider
-  static Future<bool> linkUserToProvider(int userId, String providerId) async {
+  static Future<bool> linkUserToProvider(int userId, int providerId) async {
     final response = await http.post(
       Uri.parse("$baseUrl/link-user-provider"),
       headers: {"Content-Type": "application/json"},
