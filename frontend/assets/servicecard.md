@@ -73,3 +73,4 @@ Add scan-to-log (OCR from paper card → optional Phase 2 feature).
 Your app becomes the digital replacement of this paper card, but unified across all providers.
 
 Do you want me to draft you a database schema update for ServiceLog that covers exactly the fields on this TotalEnergies card (so you can capture them all now)?
+

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:car_platform/services/provider_service.dart';
+import 'package:car_platform/services/booking_service.dart';
+import 'package:car_platform/services/vehicle_service.dart';
 
 class ProviderLogServicePage extends StatefulWidget {
   final String providerId;
@@ -11,6 +14,25 @@ class ProviderLogServicePage extends StatefulWidget {
 }
 
 class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
+  final _formKey = GlobalKey<FormState>();
+
+ // Vehicle + user
+  final TextEditingController _vehiclePlateController = TextEditingController();
+  final TextEditingController _vehicleMakeController = TextEditingController();
+  final TextEditingController _vehicleModelController = TextEditingController();
+  final TextEditingController _guestContactController = TextEditingController();
+  final TextEditingController _fuelTypeController = TextEditingController();
+  final TextEditingController _yomController = TextEditingController();
+
+  // Service info
+  final TextEditingController _mileageController = TextEditingController();
+  final TextEditingController _mechanicNameController = TextEditingController();
+  final TextEditingController _mechanicContactController = TextEditingController();
+  final TextEditingController _nextServiceKmController = TextEditingController();
+
+  DateTime? _performedAt;
+  DateTime? _nextServiceDate;
+
   List<Map<String, dynamic>> _services = [];
   bool _loading = true;
 
@@ -21,134 +43,342 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   }
 
   Future<void> _fetchTemplateServices() async {
-    setState(() {
-      _loading = true;
-    });
-
+    setState(() => _loading = true);
     try {
-      // Fetch all templates for the provider
+      final providerServices =
+          await ProviderService.getProviderServices(widget.providerId);
+
+      final Map<String, dynamic> serviceMap = {
+        for (var ps in providerServices) ps['service_id']: ps
+      };
+
       final templates = await ProviderService.getServiceTemplates(widget.providerId);
-
-      if (templates.isNotEmpty) {
-        // Pick the first template as the "active" template
-        final activeTemplate = templates[0];
-
-        // Map template items to local state with logging fields
-        final items = List<Map<String, dynamic>>.from(
-          activeTemplate['items'] ?? [],
-        ).map((item) {
-          return {
-            'service_id': item['service_id'],
-            'display_name': item['service']['name'] ?? 'Unnamed Service',
-            'done': false,
-            'notes': '',
-          };
-        }).toList();
-
-        setState(() {
-          _services = items;
-        });
+      if (templates.isEmpty) {
+        setState(() => _services = []);
+        return;
       }
+
+      final activeTemplate = templates.first;
+      final items = List<Map<String, dynamic>>.from(activeTemplate['items'] ?? []);
+
+      final resolvedItems = items.map((item) {
+        final ps = serviceMap[item['service_id']];
+        return {
+          'service_id': item['service_id'],
+          'display_name':
+              ps?['display_name'] ?? ps?['service']?['name'] ?? 'Unnamed Service',
+          'done': false,
+          'notes': '',
+        };
+      }).toList();
+
+      setState(() => _services = resolvedItems);
     } catch (e) {
       debugPrint("Error fetching template services: $e");
     }
-
-    setState(() {
-      _loading = false;
-    });
+    setState(() => _loading = false);
   }
 
   void _toggleDone(int index, bool? value) {
-    setState(() {
-      _services[index]['done'] = value ?? false;
-    });
+    setState(() => _services[index]['done'] = value ?? false);
   }
 
   void _updateNotes(int index, String value) {
-    setState(() {
-      _services[index]['notes'] = value;
-    });
+    setState(() => _services[index]['notes'] = value);
   }
 
-  void _submitLog() {
-    // Prepare payload
-    final payload = _services.map((s) {
-      return {
-        'service_id': s['service_id'],
-        'done': s['done'],
-        'notes': s['notes'],
-      };
-    }).toList();
-
-    debugPrint("Submitting provider log: $payload");
-
-    // TODO: Call backend API to save log
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Provider log submitted!')),
+  Future<void> _selectDate(BuildContext context, bool isNextService) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
     );
+
+    if (picked != null) {
+      setState(() {
+        if (isNextService) {
+          _nextServiceDate = picked;
+        } else {
+          _performedAt = picked;
+        }
+      });
+    }
   }
+
+  Future<void> _submitLog() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_services.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No services available.')));
+      return;
+    }
+
+    final completed = _services.where((s) => s['done'] == true).toList();
+    if (completed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mark at least one service as done.')));
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      // 1️⃣ Create guest vehicle first
+      final guestVehiclePayload = {
+        "plate": _vehiclePlateController.text.trim(),
+        "make": _vehicleMakeController.text.trim(),
+        "model": _vehicleModelController.text.trim(),
+        "mileage": int.tryParse(_mileageController.text) ?? 0,
+        "yom": int.tryParse(_yomController.text) ?? 0,
+        "fuel_type": _fuelTypeController.text.trim(),
+        "guest_owner_email": _guestContactController.text.trim(),
+        "guest_owner_phone": _guestContactController.text.trim(),
+        "created_by_provider_id": widget.providerId,
+      };
+
+      final createdVehicle =
+          await VehicleService.createGuestVehicle(guestVehiclePayload);
+
+      if (createdVehicle == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to create guest vehicle.')),
+        );
+        setState(() => _loading = false);
+        return;
+      }
+
+      final vehicleId = createdVehicle["id"];
+      final guestId = createdVehicle["owner_id"];
+
+      // 2️⃣ Prepare service logs payload using the created vehicle + guest user
+      final logsPayload = completed.map((s) {
+        return {
+          "provider_id": widget.providerId,
+          "vehicle_id": vehicleId,
+          "user_id": guestId,
+          "mileage_km": int.tryParse(_mileageController.text) ?? 0,
+          "service_id": s["service_id"],
+          "service_name": s["display_name"],
+          "performed_at": _performedAt?.toIso8601String(),
+          "next_service_km": int.tryParse(_nextServiceKmController.text) ?? 0,
+          "next_service_date": _nextServiceDate?.toIso8601String(),
+          "mechanic_name": _mechanicNameController.text.trim(),
+          "mechanic_contact": _mechanicContactController.text.trim(),
+          "notes": s["notes"],
+          "logged_by": "provider",
+        };
+      }).toList();
+
+      debugPrint("📦 Creating guest vehicle: $guestVehiclePayload");
+      debugPrint("🧾 Submitting logs: $logsPayload");
+
+      // 3️⃣ Log the completed services
+      final response = await BookingService.createBulkServiceLogs(logsPayload);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logged ${response.length} services successfully!')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      debugPrint("❌ Error submitting logs: $e");
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Failed to submit logs.')));
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Log Services"),
-      ),
+      appBar: AppBar(title: const Text("Log Services")),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _services.isEmpty
-              ? const Center(child: Text("No services in active template"))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _services.length,
-                  itemBuilder: (context, index) {
-                    final service = _services[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    service['display_name'],
-                                    style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                                Checkbox(
-                                  value: service['done'],
-                                  onChanged: (value) =>
-                                      _toggleDone(index, value),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              decoration: const InputDecoration(
-                                labelText: "Notes",
-                                border: OutlineInputBorder(),
-                              ),
-                              maxLines: 2,
-                              onChanged: (value) => _updateNotes(index, value),
-                            ),
-                          ],
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(14),
+                children: [
+                  const Text("Guest & Vehicle Info",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+
+                  TextFormField(
+                    controller: _guestContactController,
+                    decoration: const InputDecoration(
+                      labelText: "Guest Contact (phone/email)",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) => v == null || v.isEmpty ? "Required" : null,
+                  ),
+                  const SizedBox(height: 8),
+
+                  TextFormField(
+                    controller: _vehiclePlateController,
+                    decoration: const InputDecoration(
+                      labelText: "Vehicle Plate",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) => v == null || v.isEmpty ? "Required" : null,
+                  ),
+                  const SizedBox(height: 8),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _vehicleMakeController,
+                          decoration: const InputDecoration(
+                            labelText: "Make",
+                            border: OutlineInputBorder(),
+                          ),
                         ),
                       ),
-                    );
-                  },
-                ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: _services.isEmpty ? null : _submitLog,
-          child: const Text("Submit Log"),
-        ),
-      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _vehicleModelController,
+                          decoration: const InputDecoration(
+                            labelText: "Model",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _yomController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "Year of Manufacture (YOM)",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) => v == null || v.isEmpty ? "Required" : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _fuelTypeController,
+                          decoration: const InputDecoration(
+                            labelText: "Fuel Type",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) => v == null || v.isEmpty ? "Required" : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 30),
+                  const Text("Service Details",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _mileageController,
+                    decoration: const InputDecoration(
+                      labelText: "Mileage (km)",
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  ListTile(
+                    title: Text(_performedAt == null
+                        ? "Select Date Performed"
+                        : "Performed: ${DateFormat.yMMMd().format(_performedAt!)}"),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () => _selectDate(context, false),
+                  ),
+                  const SizedBox(height: 10),
+                  ..._services.map((service) => Card(
+                        elevation: 1,
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(8),
+                          title: Text(
+                            service['display_name'],
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          trailing: Checkbox(
+                            value: service['done'],
+                            onChanged: (value) =>
+                                _toggleDone(_services.indexOf(service), value),
+                          ),
+                          subtitle: TextField(
+                            decoration: const InputDecoration(
+                              labelText: "Notes",
+                              isDense: true,
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                            maxLines: 1,
+                            onChanged: (v) =>
+                                _updateNotes(_services.indexOf(service), v),
+                          ),
+                        ),
+                      )),
+                  const Divider(height: 30),
+                  const Text("Mechanic Details",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _mechanicNameController,
+                    decoration: const InputDecoration(
+                      labelText: "Mechanic Name",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _mechanicContactController,
+                    decoration: const InputDecoration(
+                      labelText: "Mechanic Contact",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const Divider(height: 30),
+                  const Text("Next Service",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _nextServiceKmController,
+                    decoration: const InputDecoration(
+                      labelText: "Next Service (km)",
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  ListTile(
+                    title: Text(_nextServiceDate == null
+                        ? "Select Next Service Date"
+                        : "Next Service: ${DateFormat.yMMMd().format(_nextServiceDate!)}"),
+                    trailing: const Icon(Icons.calendar_month),
+                    onTap: () => _selectDate(context, true),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: _loading ? null : _submitLog,
+                    icon: const Icon(Icons.save),
+                    label: const Text("Submit Log"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      textStyle: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

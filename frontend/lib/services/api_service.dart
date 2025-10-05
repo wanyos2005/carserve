@@ -5,33 +5,39 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseGatewayUrl = "http://192.168.0.107:8000";// nginx gateway "http://192.168.0.107:8000"; peter , "http://192.168.2.116:8000"; alex
+  static const String baseGatewayUrl = "http://192.168.0.107:8000"; 
+  // Alternate gateways:
+  // peter -> "http://192.168.0.107:8000"
+  // alex  -> "http://192.168.2.116:8000"
 
-
-  // Get token from SharedPreferences
+  // --- TOKEN HANDLER ---
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString("token");
   }
 
-  // Generic GET
-  static Future<dynamic> get(String path) async {
+  // --- GENERIC GET ---
+  static Future<dynamic> get(String path, {Map<String, String>? query}) async {
     final token = await _getToken();
+    Uri uri = Uri.parse("$baseGatewayUrl$path").replace(queryParameters: query);
+
     final response = await http.get(
-      Uri.parse("$baseGatewayUrl$path"),
+      uri,
       headers: {
         "Content-Type": "application/json",
         if (token != null) "Authorization": "Bearer $token",
       },
     );
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
+      return response.body.isNotEmpty ? jsonDecode(response.body) : null;
     }
+    print("GET $path failed: ${response.statusCode} - ${response.body}");
     return null;
   }
 
-  // Generic POST
-static Future<dynamic> post(String path, dynamic body) async {
+  // --- GENERIC POST ---
+  static Future<dynamic> post(String path, dynamic body) async {
     final token = await _getToken();
     final response = await http.post(
       Uri.parse("$baseGatewayUrl$path"),
@@ -39,15 +45,36 @@ static Future<dynamic> post(String path, dynamic body) async {
         "Content-Type": "application/json",
         if (token != null) "Authorization": "Bearer $token",
       },
-      body: jsonEncode(body), // works for both Map and List
+      body: jsonEncode(body),
     );
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
+      return response.body.isNotEmpty ? jsonDecode(response.body) : null;
     }
+    print("POST $path failed: ${response.statusCode} - ${response.body}");
     return null;
   }
 
-  // Generic DELETE
+  // --- GENERIC PUT ---
+  static Future<dynamic> put(String path, dynamic body) async {
+    final token = await _getToken();
+    final response = await http.put(
+      Uri.parse("$baseGatewayUrl$path"),
+      headers: {
+        "Content-Type": "application/json",
+        if (token != null) "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.body.isNotEmpty ? jsonDecode(response.body) : null;
+    }
+    print("PUT $path failed: ${response.statusCode} - ${response.body}");
+    return null;
+  }
+
+  // --- GENERIC DELETE ---
   static Future<bool> delete(String path) async {
     final token = await _getToken();
     final response = await http.delete(
@@ -57,6 +84,11 @@ static Future<dynamic> post(String path, dynamic body) async {
         if (token != null) "Authorization": "Bearer $token",
       },
     );
-    return response.statusCode >= 200 && response.statusCode < 300;
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return true;
+    }
+    print("DELETE $path failed: ${response.statusCode} - ${response.body}");
+    return false;
   }
 }

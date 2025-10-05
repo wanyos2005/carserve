@@ -6,6 +6,7 @@ class AuthService {
   static const String baseUrl = "http://192.168.0.107:8000/users";//.107 -Kelly
 
   // Send OTP
+  // Send OTP
   static Future<bool> sendCode(String email) async {
     final response = await http.post(
       Uri.parse("$baseUrl/send-code"),
@@ -15,31 +16,54 @@ class AuthService {
 
     if (response.statusCode == 200) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString("last_email", email);
+      await prefs.setString("email", email); // ✅ FIX: use same key as verifyCode()
       return true;
     }
     return false;
   }
+
 
   // Verify OTP
   static Future<bool> verifyCode(String code) async {
     final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString("last_email");
+    final email = prefs.getString('email'); // saved earlier during /send-code
     if (email == null) return false;
 
     final response = await http.post(
-      Uri.parse("$baseUrl/verify-code"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"email": email, "code": code}),
+      Uri.parse('$baseUrl/verify-code'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'code': code}),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      await prefs.setString("token", data["access_token"]);
-      return true;
+      final token = data['access_token'];
+
+      await prefs.setString('token', token);
+
+      // Fetch user profile (/me)
+      final meResponse = await http.get(
+        Uri.parse('$baseUrl/me'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (meResponse.statusCode == 200) {
+        final user = jsonDecode(meResponse.body);
+        await prefs.setString('user', jsonEncode(user));
+        return true;
+      }
     }
+
     return false;
   }
+
+  static Future<Map<String, dynamic>?> getCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userData = prefs.getString('user');
+    if (userData == null) return null;
+    return jsonDecode(userData);
+  }
+
 
   // Get logged-in user info
   static Future<Map<String, dynamic>?> getMe() async {

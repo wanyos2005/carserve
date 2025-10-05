@@ -34,4 +34,8 @@ class BookingService {
   static Future<Map<String, dynamic>?> getService(String serviceId) async {
     return await ApiService.get("/services/$serviceId");
   }
+   static Future<List<dynamic>> createBulkServiceLogs(List<Map<String, dynamic>> logsData) async {
+    final data = await ApiService.post("/service-logs/bulk", logsData);
+    return data ?? [];
+  }
 }

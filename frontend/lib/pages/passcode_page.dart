@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/auth_service.dart';
 import 'home_page.dart';
+import 'ProviderPages/provider_homepage.dart';
 
 class PasscodePage extends StatefulWidget {
   const PasscodePage({super.key});
@@ -12,30 +13,37 @@ class PasscodePage extends StatefulWidget {
 class _PasscodePageState extends State<PasscodePage> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
-
   bool _loading = false;
   String? _error;
 
   Future<void> _verifyCode() async {
     if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    final success = await AuthService.verifyCode(
-      _codeController.text.trim(),
-    );
-
+    final success = await AuthService.verifyCode(_codeController.text.trim());
     setState(() => _loading = false);
 
     if (success) {
+      final user = await AuthService.getCurrentUser();
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
+
+      final providerId = user?['provider_id']?.toString();
+
+      if (providerId != null && providerId.isNotEmpty) {
+        // ✅ Provider employee or owner — pass providerId to homepage
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProviderHomePage(providerId: providerId),
+          ),
+        );
+      } else {
+        // 🚗 Regular car owner
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
     } else {
       setState(() => _error = "Invalid or expired code");
     }
@@ -43,8 +51,6 @@ class _PasscodePageState extends State<PasscodePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -52,49 +58,27 @@ class _PasscodePageState extends State<PasscodePage> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-
-                Text(
-                  "Enter the Code",
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.start,
-                ),
-                const SizedBox(height: 24),
-
+                const Text("A 4 digit code was sent to your email, Enter the Code", style: TextStyle(fontSize: 18)),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _codeController,
-                  style: theme.textTheme.bodyLarge,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: "Passcode"),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return "Passcode required";
-                    }
-                    if (val.length != 4) {
-                      return "Enter a valid 6-digit code";
-                    }
-                    return null;
-                  },
+                  validator: (v) => (v == null || v.length != 4)
+                      ? "Enter a valid 4-digit code"
+                      : null,
                 ),
-                const SizedBox(height: 16),
-
+                const SizedBox(height: 24),
                 if (_error != null)
-                  Text(
-                    _error!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.error,
-                    ),
-                  ),
-
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
                 _loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const CircularProgressIndicator()
                     : ElevatedButton(
                         onPressed: _verifyCode,
                         child: const Text("Proceed"),
                       ),
-
                 const Spacer(),
               ],
             ),
