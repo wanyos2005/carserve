@@ -16,6 +16,7 @@ from crud.vehicles import (
     delete_vehicle,
     create_guest_vehicle,
 )
+from models.vehicles import Vehicle
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
@@ -74,24 +75,14 @@ def delete_vehicle_route(
     return None
 
 @router.post("/guest", response_model=VehicleRead)
-async def create_guest_vehicle_route(
-    payload: VehicleCreate,
-    db: Session = Depends(get_db),
-):
-    try:
-        provider_id = payload.created_by_provider_id
-        if not provider_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Provider ID is required for guest vehicle creation",
-            )
-
-        return await create_guest_vehicle(db, payload)
-
-    except RequestValidationError as e:
-        logger.error(f"Validation error for payload={payload.dict()}: {e.errors()}")
-
-        return JSONResponse(status_code=422, content={"detail": e.errors()})
+async def create_guest_vehicle_route(payload: VehicleCreate, db: Session = Depends(get_db)):
+    if not payload.owner_id:
+        raise HTTPException(status_code=400, detail="Owner ID required for guest vehicle")
+    vehicle = Vehicle(**payload.dict())
+    db.add(vehicle)
+    db.commit()
+    db.refresh(vehicle)
+    return vehicle
 
 
 

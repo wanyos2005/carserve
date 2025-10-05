@@ -104,24 +104,9 @@ async def create_guest_vehicle(db: Session, payload: VehicleCreate) -> Vehicle:
     """
     Creates a guest user in user-service, then registers their vehicle.
     """
-
-    guest_data = {
-        "name": payload.guest_owner_name,
-        "email": payload.guest_owner_email,
-        "phone": payload.guest_owner_phone,
-        "provider_id": payload.created_by_provider_id,
-    }
-
-    # 1️⃣ Create guest user in user-service
-    async with httpx.AsyncClient() as client:
-        res = await client.post("http://user-service:8000/users/guest", json=guest_data)
-        res.raise_for_status()
-        guest_user = res.json()
-        guest_user_id = guest_user["id"]
-
     # 2️⃣ Create their vehicle
     vehicle = Vehicle(
-        owner_id=guest_user_id,
+        owner_id=payload.owner_id,  # This is the guest user ID from user-service
         make=payload.make,
         model=payload.model,
         plate=normalize_plate(payload.plate),
