@@ -106,5 +106,13 @@ class AuthService {
 
     return response.statusCode == 200;
   }
-
-}
+  // Create guest user 
+  static Future<Map<String, dynamic>?> createGuestUser({ String? email, String? phone, String? name, String? providerId, }) async {
+     final response = await http.post( 
+      Uri.parse("$baseUrl/guest"), 
+      headers: {"Content-Type": "application/json"}, 
+      body: jsonEncode({ if (email != null) "email": email, if (phone != null) "phone": phone, if (name != null) "name": name, if (providerId != null) "provider_id": providerId, }), );
+      if (response.statusCode == 200) { return jsonDecode(response.body); } 
+      return null; 
+  }
+  }

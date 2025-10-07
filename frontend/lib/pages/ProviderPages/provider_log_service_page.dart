@@ -155,12 +155,15 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
         "user_id": guestId,
         "service_id": s["service_id"],
         "service_name": s["display_name"],
-        "performed_at": _performedAt?.toIso8601String(),
+        "performed_at": _performedAt?.toIso8601String().split('.').first,
         "next_service_km": int.tryParse(_nextServiceKmController.text) ?? 0,
-        "next_service_date": _nextServiceDate?.toIso8601String(),
+        "next_service_date": _nextServiceDate?.toIso8601String().split('.').first,
         "mileage_km": int.tryParse(_mileageController.text) ?? 0,
         "mechanic_name": _mechanicNameController.text.trim(),
         "mechanic_contact": _mechanicContactController.text.trim(),
+        "provider_contact": {
+          "contact": _mechanicContactController.text.trim() // <-- wrapped as dict
+        },
         "notes": s["notes"],
         "logged_by": "provider",
       }).toList();
