@@ -45,6 +45,20 @@ def list_vehicles_route(
 ):
     return list_vehicles(db, user_id, plate, skip, limit)
 
+# search vehicles by plate (partial match)
+@router.get("/search", response_model=List[VehicleRead])
+def search_vehicle_by_plate(
+    plate: str = Query(..., min_length=2),
+    db: Session = Depends(get_db),
+):
+    results = (
+        db.query(Vehicle)
+        .filter(Vehicle.plate.ilike(f"%{plate}%"))
+        .limit(5)
+        .all()
+    )
+    return results
+
 
 @router.get("/{vehicle_id}", response_model=VehicleRead)
 def get_vehicle_route(
@@ -83,6 +97,8 @@ async def create_guest_vehicle_route(payload: VehicleCreate, db: Session = Depen
     db.commit()
     db.refresh(vehicle)
     return vehicle
+
+
 
 
 
