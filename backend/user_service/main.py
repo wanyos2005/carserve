@@ -19,7 +19,7 @@ app.add_middleware(
 )
 
 # Routes
-app.include_router(users_router.router, prefix="/users", tags=["users"])
+app.include_router(users_router.router, prefix="", tags=["users"])
 
 
 @app.get("/")

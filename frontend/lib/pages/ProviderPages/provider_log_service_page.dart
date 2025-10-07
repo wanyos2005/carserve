@@ -111,6 +111,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   Future<void> _submitLog() async {
     if (!_formKey.currentState!.validate()) return;
     if (_services.isEmpty) return;
+    if (_services.isEmpty) return;
 
     setState(() => _loading = true);
 
@@ -131,7 +132,14 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
       final guestId = guestUser["id"];
 
       // 2️⃣ Create vehicle
+      // 1️⃣ Create guest user first
+      
+
+      
+
+      // 2️⃣ Create vehicle
       final guestVehiclePayload = {
+        "owner_id": guestId,
         "owner_id": guestId,
         "plate": _vehiclePlateController.text.trim(),
         "make": _vehicleMakeController.text.trim(),
@@ -172,12 +180,14 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Logged ${response.length} services successfully!")),
+       
       );
       Navigator.pop(context);
     } catch (e) {
       debugPrint("❌ Error submitting logs: $e");
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: $e")));
+          
     } finally {
       setState(() => _loading = false);
     }

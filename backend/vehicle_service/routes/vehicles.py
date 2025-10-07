@@ -1,124 +1,90 @@
-#vehicle_service/routes/vehicles.py
-import uuid
-from typing import List, Optional
+# vehicle_service/routes/vehicles.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
+import httpx
 
 from core.db import get_db
 from core.security import get_current_user_id
-from models.vehicles import Vehicle
 from schemas.vehicles import VehicleCreate, VehicleRead, VehicleUpdate
+from crud.vehicles import (
+    create_vehicle,
+    list_vehicles,
+    get_vehicle,
+    update_vehicle,
+    delete_vehicle,
+    create_guest_vehicle,
+)
+from models.vehicles import Vehicle
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi import HTTPException
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-def normalize_plate(plate: str) -> str:
-    # Simple normalization: trim + uppercase (e.g., "KDA 123A" stays consistent)
-    return plate.strip().upper()
 
 @router.post("/", response_model=VehicleRead, status_code=status.HTTP_201_CREATED)
-def create_vehicle(
+def create_vehicle_route(
     payload: VehicleCreate,
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    plate = normalize_plate(payload.plate)
+    return create_vehicle(db, user_id, payload)
 
-    # Enforce unique plate
-    existing = db.query(Vehicle).filter(Vehicle.plate == plate).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Plate already registered")
-
-    vehicle = Vehicle(
-    owner_id=user_id,
-    make=payload.make,
-    model=payload.model,
-    plate=plate,
-    mileage=payload.mileage or 0,
-    yom=payload.yom,
-    fuel_type=payload.fuel_type,
-    transmission=payload.transmission,
-    color=payload.color,
-    )
-    db.add(vehicle)
-    db.commit()
-    db.refresh(vehicle)
-    return vehicle
 
 @router.get("/", response_model=List[VehicleRead])
-def list_vehicles(
+def list_vehicles_route(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
-    plate: Optional[str] = Query(None, description="Filter by plate"),
+    plate: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
 ):
-    q = db.query(Vehicle).filter(Vehicle.owner_id == user_id)
-    if plate:
-        q = q.filter(Vehicle.plate == normalize_plate(plate))
-    return q.offset(skip).limit(limit).all()
+    return list_vehicles(db, user_id, plate, skip, limit)
+
 
 @router.get("/{vehicle_id}", response_model=VehicleRead)
-def get_vehicle(
+def get_vehicle_route(
     vehicle_id: str,
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not v or v.owner_id != user_id:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
-    return v
+    return get_vehicle(db, user_id, vehicle_id)
+
 
 @router.put("/{vehicle_id}", response_model=VehicleRead)
-def update_vehicle(
+def update_vehicle_route(
     vehicle_id: str,
     payload: VehicleUpdate,
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not v or v.owner_id != user_id:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
+    return update_vehicle(db, user_id, vehicle_id, payload)
 
-    if payload.plate is not None:
-        new_plate = normalize_plate(payload.plate)
-        if new_plate != v.plate:
-            exists = db.query(Vehicle).filter(Vehicle.plate == new_plate).first()
-            if exists:
-                raise HTTPException(status_code=400, detail="Plate already registered")
-            v.plate = new_plate
-
-    if payload.make is not None:
-        v.make = payload.make
-    if payload.model is not None:
-        v.model = payload.model
-    if payload.mileage is not None:
-        v.mileage = payload.mileage
-    if payload.yom is not None:
-        v.yom = payload.yom
-    if payload.fuel_type is not None:
-        v.fuel_type = payload.fuel_type
-    if payload.transmission is not None:
-        v.transmission = payload.transmission
-    if payload.color is not None:
-        v.color = payload.color
-
-    db.add(v)
-    db.commit()
-    db.refresh(v)
-    return v
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_vehicle(
+def delete_vehicle_route(
     vehicle_id: str,
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not v or v.owner_id != user_id:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
-    db.delete(v)
-    db.commit()
+    delete_vehicle(db, user_id, vehicle_id)
     return None
 
+@router.post("/guest", response_model=VehicleRead)
+async def create_guest_vehicle_route(payload: VehicleCreate, db: Session = Depends(get_db)):
+    if not payload.owner_id:
+        raise HTTPException(status_code=400, detail="Owner ID required for guest vehicle")
+    vehicle = Vehicle(**payload.dict())
+    db.add(vehicle)
+    db.commit()
+    db.refresh(vehicle)
+    return vehicle
 
+
+
+
+    

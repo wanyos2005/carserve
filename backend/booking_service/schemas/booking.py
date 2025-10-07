@@ -34,20 +34,21 @@ class BookingOut(BookingCreate):
 
 class ServiceLogBase(BaseModel):
     user_id: int
-    vehicle_id: Optional[str]
-    provider_id: Optional[str]
-    provider_name: Optional[str]
-    provider_contact: Optional[dict]
-    service_id: Optional[str]
-    service_name: Optional[str]
-    service_items: Optional[Dict[str, str]]
-    mileage_km: Optional[int]
-    performed_at: Optional[datetime]
-    next_service_km: Optional[int]
-    next_service_date: Optional[datetime]
-    mechanic_name: Optional[str]
-    mechanic_contact: Optional[str]
-    logged_by: Optional[str] = "user"  # default "user"
+    vehicle_id: Optional[str] = None
+    provider_id: Optional[str] = None
+    provider_name: Optional[str] = None
+    provider_contact: Optional[dict] = None
+    service_id: Optional[str] = None
+    service_name: Optional[str] = None
+    service_items: Optional[Dict[str, str]] = None
+    mileage_km: Optional[int] = None
+    performed_at: Optional[datetime] = None
+    next_service_km: Optional[int] = None
+    next_service_date: Optional[datetime] = None
+    mechanic_name: Optional[str] = None
+    mechanic_contact: Optional[str] = None
+    logged_by: Optional[str] = "user"
+    notes: Optional[str] = ""
 
 class ServiceLogCreate(ServiceLogBase):
     pass

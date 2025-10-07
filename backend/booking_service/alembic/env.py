@@ -9,9 +9,9 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # --- 🔹 1. Import your service’s models here ---
-from app.models import booking 
+from models import booking 
 # Example for vehicles service:
-from app.core.db import Base  
+from core.db import Base  
 
 # This is the Alembic Config object
 config = context.config

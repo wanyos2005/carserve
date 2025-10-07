@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
+//
+
 class AuthService {
   static const String baseUrl = "http://192.168.0.107:8000/users";//.107 -Kelly
 
@@ -97,7 +99,7 @@ class AuthService {
   }
 
   // Link user to provider
-  static Future<bool> linkUserToProvider(int userId, String providerId) async {
+  static Future<bool> linkUserToProvider(int userId, int providerId) async {
     final response = await http.post(
       Uri.parse("$baseUrl/link-user-provider"),
       headers: {"Content-Type": "application/json"},

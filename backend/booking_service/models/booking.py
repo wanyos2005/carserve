@@ -4,7 +4,7 @@ from sqlalchemy import Column, String, JSON, TIMESTAMP, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
-from app.core.db import Base
+from core.db import Base
 
 class Booking(Base):
     __tablename__ = "bookings"
@@ -58,9 +58,10 @@ class ServiceLog(Base):
     # Mechanic info
     mechanic_name = Column(String(255), nullable=True)
     mechanic_contact = Column(String(255), nullable=True)
-
+    
     # NEW → Who logged this (user vs provider vs system)
     logged_by = Column(String(50), default="user")  # "user", "provider", "system"
+    notes = Column(String, nullable=True)
 
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 

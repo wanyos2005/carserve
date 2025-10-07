@@ -12,15 +12,21 @@ class User(Base):
     __tablename__ = "tbl_auth"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=True)  # now optional
     name = Column(String, index=True, nullable=True)
     phone = Column(String, index=True, nullable=True)
-    # role = Column(String, index=True, default="user")
     auth_provider = Column(String, index=True, default="email")
     verified = Column(Boolean, default=False)
+
+    # 🔹 NEW FIELDS
+    is_guest = Column(Boolean, default=False)  # True if created by provider
+    created_by_provider_id = Column(String, nullable=True)  # link provider UUID
+
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+
     roles = relationship("User_Roles", back_populates="user", uselist=True)
+
 
 
 
@@ -52,8 +58,6 @@ class User_Roles(Base):
     active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     user = relationship("User", back_populates="roles")
-
-
 
 class ProviderUserLink(Base):
     __tablename__ = "provider_user_links"

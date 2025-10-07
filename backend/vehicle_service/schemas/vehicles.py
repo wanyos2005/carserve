@@ -11,6 +11,12 @@ class VehicleBase(BaseModel):
     fuel_type: str
     transmission: Optional[str] = None
     color: Optional[str] = None
+    # 🔹 NEW: guest vehicle metadata
+    guest_owner_name: Optional[str] = None
+    guest_owner_email: Optional[str] = None
+    guest_owner_phone: Optional[str] = None
+    created_by_provider_id: Optional[str] = None
+    owner_id: Optional[int] = None  # User ID of the owner
 
 class VehicleCreate(VehicleBase):
     pass
@@ -28,7 +34,7 @@ class VehicleUpdate(BaseModel):
 
 class VehicleRead(VehicleBase):
     id: str
-    owner_id: str
+    owner_id: int
 
     class Config:
         from_attributes = True  # replaces orm_mode in Pydantic v2
