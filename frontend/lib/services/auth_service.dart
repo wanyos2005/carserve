@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 //
 
 class AuthService {
-  static const String baseUrl = "http://192.168.0.107:8000/users";//.107 -Kelly
+  static const String baseUrl = "http://192.168.0.107:8000/users";
 
   // Send OTP
   // Send OTP
@@ -99,7 +99,7 @@ class AuthService {
   }
 
   // Link user to provider
-  static Future<bool> linkUserToProvider(int userId, int providerId) async {
+  static Future<bool> linkUserToProvider(int userId, String providerId) async {
     final response = await http.post(
       Uri.parse("$baseUrl/link-user-provider"),
       headers: {"Content-Type": "application/json"},

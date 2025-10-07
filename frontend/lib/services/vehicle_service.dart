@@ -53,4 +53,23 @@ class VehicleService {
     }
     return null;
   }
+
+  /// Search vehicles by partial or full plate (for autofill).
+  static Future<List<dynamic>> searchVehicles(String plate) async {
+    if (plate.isEmpty) return [];
+
+    try {
+      final res = await ApiService.get("/vehicles/search", query: {"plate": plate});
+      if (res is List) {
+        return res;
+      } else {
+        print("Unexpected vehicle search response: $res");
+        return [];
+      }
+    } catch (e) {
+      print("Error searching vehicles: $e");
+      return [];
+    }
+  }
+
 }
