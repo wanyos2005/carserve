@@ -92,20 +92,27 @@ def create_provider_service(db: Session, provider_id: str, payload: Dict) -> Pro
 def get_provider_services(db: Session, provider_id: str) -> List[ProviderService]:
     return db.query(ProviderService).filter(ProviderService.provider_id == provider_id).all()
 
-def upsert_provider_service(db: Session, provider_id: str, payload: Dict):
-    # payload contains service_id and metadata, price etc.
-    q = db.query(ProviderService).filter(
-        ProviderService.provider_id == provider_id,
-        ProviderService.service_id == payload["service_id"]
-    )
-    existing = q.first()
-    if existing:
-        # update
-        for k in ["price", "duration", "booking_required", "metadata"]:
-            if k in payload:
-                setattr(existing, k, payload.get(k))
-        db.commit()
-        db.refresh(existing)
-        return existing
+def upsert_provider_service(db: Session, provider_id: str, payload: dict):
+    ps = db.query(ProviderService).filter_by(
+        provider_id=provider_id, service_id=payload["service_id"]
+    ).first()
+
+    values = {
+        "display_name": payload.get("display_name"),
+        "price": payload.get("price"),
+        "duration": payload.get("duration"),
+        "booking_required": payload.get("booking_required", False),
+        "extra_data": payload.get("extra_data", {}),
+    }
+
+    if ps:
+        for k, v in values.items():
+            setattr(ps, k, v)
     else:
-        return create_provider_service(db, provider_id, payload)
+        ps = ProviderService(provider_id=provider_id, service_id=payload["service_id"], **values)
+        db.add(ps)
+
+    db.commit()
+    db.refresh(ps)
+    return ps
+

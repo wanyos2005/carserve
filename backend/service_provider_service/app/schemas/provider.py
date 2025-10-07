@@ -1,5 +1,5 @@
 #backend/service_provider_service/app/schemas/provider.py
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -61,15 +61,22 @@ class ProviderUpdate(BaseModel):
     is_registered: Optional[bool] = None
 
 # For request payload (input)
+
 class ProviderServiceCreate(BaseModel):
     service_id: str
     display_name: Optional[str] = None
     price: Optional[str] = None
     duration: Optional[str] = None
     booking_required: Optional[bool] = False
-    extra_data: Optional[Dict[str, Any]] = None
+
+    # ✅ Accept "metadata" from the frontend, store as extra_data internally
+    extra_data: Dict[str, Any] = Field(default_factory=dict, alias="metadata")
+
     class Config:
-        fields = {"extra_data": "metadata"}
+        from_attributes = True
+        populate_by_name = True  # allow both extra_data and metadata input names
+
+
 
 # For response payload (output)        
 class ProviderServiceAttach(BaseModel):
@@ -78,15 +85,15 @@ class ProviderServiceAttach(BaseModel):
     price: Optional[str] = None
     duration: Optional[str] = None
     booking_required: Optional[bool] = False
-    extra_data: Optional[Dict[str, Any]] = {}
 
-    
-    # 🔹 include nested service details
-    service: Optional[Service] = None   
+    # ✅ Show "metadata" in GET responses (instead of extra_data)
+    metadata: Dict[str, Any] = Field(default_factory=dict, alias="extra_data")
+
+    service: Optional[Service] = None
 
     class Config:
-        orm_mode = True   # ✅ important
         from_attributes = True
+        populate_by_name = True
 
 class ProviderOut(BaseModel):
     id: str
