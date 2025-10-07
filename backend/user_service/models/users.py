@@ -68,16 +68,3 @@ class ProviderUserLink(Base):
     provider_id = Column(String, nullable=False)  # uuid from service_providers.providers
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    
-
-
-
-class ProviderUserLink(Base):
-    __tablename__ = "provider_user_links"
-    __table_args__ = {"schema": "users"}  # or service_providers if you prefer
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.tbl_auth.id"), nullable=False)
-    provider_id = Column(String, nullable=False)  # uuid from service_providers.providers
-    created_at = Column(TIMESTAMP, server_default=func.now())
-

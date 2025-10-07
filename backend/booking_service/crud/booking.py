@@ -1,8 +1,8 @@
 # backend/booking_service/app/crud/booking.py
 from sqlalchemy.orm import Session
 
-from app.models.booking import Booking, ServiceLog
-from app.schemas.booking import BookingCreate, BookingUpdate, ServiceLogCreate
+from models.booking import Booking, ServiceLog
+from schemas.booking import BookingCreate, BookingUpdate, ServiceLogCreate
 
 from typing import List, Optional
 from uuid import UUID

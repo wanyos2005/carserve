@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
 
 class SendCodeRequest(UserBase):
     pass
@@ -35,8 +35,9 @@ class EmailSchema(BaseModel):
 class Role(BaseModel):
     name: str
     
-class GuestUserSchema(BaseModel):
-    name: Optional[str]
-    email: Optional[str]
-    phone: Optional[str]
-    provider_id: str
+
+class GuestUserRequest(BaseModel):
+    email: str | None = None
+    phone: str | None = None
+    name: str | None = None
+    provider_id: str | None = None

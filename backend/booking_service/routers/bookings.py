@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.core.db import get_db
-from app.schemas.booking import BookingCreate, BookingOut, BookingUpdate
-from app.crud.booking import (
+from core.db import get_db
+from schemas.booking import BookingCreate, BookingOut, BookingUpdate
+from crud.booking import (
     create_booking,
     get_booking,
     list_bookings_for_user,

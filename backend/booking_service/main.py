@@ -1,8 +1,8 @@
 # backend/booking_service/main.py
 from fastapi import FastAPI, Request
-from app.routers import bookings, service_logs
-from app.core.db import engine
-from app.models import booking as booking_models
+from routers import bookings, service_logs
+from core.db import engine
+from models import booking as booking_models
 import sqlalchemy
 import logging
 

@@ -9,7 +9,7 @@ class Vehicle(Base):
     __table_args__ = {"schema": "vehicles"}
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    owner_id = Column(String, index=True, nullable=True)  # 🔹 make optional
+    owner_id = Column(Integer, index=True, nullable=True)  # 🔹 make optional
     make = Column(String, index=True)
     model = Column(String, index=True)
     plate = Column(String, unique=True, index=True)

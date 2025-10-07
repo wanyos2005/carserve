@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.core.db import get_db
-from app.schemas.booking import ServiceLogCreate, ServiceLog
-from app.crud.booking import (
+from core.db import get_db
+from schemas.booking import ServiceLogCreate, ServiceLog
+from crud.booking import (
     create_service_log,
     create_bulk_service_logs,
     list_service_logs_for_user,
@@ -25,8 +25,8 @@ def create_log(payload: ServiceLogCreate, db: Session = Depends(get_db)):
 # 🔹 Provider logs full template (bulk)
 @router.post("/bulk", response_model=List[ServiceLog])
 def create_bulk_logs(payloads: List[ServiceLogCreate], db: Session = Depends(get_db)):
-    """Providers can log a batch of services (e.g. a whole template)."""
-    return create_bulk_service_logs(db, payloads)
+    logs = create_bulk_service_logs(db, payloads)
+    return logs
 
 
 # 🔹 Fetch logs by user
