@@ -9,6 +9,6 @@ sqlalchemy
 passlib[bcrypt]
 pyjwt
 alembic
-pydantic[email]
-fastapi-mail
+pydantic<2          # ✅ force Pydantic v1
+fastapi-mail # ✅ compatible with Pydantic v1
 

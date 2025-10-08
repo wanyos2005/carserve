@@ -21,4 +21,8 @@ class InsuranceService {
       return [];
     }
   }
+  static Future<List<dynamic>> getInsurancePoliciesByProvider(String providerId) async {
+    final res = await ApiService.get("/insurance/policies?provider_id=$providerId");
+    return res is List ? res : [];
+  }
 }

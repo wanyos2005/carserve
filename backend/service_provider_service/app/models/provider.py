@@ -96,3 +96,24 @@ class ServiceTemplateItem(Base):
 
     template = relationship("ServiceTemplate", back_populates="items")
     service = relationship("Service")
+
+
+class ProviderServiceView(Base):
+    __tablename__ = "provider_service_view"
+    __table_args__ = {"schema": "service_providers"}
+    __mapper_args__ = {"primary_key": ["provider_service_id"]}
+
+    provider_id = Column(String)
+    provider_name = Column(String)
+    provider_category_id = Column(Integer)
+    provider_service_id = Column(String)
+    display_name = Column(String)
+    price = Column(String)
+    duration = Column(String)
+    booking_required = Column(Boolean)
+    extra_data = Column(JSON)
+    service_id = Column(String)
+    service_name = Column(String)
+    service_category_id = Column(Integer)
+
+

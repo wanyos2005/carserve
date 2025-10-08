@@ -98,14 +98,14 @@ class _BookingPageState extends State<BookingPage> {
 
     try {
       final serviceIds = _selectedServices.map((s) => s["id"].toString()).toList();
-      final providers = await ProviderService.getProviders(
+      /* final providers = await ProviderService.getProviders(
         serviceId: null, // We'll pass multiple ids through query params
-      );
+      ); */
 
       // 🔹 Use backend multi-service filtering directly
       final queryString = serviceIds.map((id) => "service_ids=$id").join("&");
       final matchAll = _recommendedOnly ? "true" : "false";
-      final url = "/service-providers/?$queryString&match_all=$matchAll";
+      final url = "/service-providers/providers/?$queryString&match_all=$matchAll";
       final filtered = await ProviderService.getProvidersByUrl(url);
 
       setState(() {
@@ -288,7 +288,7 @@ class _BookingPageState extends State<BookingPage> {
                     icon: const Icon(Icons.business),
                     label: Text(_selectedProvider == null
                         ? "Choose Provider"
-                        : _selectedProvider!["name"] ?? "Provider"),
+                        : _selectedProvider!["provider_name"] ?? "Provider"),
                   ),
             const SizedBox(height: 12),
 

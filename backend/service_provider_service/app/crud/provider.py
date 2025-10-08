@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session, joinedload
-from app.models.provider import Provider, ServiceTemplate, ServiceTemplateItem, ProviderService
+from app.models.provider import Provider, ServiceTemplate, ServiceTemplateItem, ProviderService, ProviderServiceView
 from app.schemas.provider import ProviderCreate, ProviderUpdate, ServiceTemplateCreate
 from typing import List, Optional
 from uuid import UUID
+from sqlalchemy import func, distinct
 
 
 def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
@@ -82,3 +83,42 @@ def get_providers_by_service(db: Session, service_id: str):
         .options(joinedload(Provider.provider_services).joinedload(ProviderService.service))
         .all()
     )
+
+def search_provider_view(
+    db: Session,
+    service_ids: list[str] | None = None,
+    match_all: bool = False,
+    search_term: str | None = None,
+):
+    q = db.query(ProviderServiceView)
+
+    # Apply search term
+    if search_term:
+        pattern = f"%{search_term.lower()}%"
+        q = q.filter(
+            func.lower(ProviderServiceView.provider_name).ilike(pattern)
+            | func.lower(ProviderServiceView.service_name).ilike(pattern)
+        )
+
+    # Service filtering logic
+    if service_ids:
+        if match_all:
+            # Find providers that have *all* selected services
+            subq = (
+                db.query(
+                    ProviderServiceView.provider_id,
+                    func.count(func.distinct(ProviderServiceView.service_id)).label("service_count")
+                )
+                .filter(ProviderServiceView.service_id.in_(service_ids))
+                .group_by(ProviderServiceView.provider_id)
+                .having(func.count(func.distinct(ProviderServiceView.service_id)) == len(service_ids))
+                .subquery()
+            )
+
+            q = q.join(subq, ProviderServiceView.provider_id == subq.c.provider_id)
+        else:
+            # providers that have ANY of the selected services
+            q = q.filter(ProviderServiceView.service_id.in_(service_ids))
+    print(q.statement.compile(compile_kwargs={"literal_binds": True}))
+
+    return q.all()

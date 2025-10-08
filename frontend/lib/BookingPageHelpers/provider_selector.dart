@@ -1,7 +1,6 @@
-// provider_selector.dart
 import 'package:flutter/material.dart';
 
-class ProviderSelector extends StatelessWidget {
+class ProviderSelector extends StatefulWidget {
   final List<Map<String, dynamic>> filteredProviders;
   final List<Map<String, dynamic>> selectedServices;
   final bool recommendedOnly;
@@ -18,65 +17,111 @@ class ProviderSelector extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (recommendedOnly) {
-      // Show providers that match all (already pre-filtered by booking page)
-      return SafeArea(
-        child: _providerList(context, filteredProviders),
-      );
-    }
+  State<ProviderSelector> createState() => _ProviderSelectorState();
+}
 
-    // Group providers by selected services
-    final groupedProviders = <String, List<Map<String, dynamic>>>{};
-    for (var service in selectedServices) {
-      groupedProviders[service["name"]] = filteredProviders.where((p) {
-        final providerServices = p["services"] as List? ?? [];
-        return providerServices.any((s) => s["id"] == service["id"]);
-      }).toList();
-    }
+class _ProviderSelectorState extends State<ProviderSelector> {
+  String query = "";
+
+  List<Map<String, dynamic>> get _filteredProviders {
+    if (query.isEmpty) return widget.filteredProviders;
+    return widget.filteredProviders.where((p) {
+      final name = (p["provider_name"] ?? "").toLowerCase();
+      final desc = (p["description"] ?? "").toLowerCase();
+      final q = query.toLowerCase();
+      return name.contains(q) || desc.contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final content = widget.recommendedOnly
+        ? _providerList(_filteredProviders)
+        : _groupedProviderList(_filteredProviders);
 
     return SafeArea(
-      child: ListView(
-        children: groupedProviders.entries.map((entry) {
-          return ExpansionTile(
-            title: Text("Providers for ${entry.key}"),
-            children: entry.value.map((p) {
-              return ListTile(
-                title: Text(p["name"] ?? "Provider"),
-                subtitle: Text(p["description"] ?? ""),
-                trailing: selectedProvider != null &&
-                        selectedProvider!["id"] == p["id"]
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : null,
-                onTap: () {
-                  Navigator.pop(context);
-                  onSelect(Map<String, dynamic>.from(p));
-                },
-              );
-            }).toList(),
-          );
-        }).toList(),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    "Select Provider",
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            // 🔹 Search bar
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: "Search providers...",
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (v) => setState(() => query = v),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(child: content),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _providerList(BuildContext context, List<Map<String, dynamic>> providers) {
+  Widget _groupedProviderList(List<Map<String, dynamic>> filtered) {
+    final groupedProviders = <String, List<Map<String, dynamic>>>{};
+    for (var service in widget.selectedServices) {
+      final serviceId = service["id"];
+      final serviceName = service["service_name"] ?? service["name"] ?? "Service";
+
+      groupedProviders[serviceName] = filtered.where((p) {
+        final providerServices = p["services"] as List? ?? [];
+        return providerServices.any((s) => s["service_id"] == serviceId);
+      }).toList();
+    }
+
+    return ListView(
+      children: groupedProviders.entries.map((entry) {
+        return ExpansionTile(
+          title: Text("Providers for ${entry.key}"),
+          children: entry.value.map((p) => _providerTile(p)).toList(),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _providerList(List<Map<String, dynamic>> providers) {
     return ListView.separated(
       itemCount: providers.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, i) {
-        final p = providers[i];
-        return ListTile(
-          title: Text(p["name"] ?? "Provider"),
-          subtitle: Text(p["description"] ?? ""),
-          trailing: selectedProvider != null && selectedProvider!["id"] == p["id"]
-              ? const Icon(Icons.check, color: Colors.green)
-              : null,
-          onTap: () {
-            Navigator.pop(context);
-            onSelect(Map<String, dynamic>.from(p));
-          },
-        );
+      itemBuilder: (context, i) => _providerTile(providers[i]),
+    );
+  }
+
+  Widget _providerTile(Map<String, dynamic> p) {
+    return ListTile(
+      title: Text(p["provider_name"] ?? "Provider"),
+      subtitle: Text(p["description"] ?? ""),
+      trailing: widget.selectedProvider != null &&
+              widget.selectedProvider!["id"] == p["id"]
+          ? const Icon(Icons.check, color: Colors.green)
+          : null,
+      onTap: () {
+        Navigator.pop(context);
+        widget.onSelect(Map<String, dynamic>.from(p));
       },
     );
   }

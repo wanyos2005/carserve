@@ -16,8 +16,8 @@ class ProviderService {
         .join("&");
 
     final url = queryString.isNotEmpty
-        ? "/service-providers/?$queryString"
-        : "/service-providers/";
+        ? "/service-providers/providers/?$queryString"
+        : "/service-providers/providers/";
 
     final res = await ApiService.get(url);
     return res is List ? res : [];

@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from app.schemas.category import ProviderCategory
 
 # -----------------------
 # Services
@@ -110,6 +111,7 @@ class Provider(ProviderBase):
     rating: Optional[float]
     created_at: Optional[datetime]
     category_id: int
+    category: Optional[ProviderCategory] = None
     provider_services: Optional[List[ProviderServiceAttach]] = []
 
     class Config:

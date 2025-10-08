@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
+from sqlalchemy.dialects import postgresql
+
+
 from app.core.db import get_db
 from app.schemas.provider import (
     ProviderCreate, Provider, ProviderUpdate, ProviderOut,
@@ -24,6 +27,11 @@ router = APIRouter()
 # -----------------------
 # Categories
 # -----------------------
+
+
+def debug_query(q):
+    print(q.statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+
 @router.post("/categories/provider-categories", response_model=ProviderCategory)
 def create_provider_category(payload: ProviderCategoryCreate, db: Session = Depends(get_db)):
     return crud_category.create_provider_category(db, payload.name)
@@ -92,14 +100,6 @@ def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
     return crud_provider.create_provider(db, payload)
 
 
-@router.get("/", response_model=List[Provider])
-def list_providers(
-    category_id: Optional[int] = Query(None),
-    limit: int = 50,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
-    return crud_provider.list_providers(db=db, category_id=category_id, limit=limit, offset=offset)
 
 
 # -----------------------
@@ -207,50 +207,34 @@ def list_service_templates_for_provider(
     templates = crud_provider.get_service_templates_by_provider(db, provider_id)
     return templates
 
-@router.get("/", response_model=List[ProviderOut])
-def list_providers(
-    category_id: Optional[int] = Query(None),
-    service_ids: Optional[List[str]] = Query(None),
-    match_all: bool = Query(False, description="If true, provider must offer ALL services (AND). If false, ANY (OR)."),
-    db: Session = Depends(get_db)
+
+@router.get("/providers/")
+def search_providers(
+    db: Session = Depends(get_db),
+    service_ids: list[str] = Query(None),
+    match_all: bool = Query(False),
+    search: str = Query(None),
 ):
-    query = db.query(Provider)
+    rows = crud_provider.search_provider_view(db, service_ids, match_all, search)
 
-    if category_id:
-        query = query.filter(Provider.category_id == category_id)
-
-    if service_ids:
-        query = query.join(Provider.provider_services)
-        if match_all:
-            for sid in service_ids:
-                query = query.filter(
-                    Provider.provider_services.any(ProviderService.service_id == sid)
-                )
-        else:
-            query = query.filter(
-                Provider.provider_services.any(ProviderService.service_id.in_(service_ids))
-            )
-
-    providers = query.distinct().all()
-
-    # Populate enriched ProviderServiceOut
-    result = []
-    for p in providers:
-        result.append({
-            "id": p.id,
-            "name": p.name,
-            "location": p.location,
-            "services": [
-                {
-                    "service_id": ps.service_id,
-                    "display_name": ps.display_name,
-                    "price": ps.price,
-                    "duration": ps.duration,
-                    "booking_required": ps.booking_required,
-                    "extra_data": ps.extra_data,
-                    "service": ps.service
-                }
-                for ps in p.provider_services
-            ]
+    # optional: group results by provider for frontend structure
+    grouped = {}
+    for r in rows:
+        if r.provider_id not in grouped:
+            grouped[r.provider_id] = {
+                "provider_id": r.provider_id,
+                "provider_name": r.provider_name,
+                "services": []
+            }
+        grouped[r.provider_id]["services"].append({
+            "service_id": r.service_id,
+            "service_name": r.service_name,
+            "price": r.price,
+            "display_name": r.display_name,
         })
-    return result
+
+    return list(grouped.values())
+
+    
+
+

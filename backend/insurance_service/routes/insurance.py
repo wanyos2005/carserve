@@ -45,3 +45,10 @@ def get_insurance_policy_by_owner(
     insurance_policies = db.query(Insurance_Policy).filter(Insurance_Policy.owner_id == owner_id).all()
     return insurance_policies
 
+@router.post("/policies")
+def create_policy(payload: InsurancePolicyCreate, db: Session = Depends(get_db)):
+    policy = Insurance_Policy(**payload.dict())
+    db.add(policy)
+    db.commit()
+    db.refresh(policy)
+    return policy

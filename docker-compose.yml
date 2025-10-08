@@ -69,6 +69,8 @@ services:
   service-provider:
     build:
       context: ./backend/service_provider_service
+    volumes:
+      - ./backend/service_provider_service:/app
     env_file:
       - ./backend/service_provider_service/.env
     ports:

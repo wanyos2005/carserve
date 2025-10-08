@@ -7,7 +7,6 @@ from typing import List
 class ProviderCategoryBase(BaseModel):
     name: str
 
-
 class ProviderCategoryCreate(ProviderCategoryBase):
     pass
 

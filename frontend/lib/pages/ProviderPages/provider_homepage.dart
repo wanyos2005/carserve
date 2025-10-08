@@ -1,14 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/pages/ProviderPages/provider_log_service_page.dart';
+import 'package:car_platform/pages/ProviderPages/insurance_log_service_page.dart';
+import 'package:car_platform/services/provider_service.dart';
 
-
-class ProviderHomePage extends StatelessWidget {
+class ProviderHomePage extends StatefulWidget {
   final String providerId;
 
   const ProviderHomePage({super.key, required this.providerId});
 
   @override
+  State<ProviderHomePage> createState() => _ProviderHomePageState();
+}
+
+class _ProviderHomePageState extends State<ProviderHomePage> {
+  String? _categoryName;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProviderCategory();
+  }
+
+  Future<void> _loadProviderCategory() async {
+    try {
+      final provider = await ProviderService.getProviderById(widget.providerId);
+      setState(() {
+        _categoryName = provider['category']['name']?.toLowerCase();
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint("Failed to load provider category: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final isInsurance = _categoryName == 'insurance';
+
     final quickActions = [
       {
         "title": "Bookings",
@@ -28,7 +66,9 @@ class ProviderHomePage extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ProviderLogServicePage(providerId: providerId),
+              builder: (context) => isInsurance
+                  ? InsuranceLogServicePage(providerId: widget.providerId)
+                  : ProviderLogServicePage(providerId: widget.providerId),
             ),
           );
         },
@@ -90,29 +130,27 @@ class ProviderHomePage extends StatelessWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // In future: refresh provider stats
-          await Future.delayed(const Duration(seconds: 1));
-        },
+        onRefresh: _loadProviderCategory,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Provider welcome section
-              const Text(
+              Text(
                 "Welcome Back 👋",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              const Text(
-                "Manage your garage, bookings, and services all in one place.",
-                style: TextStyle(color: Colors.black54, fontSize: 14),
+              Text(
+                isInsurance
+                    ? "Manage your insurance services and clients easily."
+                    : "Manage your garage, bookings, and services all in one place.",
+                style: const TextStyle(color: Colors.black54, fontSize: 14),
               ),
               const SizedBox(height: 24),
 
-              // Summary cards
+              // Example summary cards
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -128,15 +166,14 @@ class ProviderHomePage extends StatelessWidget {
                   _buildSummaryCard("Customer Rating", "4.8 ★", Icons.star_rate_rounded, Colors.amber),
                 ],
               ),
-
               const SizedBox(height: 32),
+
               const Text(
                 "Quick Actions",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
 
-              // Grid for actions
               GridView.builder(
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
