@@ -106,6 +106,13 @@ class ProviderServiceView(Base):
     provider_id = Column(String)
     provider_name = Column(String)
     provider_category_id = Column(Integer)
+    provider_description = Column(Text)
+    provider_contact_info = Column(JSON)
+    provider_location = Column(JSON)
+    provider_rating = Column(Numeric(2, 1))
+    provider_is_registered = Column(Boolean)
+    provider_created_at = Column(TIMESTAMP(timezone=True))
+
     provider_service_id = Column(String)
     display_name = Column(String)
     price = Column(String)
@@ -115,5 +122,6 @@ class ProviderServiceView(Base):
     service_id = Column(String)
     service_name = Column(String)
     service_category_id = Column(Integer)
+
 
 

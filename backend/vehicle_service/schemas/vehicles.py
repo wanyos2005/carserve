@@ -35,6 +35,7 @@ class VehicleUpdate(BaseModel):
 class VehicleRead(VehicleBase):
     id: str
     owner_id: int
+    
 
     class Config:
-        from_attributes = True  # replaces orm_mode in Pydantic v2
+        orm_mode = True  # replaces orm_mode in Pydantic v2

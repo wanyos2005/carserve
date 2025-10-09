@@ -10,7 +10,7 @@ from app.core.db import get_db
 from app.schemas.provider import (
     ProviderCreate, Provider, ProviderUpdate, ProviderOut,
     Service as ServiceSchema,  # ✅ alias schema
-    ServiceCreate, ServiceUpdate,
+    ServiceCreate, ServiceUpdate, ProviderQuickCreate, ProviderQuickOut,
     ProviderServiceAttach, ProviderServiceCreate, ServiceTemplateCreate, ServiceTemplateRead
 )
 from app.schemas.category import (
@@ -99,6 +99,35 @@ def delete_service(service_id: str, db: Session = Depends(get_db)):
 def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
     return crud_provider.create_provider(db, payload)
 
+DEFAULT_CATEGORY_ID = 6  # Default category for quick-created providers
+
+
+@router.post("/quick-provider", response_model=ProviderQuickOut)
+def quick_create_provider(payload: ProviderQuickCreate, db: Session = Depends(get_db)):
+    """
+    Quickly create a minimal provider with just a name.
+    Other details can be added later via the full update route.
+    """
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Provider name cannot be empty")
+
+    # Check if provider already exists (case-insensitive)
+    existing = crud_provider.get_provider_by_name(db, name)
+    if existing:
+        return existing
+
+    provider_data = {
+        "name": name,
+        "category_id": DEFAULT_CATEGORY_ID,
+        "is_registered": False,
+        "description": None,
+        "contact_info": {},
+        "location": {},
+    }
+
+    new_provider = crud_provider.create_provider(db, provider_data)
+    return new_provider
 
 @router.get("/providers/")
 def search_providers(
@@ -135,15 +164,7 @@ def get_provider(provider_id: str, db: Session = Depends(get_db)):
     provider = crud_provider.get_provider(db, provider_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
-
-    services = [ps.service for ps in provider.provider_services]
-
-    return {
-        **provider.__dict__,
-        "services": services  # ✅ explicit merge
-    }
-
-
+    return provider
 
 @router.put("/{provider_id}", response_model=Provider)
 def update_provider(provider_id: str, updates: ProviderUpdate, db: Session = Depends(get_db)):
@@ -232,3 +253,46 @@ def list_service_templates_for_provider(
     templates = crud_provider.get_service_templates_by_provider(db, provider_id)
     return templates
 
+<<<<<<< HEAD
+=======
+
+@router.get("/providers/")
+def search_providers(
+    db: Session = Depends(get_db),
+    service_ids: list[str] = Query(None),
+    match_all: bool = Query(False),
+    search: str = Query(None),
+    category_id: int | None = Query(None),
+    
+):
+    rows = crud_provider.search_provider_view(
+        db,
+        service_ids,
+        match_all,
+        search,
+        category_id,
+    )
+
+    grouped = {}
+    for r in rows:
+        if r.provider_id not in grouped:
+            grouped[r.provider_id] = {
+                 "provider_id": r.provider_id,
+                "provider_name": r.provider_name,
+                "description": r.provider_description,
+                "contact_info": r.provider_contact_info,
+                "location": r.provider_location,
+                "rating": float(r.provider_rating) if r.provider_rating else 0.0,
+                "is_registered": r.provider_is_registered,
+                "created_at": r.provider_created_at,
+                "services": []
+            }
+        grouped[r.provider_id]["services"].append({
+            "service_id": r.service_id,
+            "service_name": r.service_name,
+            "price": r.price,
+            "display_name": r.display_name,
+        })
+
+    return list(grouped.values())
+>>>>>>> e4bcbc43991ac392a637d383e35dbeb3f7585d6b

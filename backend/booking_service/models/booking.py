@@ -56,8 +56,9 @@ class ServiceLog(Base):
     next_service_date = Column(TIMESTAMP(timezone=True), nullable=True)
 
     # Mechanic info
-    mechanic_name = Column(String(255), nullable=True)
+    served_by = Column(String(255), nullable=True)
     mechanic_contact = Column(String(255), nullable=True)
+    cost = Column(Integer, nullable=True)
     
     # NEW → Who logged this (user vs provider vs system)
     logged_by = Column(String(50), default="user")  # "user", "provider", "system"

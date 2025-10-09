@@ -20,6 +20,10 @@ def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
     db.refresh(provider)
     return provider
 
+def get_provider_by_name(db: Session, name: str):
+    from app.models import Provider
+    return db.query(Provider).filter(Provider.name.ilike(name)).first()
+
 
 def get_provider(db: Session, provider_id: str) -> Optional[Provider]:
     return db.query(Provider).filter(Provider.id == provider_id).first()
@@ -89,10 +93,20 @@ def search_provider_view(
     service_ids: list[str] | None = None,
     match_all: bool = False,
     search_term: str | None = None,
+    
+    category_id: int | None = None,
 ):
     q = db.query(ProviderServiceView)
 
-    # Apply search term
+    # Filter by provider or service category
+    
+    if category_id is not None:
+        # Choose one depending on your intended meaning
+        q = q.filter(
+            (ProviderServiceView.provider_category_id == category_id)
+        )
+
+    # Search term
     if search_term:
         pattern = f"%{search_term.lower()}%"
         q = q.filter(
@@ -100,10 +114,9 @@ def search_provider_view(
             | func.lower(ProviderServiceView.service_name).ilike(pattern)
         )
 
-    # Service filtering logic
+    # Service filter
     if service_ids:
         if match_all:
-            # Find providers that have *all* selected services
             subq = (
                 db.query(
                     ProviderServiceView.provider_id,
@@ -114,11 +127,9 @@ def search_provider_view(
                 .having(func.count(func.distinct(ProviderServiceView.service_id)) == len(service_ids))
                 .subquery()
             )
-
             q = q.join(subq, ProviderServiceView.provider_id == subq.c.provider_id)
         else:
-            # providers that have ANY of the selected services
             q = q.filter(ProviderServiceView.service_id.in_(service_ids))
-    print(q.statement.compile(compile_kwargs={"literal_binds": True}))
 
+    print(q.statement.compile(compile_kwargs={"literal_binds": True}))
     return q.all()
