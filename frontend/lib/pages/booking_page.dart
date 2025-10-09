@@ -103,9 +103,7 @@ class _BookingPageState extends State<BookingPage> {
 
     try {
       final serviceIds = _selectedServices.map((s) => s["id"].toString()).toList();
-      /* final providers = await ProviderService.getProviders(
-        serviceId: null, // We'll pass multiple ids through query params
-      ); */
+      
 
       // 🔹 Use backend multi-service filtering directly
       final queryString = serviceIds.map((id) => "service_ids=$id").join("&");
