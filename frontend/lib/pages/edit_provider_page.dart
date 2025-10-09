@@ -156,7 +156,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Edit ${_provider!["name"] ?? ""}")),
+      appBar: AppBar(title: Text("Edit ${_provider!["provider_name"] ?? ""}")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

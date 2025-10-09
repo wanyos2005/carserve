@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import 'package:car_platform/pages/main_service_nav.dart';
+
 
 // Pages
 import 'package:car_platform/pages/login_page.dart';
@@ -31,7 +33,8 @@ class CarPlatformApp extends StatelessWidget {
         "/login": (context) => const LoginPage(),
         "/home": (context) => const HomePage(),
         "/insurance": (context) => const InsurancePolicyPage(),
-        
+        "/services": (context) => const MainServiceNav(),
+       
       },
       home: FutureBuilder(
         future: AuthService.getMe(),

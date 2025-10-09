@@ -40,6 +40,16 @@ class ProviderService {
     return await ApiService.post("/service-providers/", data);
   }
 
+  static Future<Map<String, dynamic>?> quickCreateProvider(String name) async {
+    final res = await ApiService.post("/service-providers/quick-provider", {
+      "name": name,
+    });
+    if (res is Map) {
+      return Map<String, dynamic>.from(res);
+    }
+    return null;
+  }
+
   static Future<bool> deleteProvider(String providerId) async {
     return await ApiService.delete("/service-providers/$providerId");
   }

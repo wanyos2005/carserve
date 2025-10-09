@@ -1,34 +1,32 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:car_platform/services/vehicle_service.dart';
 import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/insurance_service.dart';
+import 'package:car_platform/services/vehicle_service.dart';
+import 'package:car_platform/services/finance_service.dart';
 
-class InsuranceLogServicePage extends StatefulWidget {
+class CarHireFinanceLogServicePage extends StatefulWidget {
   final String providerId;
 
-  const InsuranceLogServicePage({super.key, required this.providerId});
+  const CarHireFinanceLogServicePage({super.key, required this.providerId});
 
   @override
-  State<InsuranceLogServicePage> createState() =>
-      _InsuranceLogServicePageState();
+  State<CarHireFinanceLogServicePage> createState() =>
+      _CarHireFinanceLogServicePageState();
 }
 
-class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
+class _CarHireFinanceLogServicePageState
+    extends State<CarHireFinanceLogServicePage> {
   final _formKey = GlobalKey<FormState>();
 
-  // --- Controllers ---
   final TextEditingController _guestContactController = TextEditingController();
   final TextEditingController _vehiclePlateController = TextEditingController();
   final TextEditingController _vehicleMakeController = TextEditingController();
   final TextEditingController _vehicleModelController = TextEditingController();
-  final TextEditingController _fuelTypeController = TextEditingController();
-  final TextEditingController _yomController = TextEditingController();
-  final TextEditingController _insuranceTypeController = TextEditingController();
+  final TextEditingController _loanRateController = TextEditingController();
+  final TextEditingController _loanTenureController = TextEditingController();
 
-  DateTime? _commencementDate;
-  DateTime? _expiryDate;
+  DateTime? _applicationDate;
   Timer? _debounce;
   bool _loading = false;
 
@@ -45,14 +43,12 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
     _vehiclePlateController.dispose();
     _vehicleMakeController.dispose();
     _vehicleModelController.dispose();
-    _fuelTypeController.dispose();
-    _yomController.dispose();
-    _insuranceTypeController.dispose();
+    _loanRateController.dispose();
+    _loanTenureController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
 
-  // 🔹 Debounced vehicle lookup
   void _onPlateChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
@@ -67,16 +63,11 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
           setState(() {
             _vehicleMakeController.text = vehicle['make'] ?? '';
             _vehicleModelController.text = vehicle['model'] ?? '';
-            _fuelTypeController.text = vehicle['fuel_type'] ?? '';
-            _yomController.text =
-                vehicle['yom'] != null ? vehicle['yom'].toString() : '';
           });
         } else {
           setState(() {
             _vehicleMakeController.clear();
             _vehicleModelController.clear();
-            _fuelTypeController.clear();
-            _yomController.clear();
           });
         }
       } catch (e) {
@@ -85,7 +76,7 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
     });
   }
 
-  Future<void> _pickDate(bool isCommencement) async {
+  Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -95,22 +86,18 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
 
     if (picked != null) {
       setState(() {
-        if (isCommencement) {
-          _commencementDate = picked;
-        } else {
-          _expiryDate = picked;
-        }
+        _applicationDate = picked;
       });
     }
   }
 
-  Future<void> _submitPolicy() async {
+  Future<void> _submitFinance() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
 
     try {
-      // 1️⃣ Create or find guest user
+      // 1️⃣ Create guest
       final guest = await AuthService.createGuestUser(
         email: _guestContactController.text.contains('@')
             ? _guestContactController.text.trim()
@@ -118,7 +105,7 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
         phone: !_guestContactController.text.contains('@')
             ? _guestContactController.text.trim()
             : null,
-        name: "Insurance Client",
+        name: "Finance Client",
         providerId: widget.providerId,
       );
 
@@ -140,8 +127,6 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
           "plate": plate,
           "make": _vehicleMakeController.text.trim(),
           "model": _vehicleModelController.text.trim(),
-          "yom": int.tryParse(_yomController.text) ?? 0,
-          "fuel_type": _fuelTypeController.text.trim(),
           "created_by_provider_id": widget.providerId,
         };
         vehicle = await VehicleService.createGuestVehicle(payload);
@@ -150,25 +135,25 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
       if (vehicle == null) throw Exception("Vehicle creation failed");
       final vehicleId = vehicle["id"];
 
-      // 3️⃣ Submit insurance policy
-      final policyPayload = {
+      // 3️⃣ Submit loan application
+      final financePayload = {
         "owner_id": guestId,
         "vehicle_id": vehicleId,
         "provider_id": widget.providerId,
-        "insurance_type": _insuranceTypeController.text.trim(),
-        "commencement_date":
-            _commencementDate?.toIso8601String().split('.').first,
-        "expiry_date": _expiryDate?.toIso8601String().split('.').first,
+        "loan_rate": _loanRateController.text.trim(),
+        "loan_tenure": _loanTenureController.text.trim(),
+        "application_date":
+            _applicationDate?.toIso8601String().split('.').first,
       };
 
-      final response = await InsuranceService.createPolicy(policyPayload);
+      final response = await FinanceService.createLoanApplication(financePayload);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Insurance policy logged successfully!")),
+        const SnackBar(content: Text("Finance application logged successfully!")),
       );
       Navigator.pop(context, response);
     } catch (e) {
-      debugPrint("❌ Error submitting insurance policy: $e");
+      debugPrint("❌ Error submitting finance log: $e");
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
@@ -179,7 +164,7 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Log Insurance Policy")),
+      appBar: AppBar(title: const Text("Log Car Hire / Finance Service")),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Form(
@@ -234,65 +219,42 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _yomController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: "Year of Manufacture",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _fuelTypeController,
-                          decoration: const InputDecoration(
-                            labelText: "Fuel Type",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                   const Divider(height: 30),
-                  const Text("Insurance Details",
+                  const Text("Finance / Loan Details",
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   TextFormField(
-                    controller: _insuranceTypeController,
+                    controller: _loanRateController,
                     decoration: const InputDecoration(
-                      labelText: "Insurance Type (e.g. Comprehensive)",
+                      labelText: "Loan Rate (%)",
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) =>
                         v == null || v.isEmpty ? "Required" : null,
                   ),
-                  const SizedBox(height: 10),
-                  ListTile(
-                    title: Text(_commencementDate == null
-                        ? "Select Commencement Date"
-                        : "Commencement: ${DateFormat.yMMMd().format(_commencementDate!)}"),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () => _pickDate(true),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _loanTenureController,
+                    decoration: const InputDecoration(
+                      labelText: "Loan Tenure (Months)",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? "Required" : null,
                   ),
                   ListTile(
-                    title: Text(_expiryDate == null
-                        ? "Select Expiry Date"
-                        : "Expiry: ${DateFormat.yMMMd().format(_expiryDate!)}"),
-                    trailing: const Icon(Icons.calendar_month),
-                    onTap: () => _pickDate(false),
+                    title: Text(_applicationDate == null
+                        ? "Select Application Date"
+                        : "Application Date: ${DateFormat.yMMMd().format(_applicationDate!)}"),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: _pickDate,
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: _loading ? null : _submitPolicy,
+                    onPressed: _loading ? null : _submitFinance,
                     icon: const Icon(Icons.save),
-                    label: const Text("Submit Policy"),
+                    label: const Text("Submit Loan Record"),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       textStyle: const TextStyle(fontSize: 16),

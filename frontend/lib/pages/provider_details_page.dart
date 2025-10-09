@@ -84,7 +84,7 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
     final contact = provider["contact_info"] ?? {};
 
     return Scaffold(
-      appBar: AppBar(title: Text(provider["name"] ?? "Provider")),
+      appBar: AppBar(title: Text(provider["provider_name"] ?? "Provider")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

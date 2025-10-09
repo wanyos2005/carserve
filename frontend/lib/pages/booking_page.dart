@@ -9,6 +9,11 @@ import 'package:car_platform/services/global_service_api.dart';
 import 'package:car_platform/BookingPageHelpers/service_selector.dart';
 import 'package:car_platform/BookingPageHelpers/provider_selector.dart';
 
+//pages
+// imports at the top
+import 'package:car_platform/pages/service_log_page.dart'; // adjust path as needed
+
+
 class BookingPage extends StatefulWidget {
   final Map<String, dynamic>? provider;
   final Map<String, dynamic>? service;
@@ -241,7 +246,20 @@ class _BookingPageState extends State<BookingPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Book Service")),
+      appBar: AppBar(title: const Text("Book Service"),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.history),
+          tooltip: "Service Logs",
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ServiceLogPage()),
+            );
+          },
+        ),
+      ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -251,7 +269,7 @@ class _BookingPageState extends State<BookingPage> {
               items: _vehicles
                   .map((v) => DropdownMenuItem<String>(
                         value: v["id"].toString(),
-                        child: Text(v["display_name"] ?? "${v["make"] ?? "Vehicle"}"),
+                        child: Text("${v["plate"] ?? ""} ${v["make"] ?? ""} (${v["model"] ?? v["id"]})"),
                       ))
                   .toList(),
               onChanged: (val) => setState(() => _selectedVehicleId = val),

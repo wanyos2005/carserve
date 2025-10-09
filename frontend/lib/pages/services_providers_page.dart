@@ -45,14 +45,14 @@ class _ServicesProvidersPageState extends State<ServicesProvidersPage> {
                   margin: const EdgeInsets.all(8),
                   child: ListTile(
                     leading: const Icon(Icons.store, color: Colors.blue),
-                    title: Text(p["name"] ?? "Unnamed Provider"),
+                    title: Text(p["provider_name"] ?? "Unnamed Provider"),
                     subtitle: Text(address),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => ProviderDetailsPage(
-                            providerId: p["id"],
+                            providerId: p["provider_id"],
                           ),
                         ),
                       );

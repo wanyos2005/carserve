@@ -59,47 +59,55 @@ class _ProviderUserLinkPageState extends State<ProviderUserLinkPage> {
     if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
-      );
+      ); 
     }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Link User to Provider")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            DropdownButtonFormField<int>(
-              value: selectedUserId,
-              hint: const Text("Select User"),
-              items: users.map<DropdownMenuItem<int>>((user) {
-                return DropdownMenuItem<int>(
-                  value: user['id'],
-                  child: Text("${user['email']}"),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => selectedUserId = val),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: selectedProviderId,
-              hint: const Text("Select Provider"),
-              items: providers.map<DropdownMenuItem<String>>((prov) {
-                return DropdownMenuItem<String>(
-                  value: prov['id'], // UUID string
-                  child: Text("${prov['name']}"),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => selectedProviderId = val),
-            ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Users dropdown
+              DropdownButtonFormField<int>(
+                value: selectedUserId,
+                hint: const Text("Select User"),
+                items: users.map<DropdownMenuItem<int>>((user) {
+                  return DropdownMenuItem<int>(
+                    value: user['id'],
+                    child: Text(user['email'] ?? user['name'] ?? 'Unknown User'),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => selectedUserId = val),
+              ),
+              const SizedBox(height: 16),
 
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _linkUser,
-              child: const Text("Link User"),
-            ),
-          ],
+              // Providers dropdown
+              DropdownButtonFormField<String>(
+                value: selectedProviderId,
+                hint: const Text("Select Provider"),
+                items: providers.map<DropdownMenuItem<String>>((prov) {
+                  return DropdownMenuItem<String>(
+                    value: prov['provider_id'], // ✅ correct key
+                    child: Text(prov['provider_name']),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => selectedProviderId = val),
+              ),
+
+              const SizedBox(height: 24),
+
+              ElevatedButton(
+                onPressed: _linkUser,
+                child: const Text("Link User"),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
 }

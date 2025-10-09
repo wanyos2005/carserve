@@ -216,7 +216,7 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
                       return Column(
                         children: providers.map((prov) {
                           return ListTile(
-                            title: Text(prov["name"]),
+                            title: Text(prov["provider_name"] ?? "Unnamed Provider"),
                             subtitle: Text(prov["description"] ?? ""),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -228,7 +228,7 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => EditProviderPage(providerId: prov["id"]),
+                                        builder: (_) => EditProviderPage(providerId: prov["provider_id"]),
                                       ),
                                     );
                                   },
@@ -236,6 +236,7 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
                               ],
                             ),
                           );
+
                         }).toList(),
                       );
 

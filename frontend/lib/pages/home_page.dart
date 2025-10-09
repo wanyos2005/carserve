@@ -125,13 +125,9 @@ class HomePage extends StatelessWidget {
                         ),
                         _navCard(
                           context,
-                          "Book Service",
-                          Icons.build_circle,
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const BookingPage()),
-                          ),
+                          "Services",
+                          Icons.miscellaneous_services,
+                          () => Navigator.pushNamed(context, "/services"),
                         ),
                         _navCard(
                           context,

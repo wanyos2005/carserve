@@ -100,7 +100,32 @@ def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
     return crud_provider.create_provider(db, payload)
 
 
+@router.get("/providers/")
+def search_providers(
+    db: Session = Depends(get_db),
+    service_ids: list[str] = Query(None),
+    match_all: bool = Query(False),
+    search: str = Query(None),
+):
+    rows = crud_provider.search_provider_view(db, service_ids, match_all, search)
 
+    # optional: group results by provider for frontend structure
+    grouped = {}
+    for r in rows:
+        if r.provider_id not in grouped:
+            grouped[r.provider_id] = {
+                "provider_id": r.provider_id,
+                "provider_name": r.provider_name,
+                "services": []
+            }
+        grouped[r.provider_id]["services"].append({
+            "service_id": r.service_id,
+            "service_name": r.service_name,
+            "price": r.price,
+            "display_name": r.display_name,
+        })
+
+    return list(grouped.values())
 
 # -----------------------
 # Provider-specific routes (placed LAST to avoid collisions)
@@ -206,35 +231,4 @@ def list_service_templates_for_provider(
 
     templates = crud_provider.get_service_templates_by_provider(db, provider_id)
     return templates
-
-
-@router.get("/providers/")
-def search_providers(
-    db: Session = Depends(get_db),
-    service_ids: list[str] = Query(None),
-    match_all: bool = Query(False),
-    search: str = Query(None),
-):
-    rows = crud_provider.search_provider_view(db, service_ids, match_all, search)
-
-    # optional: group results by provider for frontend structure
-    grouped = {}
-    for r in rows:
-        if r.provider_id not in grouped:
-            grouped[r.provider_id] = {
-                "provider_id": r.provider_id,
-                "provider_name": r.provider_name,
-                "services": []
-            }
-        grouped[r.provider_id]["services"].append({
-            "service_id": r.service_id,
-            "service_name": r.service_name,
-            "price": r.price,
-            "display_name": r.display_name,
-        })
-
-    return list(grouped.values())
-
-    
-
 

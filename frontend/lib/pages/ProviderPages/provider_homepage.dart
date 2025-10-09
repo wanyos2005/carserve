@@ -24,9 +24,9 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
 
   Future<void> _loadProviderCategory() async {
     try {
-      final provider = await ProviderService.getProviderById(widget.providerId);
+      final provider = await ProviderService.getProviderDetails(widget.providerId);
       setState(() {
-        _categoryName = provider['category']['name']?.toLowerCase();
+        _categoryName = provider?['category']['name'];
         _isLoading = false;
       });
     } catch (e) {
@@ -45,7 +45,7 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
       );
     }
 
-    final isInsurance = _categoryName == 'insurance';
+    final isInsurance = _categoryName?.trim().toLowerCase() == 'insurance';
 
     final quickActions = [
       {

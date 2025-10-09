@@ -151,8 +151,8 @@ Widget _buildAddPolicyForm() {
             decoration: const InputDecoration(labelText: "Select Provider"),
             items: [
               ..._providers.map((p) => DropdownMenuItem<String>(
-                    value: p["id"].toString(),
-                    child: Text(p["name"] ?? "Provider ${p["id"]}"),
+                    value: p["provider_id"].toString(),
+                    child: Text(p["provider_name"] ?? "Provider ${p["provider_id"]}"),
                   )),
               const DropdownMenuItem<String>(
                 value: "other",
@@ -281,7 +281,7 @@ Widget _buildMyPoliciesList() {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Provider: ${policy["provider"]?["name"] ?? "Unknown"}"),
+                  Text("Provider: ${policy["provider"]?["provider_name"] ?? "Unknown"}"),
                   Text("Type: ${policy["insurance_type"] ?? "-"}"),
                   Text(
                     "Start: ${policy["commencement_date"] != null ? DateFormat.yMMMd().format(DateTime.parse(policy["commencement_date"])) : "-"}",
