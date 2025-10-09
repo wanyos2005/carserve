@@ -17,7 +17,8 @@ class UserRead(UserBase):
     name: Optional[str] = None
     phone: Optional[str] = None
     provider_id: Optional[str] = None  # ✅ NEW FIELD
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True
 
 class LinkUserToProviderRequest(BaseModel):
     user_id: int

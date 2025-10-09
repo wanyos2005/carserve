@@ -216,26 +216,25 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
                       return Column(
                         children: providers.map((prov) {
                           return ListTile(
-                            title: Text(prov["name"]),
-                            subtitle: Text(prov["description"] ?? ""),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.visibility),
-                                  tooltip: "View / Edit",
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => EditProviderPage(providerId: prov["id"]),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                            title: Text(prov["provider_name"] ?? "Unnamed Provider"),
+                            subtitle: Text(
+                              prov["description"] ?? "",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.visibility),
+                              tooltip: "View / Edit",
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditProviderPage(providerId: prov["provider_id"]),
+                                  ),
+                                );
+                              },
                             ),
                           );
+
                         }).toList(),
                       );
 

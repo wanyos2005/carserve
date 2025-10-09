@@ -53,6 +53,17 @@ class ProviderBase(BaseModel):
 class ProviderCreate(ProviderBase):
     category_id: int
 
+class ProviderQuickCreate(BaseModel):
+    name: str
+
+class ProviderQuickOut(BaseModel):
+    id: str
+    name: str
+    is_registered: bool
+
+    class Config:
+        orm_mode = True
+
 class ProviderUpdate(BaseModel):
     name: Optional[str] = None
     category_id: Optional[int] = None

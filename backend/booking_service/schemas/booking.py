@@ -1,6 +1,6 @@
 # backend/booking_service/app/schemas/booking.py
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from datetime import datetime
 from uuid import UUID
 from typing import Union
@@ -40,13 +40,14 @@ class ServiceLogBase(BaseModel):
     provider_contact: Optional[dict] = None
     service_id: Optional[str] = None
     service_name: Optional[str] = None
-    service_items: Optional[Dict[str, str]] = None
+    service_items: Optional[Dict[str, Any]] = None
     mileage_km: Optional[int] = None
     performed_at: Optional[datetime] = None
     next_service_km: Optional[int] = None
     next_service_date: Optional[datetime] = None
-    mechanic_name: Optional[str] = None
+    served_by: Optional[str] = None
     mechanic_contact: Optional[str] = None
+    cost: Optional[int] = None
     logged_by: Optional[str] = "user"
     notes: Optional[str] = ""
 
