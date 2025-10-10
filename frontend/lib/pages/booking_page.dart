@@ -219,7 +219,7 @@ class _BookingPageState extends State<BookingPage> {
         await BookingService.createBooking({
           "user_id": _me!["id"],
           "vehicle_id": _selectedVehicleId,
-          "provider_id": _selectedProvider!["id"],
+          "provider_id": _selectedProvider!["provider_id"],
           "service_id": service["id"],
           "scheduled_at": _selectedDate!.toUtc().toIso8601String(),
         });

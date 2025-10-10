@@ -27,34 +27,33 @@ class _HistoryPageState extends State<HistoryPage> {
     _loadHistory();
   }
 
+  
   Future<void> _loadHistory() async {
     setState(() => _loading = true);
 
-    final me = await AuthService.getMe();
-    if (me != null) {
+    try {
+      final me = await AuthService.getMe();
+      if (me == null) {
+        setState(() => _loading = false);
+        return;
+      }
+
       final bookings = await BookingService.listBookingsForUser(me["id"]);
       final logs = await BookingService.listServiceLogsForUser(me["id"]);
-
-      // ✅ Fetch all providers using ProviderService
       final providers = await ProviderService.getProviders();
 
       final Map<String, String> providerMap = {};
       final Map<String, String> serviceMap = {};
 
       for (final p in providers) {
-        providerMap[p["id"]] = p["provider_name"] ?? "Unknown";
+        final providerId = p["provider_id"];
+        final providerName = p["provider_name"] ?? "Unknown";
+        providerMap[providerId] = providerName;
 
-        final services = p["services"] as List? ?? [];
-        final providerServices = p["provider_services"] as List? ?? [];
-
+        final services = (p["services"] as List?) ?? [];
         for (final s in services) {
-          if (s is Map && s["id"] != null) {
-            final matched = providerServices.firstWhere(
-              (ps) => ps["service_id"] == s["id"],
-              orElse: () => null,
-            );
-            // For now we only keep service name, but matched has price/duration
-            serviceMap[s["id"]] = s["name"] ?? "Unknown";
+          if (s is Map && s["service_id"] != null) {
+            serviceMap[s["service_id"]] = s["service_name"] ?? "Unknown";
           }
         }
       }
@@ -67,10 +66,12 @@ class _HistoryPageState extends State<HistoryPage> {
         _services.addAll(serviceMap);
         _loading = false;
       });
-    } else {
+    } catch (e, st) {
+      debugPrint("❌ Error loading history: $e\n$st");
       setState(() => _loading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

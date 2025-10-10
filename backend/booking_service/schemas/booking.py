@@ -46,7 +46,7 @@ class ServiceLogBase(BaseModel):
     next_service_km: Optional[int] = None
     next_service_date: Optional[datetime] = None
     served_by: Optional[str] = None
-    mechanic_contact: Optional[str] = None
+    served_by_contact: Optional[str] = None
     cost: Optional[int] = None
     logged_by: Optional[str] = "user"
     notes: Optional[str] = ""

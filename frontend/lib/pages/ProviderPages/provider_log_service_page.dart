@@ -27,16 +27,14 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   final TextEditingController _yomController = TextEditingController();
   final TextEditingController _mileageController = TextEditingController();
   final TextEditingController _mechanicNameController = TextEditingController();
-  final TextEditingController _mechanicContactController =
-      TextEditingController();
-  final TextEditingController _nextServiceKmController =
-      TextEditingController();
+  final TextEditingController _mechanicContactController = TextEditingController();
+  final TextEditingController _nextServiceKmController = TextEditingController();
 
   DateTime? _performedAt;
   DateTime? _nextServiceDate;
   List<Map<String, dynamic>> _services = [];
-  bool _loading = true;
-  Timer? _debounce; // for search debounce
+  bool _loading = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -62,34 +60,28 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
     super.dispose();
   }
 
-  // 🔹 Fetch provider's service templates
+  // 🔹 Fetch provider's active service template
   Future<void> _fetchTemplateServices() async {
     setState(() => _loading = true);
     try {
-      final providerServices =
-          await ProviderService.getProviderServices(widget.providerId);
-
-      final Map<String, dynamic> serviceMap = {
-        for (var ps in providerServices) ps['service_id']: ps
+      final providerServices = await ProviderService.getProviderServices(widget.providerId);
+      final serviceMap = {
+        for (var ps in providerServices) ps['service_id']: ps,
       };
 
-      final templates =
-          await ProviderService.getServiceTemplates(widget.providerId);
+      final templates = await ProviderService.getServiceTemplates(widget.providerId);
       if (templates.isEmpty) {
         setState(() => _services = []);
         return;
       }
 
       final activeTemplate = templates.first;
-      final items =
-          List<Map<String, dynamic>>.from(activeTemplate['items'] ?? []);
-
+      final items = List<Map<String, dynamic>>.from(activeTemplate['items'] ?? []);
       final resolvedItems = items.map((item) {
         final ps = serviceMap[item['service_id']];
         return {
           'service_id': item['service_id'],
-          'display_name':
-              ps?['display_name'] ?? ps?['service']?['name'] ?? 'Unnamed Service',
+          'display_name': ps?['display_name'] ?? ps?['service']?['name'] ?? 'Unnamed Service',
           'done': false,
           'notes': '',
         };
@@ -113,27 +105,21 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
 
       try {
         final results = await VehicleService.searchVehicles(plate);
-
         if (results.isNotEmpty) {
           final vehicle = results.first;
           setState(() {
             _vehicleMakeController.text = vehicle['make'] ?? '';
             _vehicleModelController.text = vehicle['model'] ?? '';
             _fuelTypeController.text = vehicle['fuel_type'] ?? '';
-            _yomController.text =
-                vehicle['yom'] != null ? vehicle['yom'].toString() : '';
-            _mileageController.text =
-                vehicle['mileage'] != null ? vehicle['mileage'].toString() : '';
+            _yomController.text = vehicle['yom']?.toString() ?? '';
+            _mileageController.text = vehicle['mileage']?.toString() ?? '';
           });
         } else {
-          // 🔹 Clear previous data for new vehicle
-          setState(() {
-            _vehicleMakeController.clear();
-            _vehicleModelController.clear();
-            _fuelTypeController.clear();
-            _yomController.clear();
-            _mileageController.clear();
-          });
+          _vehicleMakeController.clear();
+          _vehicleModelController.clear();
+          _fuelTypeController.clear();
+          _yomController.clear();
+          _mileageController.clear();
         }
       } catch (e) {
         debugPrint("Vehicle search error: $e");
@@ -141,18 +127,8 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
     });
   }
 
-
-  // 🔹 Toggle and update service list
-  void _toggleDone(int index, bool? value) {
-    setState(() => _services[index]['done'] = value ?? false);
-  }
-
-  void _updateNotes(int index, String value) {
-    setState(() => _services[index]['notes'] = value);
-  }
-
-  // 🔹 Date picker
-  Future<void> _selectDate(BuildContext context, bool isNextService) async {
+  // 🔹 Date pickers
+  Future<void> _selectDate(BuildContext context, bool isNext) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -161,31 +137,32 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
     );
     if (picked != null) {
       setState(() {
-        if (isNextService) {
-          _nextServiceDate = picked;
-        } else {
-          _performedAt = picked;
-        }
+        if (isNext) _nextServiceDate = picked;
+        else _performedAt = picked;
       });
     }
   }
 
-  // 🔹 Submit log process
+  // 🔹 Toggle service completion
+  void _toggleDone(int index, bool? value) {
+    setState(() => _services[index]['done'] = value ?? false);
+  }
+
+  void _updateNotes(int index, String value) {
+    setState(() => _services[index]['notes'] = value);
+  }
+
+  // 🔹 Submit log
   Future<void> _submitLog() async {
     if (!_formKey.currentState!.validate()) return;
     if (_services.isEmpty) return;
 
     setState(() => _loading = true);
-
     try {
-      // 1️⃣ Create or get guest user
+      // Guest user
       final guestUser = await AuthService.createGuestUser(
-        email: _guestContactController.text.contains("@")
-            ? _guestContactController.text.trim()
-            : null,
-        phone: !_guestContactController.text.contains("@")
-            ? _guestContactController.text.trim()
-            : null,
+        email: _guestContactController.text.contains("@") ? _guestContactController.text.trim() : null,
+        phone: !_guestContactController.text.contains("@") ? _guestContactController.text.trim() : null,
         name: "Guest User",
         providerId: widget.providerId,
       );
@@ -193,15 +170,13 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
       if (guestUser == null) throw Exception("Failed to create guest user");
       final guestId = guestUser["id"];
 
-      // 2️⃣ Create or reuse vehicle
+      // Vehicle
       final plate = _vehiclePlateController.text.trim();
-      final search = await VehicleService.searchVehicles(plate);
+      final existing = await VehicleService.searchVehicles(plate);
       Map<String, dynamic>? vehicle;
 
-      if (search.isNotEmpty &&
-          search.first['plate'].toString().toUpperCase() ==
-              plate.toUpperCase()) {
-        vehicle = search.first;
+      if (existing.isNotEmpty && existing.first['plate'].toString().toUpperCase() == plate.toUpperCase()) {
+        vehicle = existing.first;
       } else {
         final payload = {
           "owner_id": guestId,
@@ -217,40 +192,40 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
       }
 
       if (vehicle == null) throw Exception("Failed to find or create vehicle");
-      final vehicleId = vehicle["id"];
 
-      // 3️⃣ Log the completed services
+      final provider = await ProviderService.getProviderDetails(widget.providerId);
+      final providerName = provider?["provider_name"] ?? "Unknown Provider";
+      final providerContact = provider?["contact_info"] ?? {};
+
       final completed = _services.where((s) => s["done"] == true).toList();
       final logsPayload = completed.map((s) => {
-            "provider_id": widget.providerId,
-            "vehicle_id": vehicleId,
-            "user_id": guestId,
-            "service_id": s["service_id"],
-            "service_name": s["display_name"],
-            "performed_at": _performedAt?.toIso8601String().split('.').first,
-            "next_service_km":
-                int.tryParse(_nextServiceKmController.text) ?? 0,
-            "next_service_date":
-                _nextServiceDate?.toIso8601String().split('.').first,
-            "mileage_km": int.tryParse(_mileageController.text) ?? 0,
-            "mechanic_name": _mechanicNameController.text.trim(),
-            "mechanic_contact": _mechanicContactController.text.trim(),
-            "notes": s["notes"],
-            "logged_by": "provider",
-          }).toList();
+        "provider_id": widget.providerId,
+        "provider_name": providerName,
+        "provider_contact": providerContact,
+        "vehicle_id": vehicle!["id"],
+        "user_id": guestId,
+        "service_id": s["service_id"],
+        "service_name": s["display_name"],
+        "service_items": {"notes": s["notes"], "checked": s["done"]},
+        "performed_at": _performedAt?.toIso8601String().split('.').first,
+        "next_service_km": int.tryParse(_nextServiceKmController.text) ?? 0,
+        "next_service_date": _nextServiceDate?.toIso8601String().split('.').first,
+        "mileage_km": int.tryParse(_mileageController.text) ?? 0,
+        "served_by": _mechanicNameController.text.trim(),
+        "mechanic_contact": _mechanicContactController.text.trim(),
+        "logged_by": "provider",
+        "notes": s["notes"],
+      }).toList();
 
       final response = await BookingService.createBulkServiceLogs(logsPayload);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                "Logged ${response.length} services for ${_vehiclePlateController.text}!")),
+        SnackBar(content: Text("Logged ${response.length} services for $plate")),
       );
       Navigator.pop(context);
     } catch (e) {
       debugPrint("❌ Error submitting logs: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       setState(() => _loading = false);
     }
@@ -260,7 +235,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Log Services")),
+      appBar: AppBar(title: const Text("Log Provider Services")),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Form(
@@ -268,177 +243,49 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
               child: ListView(
                 padding: const EdgeInsets.all(14),
                 children: [
-                  const Text("Guest & Vehicle Info",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-
-                  // Guest contact
-                  TextFormField(
-                    controller: _guestContactController,
-                    decoration: const InputDecoration(
-                      labelText: "Guest Contact (phone/email)",
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? "Required" : null,
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Vehicle plate with autofill
-                  TextFormField(
-                    controller: _vehiclePlateController,
-                    decoration: const InputDecoration(
-                      labelText: "Vehicle Plate (type to autofill)",
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? "Required" : null,
-                  ),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _vehicleMakeController,
-                          decoration: const InputDecoration(
-                            labelText: "Make",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _vehicleModelController,
-                          decoration: const InputDecoration(
-                            labelText: "Model",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _yomController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: "Year of Manufacture",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _fuelTypeController,
-                          decoration: const InputDecoration(
-                            labelText: "Fuel Type",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _sectionTitle("Guest & Vehicle Info"),
+                  _inputField(_guestContactController, "Guest Contact (phone/email)", required: true),
+                  _inputField(_vehiclePlateController, "Vehicle Plate (type to autofill)", required: true),
+                  _rowFields([
+                    _inputField(_vehicleMakeController, "Make"),
+                    _inputField(_vehicleModelController, "Model"),
+                  ]),
+                  _rowFields([
+                    _inputField(_yomController, "Year of Manufacture", type: TextInputType.number),
+                    _inputField(_fuelTypeController, "Fuel Type"),
+                  ]),
                   const Divider(height: 30),
-
-                  const Text("Service Details",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  _sectionTitle("Service Details"),
+                  _inputField(_mileageController, "Mileage (km)", type: TextInputType.number),
+                  _dateTile("Date Performed", _performedAt, () => _selectDate(context, false)),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _mileageController,
-                    decoration: const InputDecoration(
-                      labelText: "Mileage (km)",
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  ListTile(
-                    title: Text(_performedAt == null
-                        ? "Select Date Performed"
-                        : "Performed: ${DateFormat.yMMMd().format(_performedAt!)}"),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () => _selectDate(context, false),
-                  ),
-                  const SizedBox(height: 10),
 
-                  // Service items
-                  ..._services.map((service) => Card(
-                        elevation: 1,
+                  if (_services.isEmpty)
+                    const Center(child: Text("No service templates found.")),
+                  ..._services.map((s) => Card(
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         child: ListTile(
-                          contentPadding: const EdgeInsets.all(8),
-                          title: Text(service['display_name'],
-                              style: const TextStyle(fontSize: 13)),
+                          title: Text(s['display_name']),
                           trailing: Checkbox(
-                            value: service['done'],
-                            onChanged: (v) =>
-                                _toggleDone(_services.indexOf(service), v),
+                            value: s['done'],
+                            onChanged: (v) => _toggleDone(_services.indexOf(s), v),
                           ),
                           subtitle: TextField(
-                            decoration: const InputDecoration(
-                              labelText: "Notes",
-                              isDense: true,
-                            ),
-                            style: const TextStyle(fontSize: 12),
+                            decoration: const InputDecoration(labelText: "Notes", isDense: true),
                             maxLines: 1,
-                            onChanged: (v) =>
-                                _updateNotes(_services.indexOf(service), v),
+                            onChanged: (v) => _updateNotes(_services.indexOf(s), v),
                           ),
                         ),
                       )),
                   const Divider(height: 30),
-
-                  const Text("Mechanic Details",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _mechanicNameController,
-                    decoration: const InputDecoration(
-                      labelText: "Mechanic Name",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _mechanicContactController,
-                    decoration: const InputDecoration(
-                      labelText: "Mechanic Contact",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
+                  _sectionTitle("Mechanic Details"),
+                  _inputField(_mechanicNameController, "Mechanic Name"),
+                  _inputField(_mechanicContactController, "Mechanic Contact"),
                   const Divider(height: 30),
-
-                  const Text("Next Service",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _nextServiceKmController,
-                    decoration: const InputDecoration(
-                      labelText: "Next Service (km)",
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  ListTile(
-                    title: Text(_nextServiceDate == null
-                        ? "Select Next Service Date"
-                        : "Next Service: ${DateFormat.yMMMd().format(_nextServiceDate!)}"),
-                    trailing: const Icon(Icons.calendar_month),
-                    onTap: () => _selectDate(context, true),
-                  ),
+                  _sectionTitle("Next Service"),
+                  _inputField(_nextServiceKmController, "Next Service (km)", type: TextInputType.number),
+                  _dateTile("Next Service Date", _nextServiceDate, () => _selectDate(context, true)),
                   const SizedBox(height: 20),
 
                   ElevatedButton.icon(
@@ -453,6 +300,44 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
                 ],
               ),
             ),
+    );
+  }
+
+  // --- Helper UI Builders ---
+  Widget _sectionTitle(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      );
+
+  Widget _inputField(TextEditingController controller, String label,
+      {bool required = false, TextInputType type = TextInputType.text}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: type,
+        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        validator: required ? (v) => (v == null || v.isEmpty) ? "Required" : null : null,
+      ),
+    );
+  }
+
+  Widget _rowFields(List<Widget> fields) {
+    return Row(
+      children: [
+        Expanded(child: fields[0]),
+        const SizedBox(width: 8),
+        Expanded(child: fields[1]),
+      ],
+    );
+  }
+
+  Widget _dateTile(String label, DateTime? date, VoidCallback onTap) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(date == null ? label : "$label: ${DateFormat.yMMMd().format(date)}"),
+      trailing: const Icon(Icons.calendar_today),
+      onTap: onTap,
     );
   }
 }
