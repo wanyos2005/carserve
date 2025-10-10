@@ -212,7 +212,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
         "next_service_date": _nextServiceDate?.toIso8601String().split('.').first,
         "mileage_km": int.tryParse(_mileageController.text) ?? 0,
         "served_by": _mechanicNameController.text.trim(),
-        "mechanic_contact": _mechanicContactController.text.trim(),
+        "served_by_contact": _mechanicContactController.text.trim(),
         "logged_by": "provider",
         "notes": s["notes"],
       }).toList();
