@@ -79,7 +79,7 @@ class _BookingPageState extends State<BookingPage> {
         }
       });
 
-      if (_selectedServices.isNotEmpty) {
+      if (_selectedServices.isNotEmpty && widget.provider == null) {
         await _fetchMatchedProviders();
       }
     } catch (e, st) {
@@ -98,8 +98,11 @@ class _BookingPageState extends State<BookingPage> {
     setState(() {
       _providersLoading = true;
       _matchedProviders = [];
-      _selectedProvider = null;
+      if (widget.provider == null) {
+        _selectedProvider = null;
+      }
     });
+
 
     try {
       final serviceIds = _selectedServices.map((s) => s["id"].toString()).toList();
@@ -283,7 +286,12 @@ class _BookingPageState extends State<BookingPage> {
               icon: const Icon(Icons.build_circle),
               label: Text(_selectedServices.isEmpty
                   ? "Choose Services"
-                  : "Selected: ${_selectedServices.map((s) => s["name"]).join(", ")}"),
+                  : "Selected: ${_selectedServices.map((s) =>
+                    s["name"] ??
+                    s["display_name"] ??
+                    s["service"]?["name"] ??
+                    "Unnamed Service"
+                  ).join(", ")}"),
             ),
             const SizedBox(height: 12),
 

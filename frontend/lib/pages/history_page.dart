@@ -42,7 +42,7 @@ class _HistoryPageState extends State<HistoryPage> {
       final Map<String, String> serviceMap = {};
 
       for (final p in providers) {
-        providerMap[p["id"]] = p["name"] ?? "Unknown";
+        providerMap[p["id"]] = p["provider_name"] ?? "Unknown";
 
         final services = p["services"] as List? ?? [];
         final providerServices = p["provider_services"] as List? ?? [];
