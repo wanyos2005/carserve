@@ -4,7 +4,7 @@ import 'package:car_platform/services/booking_service.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/services/global_service_api.dart';
 import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/BookingPagehelpers/service_selector.dart';
+import 'package:car_platform/BookingPageHelpers/service_selector.dart';
 import 'package:car_platform/BookingPageHelpers/provider_selector.dart';
 
 class ServiceLogPage extends StatefulWidget {
@@ -126,15 +126,45 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
           _providerNameCtrl.text.trim(),
         );
 
+        debugPrint("🔍 New provider created: $newProvider");
+        debugPrint("🔍 Provider name controller text: '${_providerNameCtrl.text.trim()}'");
+
         if (newProvider != null) {
           logData["provider_id"] = newProvider["id"];
           logData["provider_name"] = newProvider["name"];
+          debugPrint("✅ Added provider to logData: ${newProvider["id"]}, ${newProvider["name"]}");
+          debugPrint("🔍 logData after adding provider: $logData");
+        } else {
+          debugPrint("❌ Failed to create provider - newProvider is null");
         }
       } else if (_selectedProvider != null) {
-        logData["provider_id"] = _selectedProvider!["provider_id"];
-        logData["provider_name"] = _selectedProvider!["provider_name"];
+        // Handle both possible field names for provider ID and name
+        final providerId = _selectedProvider!["provider_id"] ?? _selectedProvider!["id"];
+        final providerName = _selectedProvider!["provider_name"] ?? _selectedProvider!["name"];
+        
+        logData["provider_id"] = providerId;
+        logData["provider_name"] = providerName;
+        debugPrint("✅ Added selected provider to logData: $providerId, $providerName");
+        debugPrint("🔍 Full selected provider object: $_selectedProvider");
+      } else {
+        debugPrint("❌ No provider selected and manual provider is disabled");
       }
 
+      // Check if we have provider information
+      if (!logData.containsKey("provider_id") || !logData.containsKey("provider_name")) {
+        debugPrint("⚠️ WARNING: No provider information in logData!");
+        // You might want to show an error to the user here
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("⚠️ Warning: No provider information will be saved")),
+        );
+      }
+
+      debugPrint("🔍 Final logData before sending: $logData");
+      debugPrint("🔍 Manual provider mode: $_manualProvider");
+      debugPrint("🔍 Selected provider: $_selectedProvider");
+      debugPrint("🔍 Provider name controller text: '${_providerNameCtrl.text}'");
+      debugPrint("🔍 logData contains provider_id: ${logData.containsKey('provider_id')}");
+      debugPrint("🔍 logData contains provider_name: ${logData.containsKey('provider_name')}");
       await BookingService.createServiceLog(logData);
 
       ScaffoldMessenger.of(context).showSnackBar(

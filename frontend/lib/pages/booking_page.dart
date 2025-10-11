@@ -105,7 +105,15 @@ class _BookingPageState extends State<BookingPage> {
 
 
     try {
-      final serviceIds = _selectedServices.map((s) => s["id"].toString()).toList();
+      final serviceIds = _selectedServices.map((s) {
+        // Handle different service object structures
+        final id = s["id"] ?? s["service_id"] ?? s["service"]?["id"];
+        if (id == null) {
+          debugPrint("⚠️ Warning: Service object missing ID: $s");
+          return null;
+        }
+        return id.toString();
+      }).where((id) => id != null).toList();
       
 
       // 🔹 Use backend multi-service filtering directly
@@ -216,11 +224,25 @@ class _BookingPageState extends State<BookingPage> {
     setState(() => _loading = true);
     try {
       for (var service in _selectedServices) {
+        // Handle different service object structures
+        final serviceId = service["id"] ?? service["service_id"] ?? service["service"]?["id"];
+        final providerId = _selectedProvider!["provider_id"] ?? _selectedProvider!["id"];
+        
+        if (serviceId == null) {
+          debugPrint("❌ Error: Service object missing ID: $service");
+          throw Exception("Service ID is missing");
+        }
+        
+        if (providerId == null) {
+          debugPrint("❌ Error: Provider object missing ID: $_selectedProvider");
+          throw Exception("Provider ID is missing");
+        }
+        
         await BookingService.createBooking({
           "user_id": _me!["id"],
           "vehicle_id": _selectedVehicleId,
-          "provider_id": _selectedProvider!["provider_id"],
-          "service_id": service["id"],
+          "provider_id": providerId,
+          "service_id": serviceId,
           "scheduled_at": _selectedDate!.toUtc().toIso8601String(),
         });
       }

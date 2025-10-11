@@ -57,7 +57,7 @@ class ServiceLog(Base):
 
     # Mechanic info
     served_by = Column(String(255), nullable=True)
-    mechanic_contact = Column(String(255), nullable=True)
+    served_by_contact = Column(String(255), nullable=True)
     cost = Column(Integer, nullable=True)
     
     # NEW → Who logged this (user vs provider vs system)

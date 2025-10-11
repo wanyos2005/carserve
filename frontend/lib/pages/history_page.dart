@@ -148,12 +148,26 @@ class _HistoryPageState extends State<HistoryPage> {
       itemCount: _serviceLogs.length,
       itemBuilder: (context, i) {
         final l = _serviceLogs[i];
+        
+        // Format the performed_at date
+        String performedDate = "N/A";
+        if (l["performed_at"] != null) {
+          try {
+            final date = DateTime.parse(l["performed_at"]);
+            performedDate = "${date.day}/${date.month}/${date.year}";
+          } catch (e) {
+            performedDate = l["performed_at"].toString();
+          }
+        }
+        
         return Card(
           child: ListTile(
             title: Text(l["service_name"] ?? "Service"),
             subtitle: Text(
               "Provider: ${l["provider_name"] ?? "N/A"}\n"
-              "Performed: ${l["performed_at"] ?? "N/A"}",
+              "Performed: $performedDate\n"
+              "Cost: ${l["cost"] != null ? "₦${l["cost"]}" : "N/A"}\n"
+              "Mileage: ${l["mileage_km"] != null ? "${l["mileage_km"]} km" : "N/A"}",
             ),
           ),
         );

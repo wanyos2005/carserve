@@ -99,7 +99,7 @@ def delete_service(service_id: str, db: Session = Depends(get_db)):
 def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
     return crud_provider.create_provider(db, payload)
 
-DEFAULT_CATEGORY_ID = 6  # Default category for quick-created providers
+DEFAULT_CATEGORY_ID = 5  # Default category for quick-created providers
 
 
 @router.post("/quick-provider", response_model=ProviderQuickOut)
@@ -117,44 +117,18 @@ def quick_create_provider(payload: ProviderQuickCreate, db: Session = Depends(ge
     if existing:
         return existing
 
-    provider_data = {
-        "name": name,
-        "category_id": DEFAULT_CATEGORY_ID,
-        "is_registered": False,
-        "description": None,
-        "contact_info": {},
-        "location": {},
-    }
+    provider_data = ProviderCreate(
+        name=name,
+        category_id=DEFAULT_CATEGORY_ID,
+        is_registered=False,
+        description=None,
+        contact_info={},
+        location={},
+    )
 
     new_provider = crud_provider.create_provider(db, provider_data)
     return new_provider
 
-@router.get("/providers/")
-def search_providers(
-    db: Session = Depends(get_db),
-    service_ids: list[str] = Query(None),
-    match_all: bool = Query(False),
-    search: str = Query(None),
-):
-    rows = crud_provider.search_provider_view(db, service_ids, match_all, search)
-
-    # optional: group results by provider for frontend structure
-    grouped = {}
-    for r in rows:
-        if r.provider_id not in grouped:
-            grouped[r.provider_id] = {
-                "provider_id": r.provider_id,
-                "provider_name": r.provider_name,
-                "services": []
-            }
-        grouped[r.provider_id]["services"].append({
-            "service_id": r.service_id,
-            "service_name": r.service_name,
-            "price": r.price,
-            "display_name": r.display_name,
-        })
-
-    return list(grouped.values())
 
 # -----------------------
 # Provider-specific routes (placed LAST to avoid collisions)
@@ -253,24 +227,21 @@ def list_service_templates_for_provider(
     templates = crud_provider.get_service_templates_by_provider(db, provider_id)
     return templates
 
-<<<<<<< HEAD
-=======
 
 @router.get("/providers/")
 def search_providers(
     db: Session = Depends(get_db),
     service_ids: list[str] = Query(None),
     match_all: bool = Query(False),
-    search: str = Query(None),
     category_id: int | None = Query(None),
-    
+    search: str = Query(None),
 ):
     rows = crud_provider.search_provider_view(
         db,
         service_ids,
         match_all,
-        search,
         category_id,
+        search,
     )
 
     grouped = {}
@@ -295,4 +266,3 @@ def search_providers(
         })
 
     return list(grouped.values())
->>>>>>> e4bcbc43991ac392a637d383e35dbeb3f7585d6b

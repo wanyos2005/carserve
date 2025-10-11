@@ -100,7 +100,7 @@ services:
     build:
       context: ./backend/insurance_service
     volumes:
-      - ./backend/insurance_service
+      - ./backend/insurance_service:/app
     ports:
       - "8005:8005"
     environment:

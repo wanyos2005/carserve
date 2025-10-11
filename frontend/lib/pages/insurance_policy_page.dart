@@ -19,6 +19,7 @@ class _InsurancePolicyPageState extends State<InsurancePolicyPage> {
 
   String? _selectedVehicle;
   String? _selectedProvider;
+  String? _customProviderName;
   String? _insuranceType;
   DateTime? _commencementDate;
   DateTime? _expiryDate;
@@ -70,31 +71,54 @@ class _InsurancePolicyPageState extends State<InsurancePolicyPage> {
 
     setState(() => _loading = true);
 
-    final me = await AuthService.getMe();
-    final ownerId = me?["id"];
+    try {
+      final me = await AuthService.getMe();
+      final ownerId = me?["id"];
 
-    final payload = {
-      "owner_id": ownerId,
-      "vehicle_id": _selectedVehicle,
-      "provider_id": _selectedProvider,
-      "insurance_type": _insuranceType,
-      "commencement_date": _commencementDate?.toUtc().toIso8601String(),
-      "expiry_date": _expiryDate?.toUtc().toIso8601String(),
-    };
+      String? providerId = _selectedProvider;
 
-  final res = await InsuranceService.createPolicy(payload);
+      // If "other" is selected, create a new provider first
+      if (_selectedProvider == "other" && _customProviderName != null && _customProviderName!.isNotEmpty) {
+        debugPrint("🔄 Creating new provider: ${_customProviderName!.trim()}");
+        final newProvider = await ProviderService.quickCreateProvider(_customProviderName!.trim());
+        debugPrint("🔄 Provider creation response: $newProvider");
+        if (newProvider != null) {
+          providerId = newProvider["id"];
+          debugPrint("✅ Created new provider: ${newProvider["name"]} with ID: $providerId");
+        } else {
+          debugPrint("❌ Provider creation returned null");
+          throw Exception("Failed to create provider");
+        }
+      }
 
-    setState(() => _loading = false);
+      final payload = {
+        "owner_id": ownerId,
+        "vehicle_id": _selectedVehicle,
+        "provider_id": providerId,
+        "insurance_type": _insuranceType,
+        "commencement_date": _commencementDate?.toUtc().toIso8601String(),
+        "expiry_date": _expiryDate?.toUtc().toIso8601String(),
+      };
 
-    if (res != null) {
+      final res = await InsuranceService.createPolicy(payload);
+
+      if (res != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ Insurance policy created successfully!")),
+        );
+        Navigator.pop(context, true); // return success
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ Failed to create policy.")),
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Error creating insurance policy: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Insurance policy created successfully!")),
+        SnackBar(content: Text("❌ Error: ${e.toString()}")),
       );
-      Navigator.pop(context, true); // return success
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ Failed to create policy.")),
-      );
+    } finally {
+      setState(() => _loading = false);
     }
   }
 
@@ -152,7 +176,7 @@ Widget _buildAddPolicyForm() {
             items: [
               ..._providers.map((p) => DropdownMenuItem<String>(
                     value: p["provider_id"].toString(),
-                    child: Text(p["provider_name"] ?? "Provider ${p["provider_id"]}"),
+                    child: Text(p["provider_name"] ?? p["name"] ?? "Provider ${p["provider_id"]}"),
                   )),
               const DropdownMenuItem<String>(
                 value: "other",
@@ -170,7 +194,7 @@ Widget _buildAddPolicyForm() {
             TextFormField(
               decoration:
                   const InputDecoration(labelText: "Enter Provider Name"),
-              onChanged: (val) => _selectedProvider = val,
+              onChanged: (val) => _customProviderName = val,
               validator: (val) {
                 if (_selectedProvider == "other" &&
                     (val == null || val.isEmpty)) {
@@ -322,8 +346,35 @@ Future<List<Map<String, dynamic>>> _loadPoliciesWithDetails() async {
 
     if (policy["provider_id"] != null) {
       try {
-        provider = await ProviderService.getProviderDetails(policy["provider_id"].toString());
-      } catch (_) {}
+        final providerId = policy["provider_id"].toString();
+        // Check if it's a UUID (valid provider ID) or just a string name
+        if (_isValidUUID(providerId)) {
+          provider = await ProviderService.getProviderDetails(providerId);
+          // Ensure we have the right field names for display
+          if (provider != null) {
+            provider = {
+              ...provider,
+              "provider_name": provider["name"] ?? provider["provider_name"],
+              "name": provider["name"] ?? provider["provider_name"],
+            };
+          }
+        } else {
+          // Legacy: It's a custom provider name from old data, create a mock provider object
+          provider = {
+            "provider_name": providerId,
+            "name": providerId,
+            "is_registered": false,
+          };
+        }
+      } catch (e) {
+        debugPrint("❌ Error fetching provider details for ${policy["provider_id"]}: $e");
+        // If API call fails, treat as custom provider name
+        provider = {
+          "provider_name": policy["provider_id"].toString(),
+          "name": policy["provider_id"].toString(),
+          "is_registered": false,
+        };
+      }
     }
 
     enriched.add({
@@ -334,5 +385,14 @@ Future<List<Map<String, dynamic>>> _loadPoliciesWithDetails() async {
   }
 
   return enriched;
+}
+
+/// Helper function to check if a string is a valid UUID
+bool _isValidUUID(String str) {
+  final uuidRegex = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+  return uuidRegex.hasMatch(str);
 }
 }

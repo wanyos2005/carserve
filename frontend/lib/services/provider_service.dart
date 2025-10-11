@@ -29,10 +29,13 @@ class ProviderService {
     return res is List ? res : [];
   }
   static Future<Map<String, dynamic>?> getProviderDetails(String providerId) async {
+    print("🔄 GetProviderDetails: Fetching provider: $providerId");
     final res = await ApiService.get("/service-providers/$providerId");
+    print("🔄 GetProviderDetails: API response: $res");
     if (res is Map) {
       return Map<String, dynamic>.from(res);
     }
+    print("❌ GetProviderDetails: Response is not a Map, returning null");
     return null;
   }
 
@@ -41,12 +44,15 @@ class ProviderService {
   }
 
   static Future<Map<String, dynamic>?> quickCreateProvider(String name) async {
+    print("🔄 QuickCreateProvider: Sending request for provider: $name");
     final res = await ApiService.post("/service-providers/quick-provider", {
       "name": name,
     });
+    print("🔄 QuickCreateProvider: API response: $res");
     if (res is Map) {
       return Map<String, dynamic>.from(res);
     }
+    print("❌ QuickCreateProvider: Response is not a Map, returning null");
     return null;
   }
 

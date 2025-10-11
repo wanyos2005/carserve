@@ -21,7 +21,6 @@ def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
     return provider
 
 def get_provider_by_name(db: Session, name: str):
-    from app.models import Provider
     return db.query(Provider).filter(Provider.name.ilike(name)).first()
 
 
