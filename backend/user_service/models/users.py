@@ -10,6 +10,7 @@ from sqlalchemy.orm import relationship
 
 class User(Base):
     __tablename__ = "tbl_auth"
+    __table_args__ = {"schema": "users"}
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     email = Column(String, unique=True, index=True, nullable=True)  # now optional

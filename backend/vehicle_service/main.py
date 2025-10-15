@@ -51,3 +51,11 @@ app.include_router(vehicles_router, prefix="/vehicles", tags=["vehicles"])
 @app.get("/vehicles/health")
 def health():
     return {"status": "vehicle-service healthy"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "vehicle service healthy"}
+
+@app.get("/metrics")
+def metrics():
+    return {"status": "metrics endpoint", "message": "Prometheus metrics not implemented yet"}

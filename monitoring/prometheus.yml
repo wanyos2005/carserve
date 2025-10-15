@@ -1,0 +1,82 @@
+# This is the configuration file for Prometheus, it is used to scrape the metrics from the services and store them in the database.
+# metrics like the number of requests, the number of errors, the number of users,
+# the number of vehicles, the number of bookings, the number of services,
+# the number of insurance, the number of alerts, the number of expenses,
+# the number of payments, the number of notifications, the number of messages,
+# the number of reports, the number of logs, the number of events, 
+# it achieves this by running a script that scrapes the metrics from the services and stores them in the database.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Nginx metrics (if nginx-prometheus-exporter is added)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['gateway:9113']
+    scrape_interval: 5s
+
+  # PostgreSQL metrics (if postgres_exporter is added)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:9187']
+    scrape_interval: 5s
+
+  # Redis metrics (if redis_exporter is added)
+  # to add redis_exporter, go to  
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:9121']
+    scrape_interval: 5s
+
+  # Application services
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'vehicle-service'
+    static_configs:
+      - targets: ['vehicle-service:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'service-provider'
+    static_configs:
+      - targets: ['service-provider:8003']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'booking-service'
+    static_configs:
+      - targets: ['booking-service:8004']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'insurance-service'
+    static_configs:
+      - targets: ['insurance-service:8005']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'alert-service'
+    static_configs:
+      - targets: ['alert-service:8006']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  - job_name: 'expenses-service'
+    static_configs:
+      - targets: ['expenses-service:8007']
+    metrics_path: '/metrics'
+    scrape_interval: 10s

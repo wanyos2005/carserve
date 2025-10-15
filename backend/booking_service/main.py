@@ -28,4 +28,12 @@ app.include_router(service_logs.router, prefix="/service-logs")
 # --- Health check ---
 @app.get("/")
 def root():
-    return {"service": "booking_service", "status": "ok"}
+    return {"service": "booking-service", "status": "ok"}
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.get("/metrics")
+def metrics():
+    return {"status": "metrics endpoint", "message": "Prometheus metrics not implemented yet"}

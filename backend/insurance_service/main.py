@@ -36,7 +36,15 @@ app.include_router(insurance_router, prefix="/insurance", tags=["insurance-polic
 app.include_router(claims_router, prefix="/insurance/claims", tags=["insurance-claims"])
 app.include_router(risk_scoring_router, prefix="/insurance/risk", tags=["risk-scoring"])
 
-# Health check endpoint
+# Health check endpoints
+@app.get("/health")
+def health_root():
+    return {"status": "healthy"}
+
+@app.get("/metrics")
+def metrics():
+    return {"status": "metrics endpoint", "message": "Prometheus metrics not implemented yet"}
+
 @app.get("/insurance/health")
 def health():
     return {

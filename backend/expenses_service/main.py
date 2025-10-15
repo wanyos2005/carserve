@@ -32,6 +32,14 @@ app.include_router(expense_router, prefix="/expense", tags=["expense"])
 def health():
     return {"status": "expense-service healthy"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "expense service healthy"}
+
+@app.get("/metrics")
+def metrics():
+    return {"status": "metrics endpoint", "message": "Prometheus metrics not implemented yet"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8007)

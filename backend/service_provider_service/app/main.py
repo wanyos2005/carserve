@@ -29,5 +29,13 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     return response
 
-# Register routes
+@app.get("/health")
+def health_check():
+    return {"status": "service provider healthy"}
+
+@app.get("/metrics")
+def metrics():
+    return {"status": "metrics endpoint", "message": "Prometheus metrics not implemented yet"}
+
+# Register routes AFTER health/metrics so catch-all paths don't shadow them
 app.include_router(providers_router, prefix="", tags=["service-providers"])

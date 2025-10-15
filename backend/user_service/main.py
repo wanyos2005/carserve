@@ -3,9 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import users as users_router
 from core.db import Base, engine
+from sqlalchemy import text
 
-# Create DB tables (use Alembic in prod instead of this)
-Base.metadata.create_all(bind=engine)
+# In production, schemas and tables are managed via Alembic migrations.
+# We avoid implicit table creation here to prevent drift across environments.
 
 app = FastAPI(title="User Service")
 
@@ -23,5 +24,13 @@ app.include_router(users_router.router, prefix="", tags=["users"])
 
 
 @app.get("/")
+async def root():
+    return {"service": "user-service", "status": "ok"}
+
+@app.get("/health")
 async def health_check():
-    return {"status": "users route healthy"}
+    return {"status": "healthy"}
+
+@app.get("/metrics")
+def metrics():
+    return {"status": "metrics endpoint", "message": "Prometheus metrics not implemented yet"}
