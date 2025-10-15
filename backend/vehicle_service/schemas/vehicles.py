@@ -38,4 +38,4 @@ class VehicleRead(VehicleBase):
     
 
     class Config:
-        orm_mode = True  # replaces orm_mode in Pydantic v2
+        from_attributes = True  # replaces orm_mode in Pydantic v2

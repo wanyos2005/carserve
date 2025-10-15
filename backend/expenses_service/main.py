@@ -31,3 +31,7 @@ app.include_router(expense_router, prefix="/expense", tags=["expense"])
 @app.get("/expense/health")
 def health():
     return {"status": "expense-service healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8007)

@@ -1,17 +1,16 @@
-version: '3.8'
 services:
   postgres:
     image: postgres:latest
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: AdminDb
+      POSTGRES_PASSWORD: Ngojakwanza
       POSTGRES_DB: car_platform
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d car_platform"]
+      test: ["CMD-SHELL", "pg_isready -U AdminDb -d car_platform"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,11 +37,11 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://user:password@postgres:5432/car_platform
+      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
       - DB_HOST=postgres
       - DB_NAME=car_platform
-      - DB_USER=user
-      - DB_PASSWORD=password
+      - DB_USER=AdminDb
+      - DB_PASSWORD=Ngojakwanza
       - REDIS_HOST=redis
     depends_on:
       postgres:
@@ -59,11 +58,11 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://user:password@postgres:5432/car_platform
+      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
       - DB_HOST=postgres
       - DB_NAME=car_platform
-      - DB_USER=user
-      - DB_PASSWORD=password
+      - DB_USER=AdminDb
+      - DB_PASSWORD=Ngojakwanza
       - REDIS_HOST=redis
     depends_on:
       postgres:
@@ -104,14 +103,124 @@ services:
     ports:
       - "8005:8005"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://user:password@postgres:5432/car_platform
+      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
       - DB_HOST=postgres
       - DB_NAME=car_platform
-      - DB_USER=user
-      - DB_PASSWORD=password
+      - DB_USER=AdminDb
+      - DB_PASSWORD=Ngojakwanza
       - REDIS_HOST=redis
     depends_on:
       - postgres
+
+  alert-service:
+    build:
+      context: ./backend/alert_service
+    volumes:
+      - ./backend/alert_service:/app
+    ports:
+      - "8006:8006"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
+      - REDIS_URL=redis://redis:6379
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
+      # Email settings (same as user service)
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=tastytasty101@gmail.com
+      - SMTP_PASSWORD=degp zfga fqfp sifz
+      - SMTP_FROM_EMAIL=tastytasty101@gmail.com
+      - SMTP_FROM_NAME=DRIVEon.fit
+      - SMTP_TLS=True
+      - SMTP_SSL=False
+      # Notification services (add when ready)
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY:-}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
+      - ALLOWED_ORIGINS=http://localhost:3000,http://192.168.0.107:8081,http://192.168.2.116:8000*
+      - SMS_PROVIDER=${SMS_PROVIDER:-africastalking}
+      - AT_USERNAME=${AT_USERNAME:-sandbox}
+      - AT_API_KEY=${AT_API_KEY:-atsk_f3f2b279ac069c0320e24f5ec82bdeafbb31c8212f9a5b7e9b7bd6b94bff46c10869c579}
+      - AT_SENDER_ID=${AT_SENDER_ID:-}
+    depends_on:
+      - postgres
+      - redis
+      - user-service
+      - booking-service
+      - insurance-service
+
+  alert-worker:
+    build:
+      context: ./backend/alert_service
+    volumes:
+      - ./backend/alert_service:/app
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=tastytasty101@gmail.com
+      - SMTP_PASSWORD=degp zfga fqfp sifz
+      - SMTP_FROM_EMAIL=tastytasty101@gmail.com
+      - SMTP_FROM_NAME=DRIVEon.fit
+      - SMTP_TLS=True
+      - SMTP_SSL=False
+      - SMS_PROVIDER=${SMS_PROVIDER:-africastalking}
+      - AT_USERNAME=${AT_USERNAME:-sandbox}
+      - AT_API_KEY=${AT_API_KEY:-atsk_f3f2b279ac069c0320e24f5ec82bdeafbb31c8212f9a5b7e9b7bd6b94bff46c10869c579}
+      - AT_SENDER_ID=${AT_SENDER_ID:-}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY:-}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
+    depends_on:
+      - postgres
+      - redis
+    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
+
+  alert-beat:
+    build:
+      context: ./backend/alert_service
+    volumes:
+      - ./backend/alert_service:/app
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
+    depends_on:
+      - redis
+      - user-service
+      - booking-service
+      - insurance-service
+    command: bash -lc "celery -A celery_app.celery_app beat --loglevel=INFO"
+
+  expenses-service:
+    build:
+      context: ./backend/expenses_service
+    volumes:
+      - ./backend/expenses_service:/app
+    ports:
+      - "8007:8007"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
+      - DB_HOST=postgres
+      - DB_NAME=car_platform
+      - DB_USER=AdminDb
+      - DB_PASSWORD=Ngojakwanza
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   
   gateway:

@@ -62,7 +62,7 @@ class ProviderQuickOut(BaseModel):
     is_registered: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProviderUpdate(BaseModel):
     name: Optional[str] = None
@@ -114,7 +114,7 @@ class ProviderOut(BaseModel):
     services: List[ProviderServiceAttach] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Provider(ProviderBase):
@@ -126,7 +126,7 @@ class Provider(ProviderBase):
     provider_services: Optional[List[ProviderServiceAttach]] = []
 
     class Config:
-        orm_mode = True   # ✅ important
+        from_attributes = True   # ✅ important
         from_attributes = True
 # -----------------------
 # Templates for Providers
@@ -145,7 +145,7 @@ class ServiceTemplateItemRead(ServiceTemplateItemBase):
     id: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         from_attributes = True
 
 
@@ -165,6 +165,6 @@ class ServiceTemplateRead(ServiceTemplateBase):
     items: List[ServiceTemplateItemRead] = []  # ✅ expanded list of items
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         from_attributes = True
 

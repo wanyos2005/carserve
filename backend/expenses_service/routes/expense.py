@@ -18,7 +18,7 @@ def create_expense(
     expense = Expense(
         owner_id=payload.owner_id,
         vehicle_id=payload.vehicle_id,
-        exoense_type=payload.expense_type,
+        expense_type=payload.expense_type,
         provider_id=payload.provider_id, 
         location=payload.location, 
         cost=payload.cost, 
@@ -31,17 +31,30 @@ def create_expense(
 #GET all insurance policies
 @router.get("/get-expenses", response_model=list[ExpenseRead], status_code=status.HTTP_200_OK)
 def get_expenses(
+    owner_id: int | None = None,
+    vehicle_id: str | None = None,
     db: Session = Depends(get_db),
 ):
-    expenses = db.query(Expense).all()
+    q = db.query(Expense)
+    if owner_id is not None:
+        q = q.filter(Expense.owner_id == owner_id)
+    if vehicle_id is not None:
+        q = q.filter(Expense.vehicle_id == vehicle_id)
+    expenses = q.order_by(Expense.created_at.desc()).all()
     return expenses
 
 #GET insurance policy by owner ID
-@router.get("/get-expenses-by-owner/{owner_id}", response_model=list[ExpenseRead], status_code=status.HTTP_200_OK)
-def get_expenses_by_owner(
+@router.get("/stats", status_code=status.HTTP_200_OK)
+def get_expense_stats(
     owner_id: int,
+    vehicle_id: str | None = None,
     db: Session = Depends(get_db),
 ):
-    expenses = db.query(Expense).filter(Expense.owner_id == owner_id).all()
-    return expenses
+    from sqlalchemy import func
+    q = db.query(Expense).filter(Expense.owner_id == owner_id)
+    if vehicle_id is not None:
+        q = q.filter(Expense.vehicle_id == vehicle_id)
+    total = db.query(func.coalesce(func.sum(Expense.cost), 0)).filter(q.whereclause).scalar() if hasattr(q, 'whereclause') else 0
+    count = q.count()
+    return {"total": int(total or 0), "count": count}
 

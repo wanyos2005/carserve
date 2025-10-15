@@ -6,6 +6,8 @@ import 'package:car_platform/services/auth_service.dart';
 import 'package:car_platform/services/vehicle_service.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/services/insurance_service.dart';
+import 'package:car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
+import 'package:car_platform/services/alerts_service.dart';
 
 class InsurancePolicyPage extends StatefulWidget {
   const InsurancePolicyPage({super.key});
@@ -29,6 +31,8 @@ class _InsurancePolicyPageState extends State<InsurancePolicyPage> {
   List<dynamic> _providers = [];
 
   bool _loading = false;
+  bool _showCustomProviderInput = false;
+  Map<String, dynamic>? _selectedProviderMap;
 
   @override
   void initState() {
@@ -44,6 +48,30 @@ class _InsurancePolicyPageState extends State<InsurancePolicyPage> {
       _vehicles = vehicles;
       _providers = providers;
     });
+  }
+
+  Future<void> _openProviderSelector() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) {
+        return EnhancedProviderSelector(
+          filteredProviders: _providers.cast<Map<String, dynamic>>(),
+          selectedServices: const [],
+          recommendedOnly: false,
+          selectedProvider: _selectedProviderMap,
+          onSelect: (provider) {
+            setState(() {
+              _selectedProviderMap = provider;
+              _selectedProvider = provider['provider_id']?.toString();
+              _showCustomProviderInput = false;
+              _customProviderName = null;
+            });
+          },
+        );
+      },
+    );
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -91,27 +119,29 @@ class _InsurancePolicyPageState extends State<InsurancePolicyPage> {
         }
       }
 
-      final payload = {
-        "owner_id": ownerId,
-        "vehicle_id": _selectedVehicle,
-        "provider_id": providerId,
-        "insurance_type": _insuranceType,
-        "commencement_date": _commencementDate?.toUtc().toIso8601String(),
-        "expiry_date": _expiryDate?.toUtc().toIso8601String(),
-      };
+      await InsuranceService.createPolicy(
+        ownerId: ownerId!,
+        vehicleId: _selectedVehicle!,
+        providerId: providerId!,
+        insuranceType: _insuranceType!,
+        commencementDate: _commencementDate,
+        expiryDate: _expiryDate,
+      );
 
-      final res = await InsuranceService.createPolicy(payload);
+      // Upsert user preference for insurance expiry reminders based on toggle
+      try {
+        await AlertsService.upsertPreference(
+          userId: ownerId,
+          alertType: 'insurance_expiry',
+          isEnabled: _reminderEnabled,
+          channels: const ['in_app', 'email', 'sms'],
+        );
+      } catch (_) {}
 
-      if (res != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Insurance policy created successfully!")),
-        );
-        Navigator.pop(context, true); // return success
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("❌ Failed to create policy.")),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Insurance policy created successfully!")),
+      );
+      Navigator.pop(context, true); // return success
     } catch (e) {
       debugPrint("❌ Error creating insurance policy: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,25 +154,11 @@ class _InsurancePolicyPageState extends State<InsurancePolicyPage> {
 
   @override
 Widget build(BuildContext context) {
-  return DefaultTabController(
-    length: 2,
-    child: Scaffold(
-      appBar: AppBar(
-        title: const Text("Insurance"),
-        bottom: const TabBar(
-          tabs: [
-            Tab(text: "Add Policy"),
-            Tab(text: "My Policies"),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        children: [
-          _buildAddPolicyForm(),
-          _buildMyPoliciesList(),
-        ],
-      ),
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text("Insurance - Add Policy"),
     ),
+    body: _buildAddPolicyForm(),
   );
 }
 
@@ -170,22 +186,79 @@ Widget _buildAddPolicyForm() {
           ),
           const SizedBox(height: 16),
 
-          // Provider Dropdown with "Other" option
-          DropdownButtonFormField<String>(
-            decoration: const InputDecoration(labelText: "Select Provider"),
-            items: [
-              ..._providers.map((p) => DropdownMenuItem<String>(
-                    value: p["provider_id"].toString(),
-                    child: Text(p["provider_name"] ?? p["name"] ?? "Provider ${p["provider_id"]}"),
-                  )),
-              const DropdownMenuItem<String>(
-                value: "other",
-                child: Text("Other (Not Listed)"),
-              ),
-            ],
-            onChanged: (val) => setState(() => _selectedProvider = val),
-            validator: (val) =>
-                val == null ? "Please select or enter a provider" : null,
+          // Provider selector using EnhancedProviderSelector
+          FormField<String>(
+            validator: (_) => (_selectedProvider == null && !_showCustomProviderInput)
+                ? "Please select or enter a provider"
+                : (_showCustomProviderInput && (_customProviderName == null || _customProviderName!.isEmpty))
+                    ? "Please enter provider name"
+                    : null,
+            builder: (state) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    onTap: _openProviderSelector,
+                    borderRadius: BorderRadius.circular(8),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Select Provider',
+                        errorText: state.errorText,
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.store, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _selectedProviderMap != null
+                                  ? (_selectedProviderMap!["provider_name"] ?? _selectedProviderMap!["name"] ?? 'Selected provider')
+                                  : 'Tap to choose from providers',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Icon(Icons.keyboard_arrow_down),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _showCustomProviderInput = !_showCustomProviderInput;
+                          if (_showCustomProviderInput) {
+                            _selectedProvider = 'other';
+                            _selectedProviderMap = null;
+                          } else {
+                            if (_selectedProvider == 'other') {
+                              _selectedProvider = null;
+                            }
+                            _customProviderName = null;
+                          }
+                        });
+                      },
+                      child: Text(_showCustomProviderInput
+                          ? 'Cancel manual entry'
+                          : 'Provider not listed? Enter manually'),
+                    ),
+                  ),
+                  if (_showCustomProviderInput) ...[
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Enter Provider Name",
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (val) => setState(() => _customProviderName = val),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
 
@@ -258,7 +331,21 @@ Widget _buildAddPolicyForm() {
           // Reminder Switch
           SwitchListTile(
             value: _reminderEnabled,
-            onChanged: (val) => setState(() => _reminderEnabled = val),
+            onChanged: (val) async {
+              setState(() => _reminderEnabled = val);
+              final me = await AuthService.getMe();
+              final ownerId = me?["id"];
+              if (ownerId != null) {
+                try {
+                  await AlertsService.upsertPreference(
+                    userId: ownerId,
+                    alertType: 'insurance_expiry',
+                    isEnabled: val,
+                    channels: const ['in_app', 'email', 'sms'],
+                  );
+                } catch (_) {}
+              }
+            },
             title: const Text("Enable Expiry Reminder"),
           ),
           const SizedBox(height: 24),
@@ -267,7 +354,7 @@ Widget _buildAddPolicyForm() {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _submit,
+              onPressed: _loading ? null : _submit,
               child: const Text("Save Policy"),
             ),
           ),
@@ -276,123 +363,5 @@ Widget _buildAddPolicyForm() {
     ),
   );
 }
-Widget _buildMyPoliciesList() {
-  return FutureBuilder(
-    future: _loadPoliciesWithDetails(),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (snapshot.hasError) {
-        return Center(child: Text("Error: ${snapshot.error}"));
-      }
-      final policies = snapshot.data as List<Map<String, dynamic>>;
-      if (policies.isEmpty) {
-        return const Center(child: Text("No policies found."));
-      }
-
-      return ListView.builder(
-        itemCount: policies.length,
-        itemBuilder: (context, index) {
-          final policy = policies[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: ListTile(
-              title: Text(
-                "${policy["vehicle"]?["plate"] ?? "Unknown"} - ${policy["vehicle"]?["make"] ?? ""} ${policy["vehicle"]?["model"] ?? ""}",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Provider: ${policy["provider"]?["provider_name"] ?? "Unknown"}"),
-                  Text("Type: ${policy["insurance_type"] ?? "-"}"),
-                  Text(
-                    "Start: ${policy["commencement_date"] != null ? DateFormat.yMMMd().format(DateTime.parse(policy["commencement_date"])) : "-"}",
-                  ),
-                  Text(
-                    "Expiry: ${policy["expiry_date"] != null ? DateFormat.yMMMd().format(DateTime.parse(policy["expiry_date"])) : "-"}",
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
-/// Fetches policies and enriches with vehicle + provider details
-Future<List<Map<String, dynamic>>> _loadPoliciesWithDetails() async {
-  final me = await AuthService.getMe();
-  final ownerId = me?["id"];
-  if (ownerId == null) return [];
-
-  final policies = await InsuranceService.getPoliciesByOwner(ownerId.toString());
-
-  List<Map<String, dynamic>> enriched = [];
-
-  for (var policy in policies) {
-    Map<String, dynamic>? vehicle;
-    Map<String, dynamic>? provider;
-
-    if (policy["vehicle_id"] != null) {
-      try {
-        final v = await VehicleService.getByVehicleId(policy["vehicle_id"].toString());
-        if (v is Map<String, dynamic>) vehicle = v; 
-      } catch (_) {}
-    }
-
-    if (policy["provider_id"] != null) {
-      try {
-        final providerId = policy["provider_id"].toString();
-        // Check if it's a UUID (valid provider ID) or just a string name
-        if (_isValidUUID(providerId)) {
-          provider = await ProviderService.getProviderDetails(providerId);
-          // Ensure we have the right field names for display
-          if (provider != null) {
-            provider = {
-              ...provider,
-              "provider_name": provider["name"] ?? provider["provider_name"],
-              "name": provider["name"] ?? provider["provider_name"],
-            };
-          }
-        } else {
-          // Legacy: It's a custom provider name from old data, create a mock provider object
-          provider = {
-            "provider_name": providerId,
-            "name": providerId,
-            "is_registered": false,
-          };
-        }
-      } catch (e) {
-        debugPrint("❌ Error fetching provider details for ${policy["provider_id"]}: $e");
-        // If API call fails, treat as custom provider name
-        provider = {
-          "provider_name": policy["provider_id"].toString(),
-          "name": policy["provider_id"].toString(),
-          "is_registered": false,
-        };
-      }
-    }
-
-    enriched.add({
-      ...policy,
-      "vehicle": vehicle,
-      "provider": provider,
-    });
-  }
-
-  return enriched;
-}
-
-/// Helper function to check if a string is a valid UUID
-bool _isValidUUID(String str) {
-  final uuidRegex = RegExp(
-    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-    caseSensitive: false,
-  );
-  return uuidRegex.hasMatch(str);
-}
+// Removed My Policies tab; list view handled in dashboard
 }

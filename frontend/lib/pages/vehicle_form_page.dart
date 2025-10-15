@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:car_platform/services/vehicle_service.dart';
+import 'package:car_platform/services/user_context_service.dart';
 
 class VehicleFormPage extends StatefulWidget {
   const VehicleFormPage({super.key});
@@ -60,6 +61,18 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
+
+    // Check if user is authenticated
+    final userContext = UserContextService.currentContext;
+    if (userContext == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to add vehicles'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
 

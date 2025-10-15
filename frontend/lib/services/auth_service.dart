@@ -5,13 +5,13 @@ import 'package:http/http.dart' as http;
 //
 
 class AuthService {
-  static const String baseUrl = "http://192.168.0.107:8000/users";
+  static const String baseUrl = "http://192.168.0.104:8000";//"http://192.168.0.107:8000/users";
 
   // Send OTP
   // Send OTP
   static Future<bool> sendCode(String email) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/send-code"),
+      Uri.parse("$baseUrl/users/send-code"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({"email": email}),
     );
@@ -32,7 +32,7 @@ class AuthService {
     if (email == null) return false;
 
     final response = await http.post(
-      Uri.parse('$baseUrl/verify-code'),
+      Uri.parse('$baseUrl/users/verify-code'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'code': code}),
     );
@@ -43,9 +43,9 @@ class AuthService {
 
       await prefs.setString('token', token);
 
-      // Fetch user profile (/me)
+      // Fetch user profile (/users/me)
       final meResponse = await http.get(
-        Uri.parse('$baseUrl/me'),
+        Uri.parse('$baseUrl/users/me'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -71,15 +71,24 @@ class AuthService {
   static Future<Map<String, dynamic>?> getMe() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
-    if (token == null) return null;
+    if (token == null) {
+      print('DEBUG AuthService: No token found');
+      return null;
+    }
 
+    print('DEBUG AuthService: Making request to /me endpoint');
     final response = await http.get(
-      Uri.parse("$baseUrl/me"),
+      Uri.parse("$baseUrl/users/me"),
       headers: {"Authorization": "Bearer $token"},
     );
 
+    print('DEBUG AuthService: Response status: ${response.statusCode}');
+    print('DEBUG AuthService: Response body: ${response.body}');
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      print('DEBUG AuthService: Parsed data: $data');
+      return data;
     }
     return null;
   }
@@ -88,10 +97,38 @@ class AuthService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");
+    await prefs.remove("user");
+    await prefs.remove("email");
+    
+    // Note: UserContextService.clearContext() should be called from the UI layer
+    // to avoid circular dependencies
   }
   // Fetch all users (for admin)
   static Future<List<dynamic>> getAllUsers() async {
-    final response = await http.get(Uri.parse("$baseUrl/all"));
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return [];
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/users/all"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return [];
+  }
+
+  // Search users (for admin)
+  static Future<List<dynamic>> searchUsers(String query) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return [];
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/users/search?q=$query"),
+      headers: {"Authorization": "Bearer $token"},
+    );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
@@ -101,7 +138,7 @@ class AuthService {
   // Link user to provider
   static Future<bool> linkUserToProvider(int userId, String providerId) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/link-user-provider"),
+      Uri.parse("$baseUrl/users/link-user-provider"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({"user_id": userId, "provider_id": providerId}),
     );
@@ -111,10 +148,63 @@ class AuthService {
   // Create guest user 
   static Future<Map<String, dynamic>?> createGuestUser({ String? email, String? phone, String? name, String? providerId, }) async {
      final response = await http.post( 
-      Uri.parse("$baseUrl/guest"), 
+      Uri.parse("$baseUrl/users/guest"), 
       headers: {"Content-Type": "application/json"}, 
       body: jsonEncode({ if (email != null) "email": email, if (phone != null) "phone": phone, if (name != null) "name": name, if (providerId != null) "provider_id": providerId, }), );
       if (response.statusCode == 200) { return jsonDecode(response.body); } 
       return null; 
   }
+
+  // Admin Management Functions
+  static Future<bool> createAdminUser(String email, {String? name}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/users/admin/create?email=$email${name != null ? '&name=$name' : ''}"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    return response.statusCode == 200;
   }
+
+  static Future<bool> removeAdminUser(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return false;
+
+    final response = await http.delete(
+      Uri.parse("$baseUrl/users/admin/remove?email=$email"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    return response.statusCode == 200;
+  }
+
+  static Future<List<dynamic>> getAdminUsers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return [];
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/users/admin/list"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['admins'] ?? [];
+    }
+    return [];
+  }
+}

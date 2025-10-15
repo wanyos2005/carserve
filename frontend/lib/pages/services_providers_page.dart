@@ -58,10 +58,10 @@ class _ServicesProvidersPageState extends State<ServicesProvidersPage> {
                   margin: const EdgeInsets.all(8),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: isRegistered ? Colors.green.shade100 : Colors.orange.shade100,
+                      backgroundColor: isRegistered ? Colors.grey.shade100 : Colors.orange.shade100,
                       child: Icon(
                         isRegistered ? Icons.verified : Icons.store,
-                        color: isRegistered ? Colors.green.shade700 : Colors.orange.shade700,
+                        color: isRegistered ? Colors.red.shade600 : Colors.orange.shade700,
                       ),
                     ),
                     title: Text(p["provider_name"] ?? "Unnamed Provider"),

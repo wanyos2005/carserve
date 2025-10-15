@@ -122,6 +122,12 @@ class ProviderServiceView(Base):
     service_id = Column(String)
     service_name = Column(String)
     service_category_id = Column(Integer)
+    service_description = Column(Text)
+    service_requirements = Column(JSON)
+    
+    # Category names for better readability
+    provider_category_name = Column(String)
+    service_category_name = Column(String)
 
 
 

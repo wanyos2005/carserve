@@ -10,7 +10,7 @@ from jose import jwt, JWTError
 
 from core.db import get_db
 from core.security import create_access_token
-from models.users import User, Roles, OTP, ProviderUserLink
+from models.users import User, Roles, OTP, ProviderUserLink, User_Roles
 from schemas.users import (
     SendCodeRequest,
     VerifyCodeRequest,
@@ -51,6 +51,24 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+def is_admin_user(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Dependency to check if current user is admin"""
+    admin_role = db.query(Roles).filter(Roles.name == "admin").first()
+    if not admin_role:
+        raise HTTPException(status_code=403, detail="Admin role not configured")
+    
+    user_admin_role = db.query(User_Roles).filter(
+        User_Roles.user_id == current_user.id,
+        User_Roles.role_id == str(admin_role.id),
+        User_Roles.active == True
+    ).first()
+    
+    if not user_admin_role:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    return current_user
 
 
 def send_email(email: EmailSchema, background_tasks: BackgroundTasks):
@@ -163,22 +181,96 @@ def read_users_me(current_user: User = Depends(get_current_user), db: Session = 
         ProviderUserLink.user_id == current_user.id
     ).first()
 
+    # Check if user is admin
+    admin_role = db.query(Roles).filter(Roles.name == "admin").first()
+    is_admin = False
+    if admin_role:
+        user_admin_role = db.query(User_Roles).filter(
+            User_Roles.user_id == current_user.id,
+            User_Roles.role_id == str(admin_role.id),
+            User_Roles.active == True
+        ).first()
+        is_admin = user_admin_role is not None
+        print(f"DEBUG: User {current_user.email} (ID: {current_user.id}) - Admin role ID: {admin_role.id}, User admin role: {user_admin_role}, Is admin: {is_admin}")
+
     user_data = {
         "id": current_user.id,
         "email": current_user.email,
         "name": current_user.name,
         "phone": current_user.phone,
-        "provider_id": provider_link.provider_id if provider_link else None
+        "provider_id": provider_link.provider_id if provider_link else None,
+        "is_admin": is_admin,
+        "role": "admin" if is_admin else ("provider" if provider_link else "user")
     }
 
     return user_data
 
 # --------------------------
+# Minimal user lookup endpoints for other services
+# --------------------------
+@router.get("/users/{user_id}")
+def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+    """Return minimal user profile for service-to-service lookups."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "phone": user.phone,
+    }
+
+@router.get("/users/{user_id}/fcm-token")
+def get_user_fcm_token(user_id: int, db: Session = Depends(get_db)):
+    """Return user's FCM token (placeholder if not stored)."""
+    # If you later store tokens in DB, fetch them here. For now, return None.
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"fcm_token": None}
+
+# --------------------------
 # Get all users (Admin only)
 # --------------------------
 @router.get("/all", response_model=list[UserRead])
-def get_all_users(db: Session = Depends(get_db)):
+def get_all_users(current_user: User = Depends(is_admin_user), db: Session = Depends(get_db)):
+    """Get all users (admin only)"""
     users = db.query(User).all()
+
+    result = []
+    for user in users:
+        provider_link = db.query(ProviderUserLink).filter(
+            ProviderUserLink.user_id == user.id
+        ).first()
+
+        result.append({
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "phone": user.phone,
+            "provider_id": provider_link.provider_id if provider_link else None
+        })
+
+    return result
+
+@router.get("/search", response_model=list[UserRead])
+def search_users(
+    q: str,
+    current_user: User = Depends(is_admin_user), 
+    db: Session = Depends(get_db)
+):
+    """Search users by email, name, or phone (admin only)"""
+    if not q or len(q.strip()) < 2:
+        return []
+    
+    search_term = f"%{q.strip()}%"
+    users = db.query(User).filter(
+        (User.email.ilike(search_term)) |
+        (User.name.ilike(search_term)) |
+        (User.phone.ilike(search_term))
+    ).limit(20).all()
 
     result = []
     for user in users:
@@ -248,3 +340,113 @@ def create_or_get_guest_user(
     db.commit()
     db.refresh(guest)
     return guest
+
+# --------------------------
+# Admin Management Endpoints
+# --------------------------
+
+@router.post("/admin/create")
+def create_admin_user(
+    email: str,
+    name: str = None,
+    current_user: User = Depends(is_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new admin user (admin only)"""
+    # Check if user exists
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            email=email,
+            name=name or email.split('@')[0],
+            verified=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    # Get admin role
+    admin_role = db.query(Roles).filter(Roles.name == "admin").first()
+    if not admin_role:
+        raise HTTPException(status_code=500, detail="Admin role not found")
+    
+    # Check if user already has admin role
+    existing_role = db.query(User_Roles).filter(
+        User_Roles.user_id == user.id,
+        User_Roles.role_id == str(admin_role.id)
+    ).first()
+    
+    if existing_role:
+        if existing_role.active:
+            raise HTTPException(status_code=400, detail="User is already an admin")
+        else:
+            existing_role.active = True
+            db.commit()
+            return {"message": f"Admin privileges reactivated for {email}"}
+    
+    # Assign admin role
+    user_role = User_Roles(
+        user_id=user.id,
+        role_id=str(admin_role.id),
+        active=True
+    )
+    db.add(user_role)
+    db.commit()
+    
+    return {"message": f"Admin privileges granted to {email}"}
+
+@router.delete("/admin/remove")
+def remove_admin_user(
+    email: str,
+    current_user: User = Depends(is_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Remove admin privileges from a user (admin only)"""
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    admin_role = db.query(Roles).filter(Roles.name == "admin").first()
+    if not admin_role:
+        raise HTTPException(status_code=500, detail="Admin role not found")
+    
+    user_role = db.query(User_Roles).filter(
+        User_Roles.user_id == user.id,
+        User_Roles.role_id == str(admin_role.id)
+    ).first()
+    
+    if not user_role or not user_role.active:
+        raise HTTPException(status_code=400, detail="User is not an admin")
+    
+    user_role.active = False
+    db.commit()
+    
+    return {"message": f"Admin privileges removed from {email}"}
+
+@router.get("/admin/list")
+def list_admin_users(
+    current_user: User = Depends(is_admin_user),
+    db: Session = Depends(get_db)
+):
+    """List all admin users (admin only)"""
+    admin_role = db.query(Roles).filter(Roles.name == "admin").first()
+    if not admin_role:
+        raise HTTPException(status_code=500, detail="Admin role not found")
+    
+    admin_users = db.query(User_Roles).filter(
+        User_Roles.role_id == str(admin_role.id),
+        User_Roles.active == True
+    ).all()
+    
+    result = []
+    for user_role in admin_users:
+        user = db.query(User).filter(User.id == user_role.user_id).first()
+        if user:
+            result.append({
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "created_at": user_role.created_at
+            })
+    
+    return {"admins": result}

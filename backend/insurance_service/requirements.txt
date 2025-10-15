@@ -1,4 +1,4 @@
-# services/user-service/requirements.txt
+# services/insurance-service/requirements.txt
 fastapi==0.115.0
 uvicorn==0.30.6
 psycopg2-binary==2.9.9
@@ -9,4 +9,6 @@ sqlalchemy==2.0.19
 pyjwt
 pydantic[email]
 alembic
+httpx==0.25.0
+python-multipart==0.0.6
 

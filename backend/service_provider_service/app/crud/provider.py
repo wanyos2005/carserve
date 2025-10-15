@@ -92,18 +92,14 @@ def search_provider_view(
     service_ids: list[str] | None = None,
     match_all: bool = False,
     search_term: str | None = None,
-    
     category_id: int | None = None,
 ):
+    # Use the database view for better performance
     q = db.query(ProviderServiceView)
 
-    # Filter by provider or service category
-    
+    # Filter by provider category
     if category_id is not None:
-        # Choose one depending on your intended meaning
-        q = q.filter(
-            (ProviderServiceView.provider_category_id == category_id)
-        )
+        q = q.filter(ProviderServiceView.provider_category_id == category_id)
 
     # Search term
     if search_term:
@@ -111,6 +107,7 @@ def search_provider_view(
         q = q.filter(
             func.lower(ProviderServiceView.provider_name).ilike(pattern)
             | func.lower(ProviderServiceView.service_name).ilike(pattern)
+            | func.lower(ProviderServiceView.provider_description).ilike(pattern)
         )
 
     # Service filter

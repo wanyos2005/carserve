@@ -4,8 +4,8 @@ import 'package:car_platform/services/booking_service.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/services/global_service_api.dart';
 import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/BookingPageHelpers/service_selector.dart';
-import 'package:car_platform/BookingPageHelpers/provider_selector.dart';
+import 'package:car_platform/BookingPageHelpers/enhanced_service_selector.dart';
+import 'package:car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
 
 class ServiceLogPage extends StatefulWidget {
   const ServiceLogPage({super.key});
@@ -222,9 +222,10 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
               onTap: () => showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
-                builder: (_) => ServiceSelector(
+                builder: (_) => EnhancedServiceSelector(
                   allServices: _services,
                   selectedServices: _selectedServices,
+                  isSparePartsMode: false, // Service log is always for services, not parts
                   onConfirm: (list) => setState(() {
                     _selectedServices = list;
                   }),
@@ -263,7 +264,7 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
                 onTap: () => showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (_) => ProviderSelector(
+                  builder: (_) => EnhancedProviderSelector(
                     filteredProviders: _providers,
                     selectedServices: _selectedServices,
                     recommendedOnly: false,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/booking_page.dart';
+import 'package:car_platform/pages/enhanced_booking_page.dart';
 import 'package:car_platform/pages/service_log_page.dart';
 
 class MainServiceNav extends StatefulWidget {
@@ -13,7 +13,7 @@ class _MainServiceNavState extends State<MainServiceNav> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = const [
-    BookingPage(),
+    EnhancedBookingPage(),
     ServiceLogPage(),
   ];
 

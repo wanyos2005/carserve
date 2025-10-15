@@ -53,11 +53,21 @@ class _LoginPageState extends State<LoginPage> {
                 const Spacer(),
 
                 Text(
-                  "Welcome Back 👋",
+                  "Ready to Browse?",
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
                       ?.copyWith(fontSize: 28),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Just enter your email for a seamless one-time signup",
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
 

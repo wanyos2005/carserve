@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/auth_service.dart';
+import 'package:car_platform/services/user_context_service.dart';
 import 'home_page.dart';
 import 'ProviderPages/provider_homepage.dart';
+import 'AdminPages/admin_dashboard.dart';
 
 class PasscodePage extends StatefulWidget {
   const PasscodePage({super.key});
@@ -24,25 +26,34 @@ class _PasscodePageState extends State<PasscodePage> {
     setState(() => _loading = false);
 
     if (success) {
-      final user = await AuthService.getCurrentUser();
+      // Initialize user context after successful verification
+      final userContext = await UserContextService.refreshContext();
       if (!mounted) return;
 
-      final providerId = user?['provider_id']?.toString();
-
-      if (providerId != null && providerId.isNotEmpty) {
-        // ✅ Provider employee or owner — pass providerId to homepage
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProviderHomePage(providerId: providerId),
-          ),
-        );
+      if (userContext != null && userContext.userType != UserType.unknown) {
+        if (userContext.isAdmin) {
+          // 🔧 Admin user
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+          );
+        } else if (userContext.isProvider && userContext.providerId != null) {
+          // ✅ Provider employee or owner
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProviderHomePage(providerId: userContext.providerId!),
+            ),
+          );
+        } else {
+          // 🚗 Regular car owner
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomePage()),
+          );
+        }
       } else {
-        // 🚗 Regular car owner
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
+        setState(() => _error = "Failed to load user information");
       }
     } else {
       setState(() => _error = "Invalid or expired code");
@@ -60,8 +71,24 @@ class _PasscodePageState extends State<PasscodePage> {
             child: Column(
               children: [
                 const Spacer(),
-                const Text("A 4 digit code was sent to your email, Enter the Code", style: TextStyle(fontSize: 18)),
-                const SizedBox(height: 16),
+                Text(
+                  "Verification Code",
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontSize: 28),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "A 4-digit code was sent to your email. Please enter it below to be signed in.",
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
                 TextFormField(
                   controller: _codeController,
                   keyboardType: TextInputType.number,

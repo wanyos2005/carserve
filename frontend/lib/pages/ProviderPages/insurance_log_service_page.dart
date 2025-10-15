@@ -151,22 +151,19 @@ class _InsuranceLogServicePageState extends State<InsuranceLogServicePage> {
       final vehicleId = vehicle["id"];
 
       // 3️⃣ Submit insurance policy
-      final policyPayload = {
-        "owner_id": guestId,
-        "vehicle_id": vehicleId,
-        "provider_id": widget.providerId,
-        "insurance_type": _insuranceTypeController.text.trim(),
-        "commencement_date":
-            _commencementDate?.toIso8601String().split('.').first,
-        "expiry_date": _expiryDate?.toIso8601String().split('.').first,
-      };
-
-      final response = await InsuranceService.createPolicy(policyPayload);
+      await InsuranceService.createPolicy(
+        ownerId: guestId,
+        vehicleId: vehicleId,
+        providerId: widget.providerId,
+        insuranceType: _insuranceTypeController.text.trim(),
+        commencementDate: _commencementDate,
+        expiryDate: _expiryDate,
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Insurance policy logged successfully!")),
       );
-      Navigator.pop(context, response);
+      Navigator.pop(context, true);
     } catch (e) {
       debugPrint("❌ Error submitting insurance policy: $e");
       ScaffoldMessenger.of(context)

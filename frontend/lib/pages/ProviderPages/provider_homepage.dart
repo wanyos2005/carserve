@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/pages/ProviderPages/provider_log_service_page.dart';
 import 'package:car_platform/pages/ProviderPages/insurance_log_service_page.dart';
+import 'package:car_platform/pages/ProviderPages/staff_management_page.dart';
 import 'package:car_platform/services/provider_service.dart';
+import 'package:car_platform/services/user_context_service.dart';
+import 'package:car_platform/components/preferences_popover.dart';
+import 'package:car_platform/models/provider_category_config.dart';
+import 'package:car_platform/models/frontend_category_grouping.dart';
 
 class ProviderHomePage extends StatefulWidget {
   final String providerId;
@@ -14,23 +19,30 @@ class ProviderHomePage extends StatefulWidget {
 
 class _ProviderHomePageState extends State<ProviderHomePage> {
   String? _categoryName;
+  String? _providerName;
   bool _isLoading = true;
+  bool _showVerifiedOnly = false;
+  ProviderCategoryConfig? _categoryConfig;
+  FrontendCategoryGroup? _frontendGroup;
 
   @override
   void initState() {
     super.initState();
-    _loadProviderCategory();
+    _loadProviderDetails();
   }
 
-  Future<void> _loadProviderCategory() async {
+  Future<void> _loadProviderDetails() async {
     try {
       final provider = await ProviderService.getProviderDetails(widget.providerId);
       setState(() {
         _categoryName = provider?['category']['name'];
+        _providerName = provider?['name'];
+        _categoryConfig = ProviderCategoryConfigs.getConfig(_categoryName ?? '');
+        _frontendGroup = FrontendCategoryGroups.getGroupForBackendCategory(_categoryName ?? '');
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("Failed to load provider category: $e");
+      debugPrint("Failed to load provider details: $e");
       setState(() {
         _isLoading = false;
       });
@@ -45,155 +57,114 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
       );
     }
 
-    final isInsurance = _categoryName?.trim().toLowerCase() == 'insurance';
-
-    final quickActions = [
-      {
-        "title": "Bookings",
-        "icon": Icons.calendar_month,
-        "color": Colors.blueAccent,
-        "onTap": () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Bookings section coming soon...")),
-          );
-        },
-      },
-      {
-        "title": "Service Logs",
-        "icon": Icons.check_circle_outline,
-        "color": Colors.green,
-        "onTap": () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => isInsurance
-                  ? InsuranceLogServicePage(providerId: widget.providerId)
-                  : ProviderLogServicePage(providerId: widget.providerId),
-            ),
-          );
-        },
-      },
-      {
-        "title": "Earnings",
-        "icon": Icons.attach_money,
-        "color": Colors.orange,
-        "onTap": () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Earnings view coming soon...")),
-          );
-        },
-      },
-      {
-        "title": "History",
-        "icon": Icons.history,
-        "color": Colors.purple,
-        "onTap": () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("History view coming soon...")),
-          );
-        },
-      },
-      {
-        "title": "Analytics",
-        "icon": Icons.bar_chart_outlined,
-        "color": Colors.indigo,
-        "onTap": () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Analytics dashboard coming soon...")),
-          );
-        },
-      },
-      {
-        "title": "Settings",
-        "icon": Icons.settings_outlined,
-        "color": Colors.grey,
-        "onTap": () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Settings coming soon...")),
-          );
-        },
-      },
-    ];
+    final config = _categoryConfig ?? ProviderCategoryConfigs.getDefaultConfig(_categoryName ?? '');
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Provider Dashboard"),
+        title: Text(_providerName ?? "Provider Dashboard"),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Notifications feature coming soon")),
-              );
-            },
+            icon: const Icon(Icons.settings),
+            tooltip: "Provider Settings",
+            onPressed: _showProviderPreferences,
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadProviderCategory,
+        onRefresh: _loadProviderDetails,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Welcome Back 👋",
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                isInsurance
-                    ? "Manage your insurance services and clients easily."
-                    : "Manage your garage, bookings, and services all in one place.",
-                style: const TextStyle(color: Colors.black54, fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-
-              // Example summary cards
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildSummaryCard("Today's Profit", "KES 12,400", Icons.trending_up, Colors.green),
-                  _buildSummaryCard("Bookings", "8 Active", Icons.calendar_today, Colors.blue),
-                ],
+              // Welcome Section
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "Welcome Back 👋",
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ),
+                          if (_frontendGroup != null) ...[
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _frontendGroup!.color.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _frontendGroup!.color.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _frontendGroup!.icon,
+                                      size: 14,
+                                      color: _frontendGroup!.color,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        _frontendGroup!.name,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: _frontendGroup!.color,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 11,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _providerName ?? "Provider",
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        config.welcomeMessage,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildSummaryCard("Pending Tasks", "3", Icons.list_alt_outlined, Colors.orange),
-                  _buildSummaryCard("Customer Rating", "4.8 ★", Icons.star_rate_rounded, Colors.amber),
-                ],
-              ),
-              const SizedBox(height: 32),
 
-              const Text(
+              // Dashboard Stats
+              _buildStatsGrid(config.statCards),
+              const SizedBox(height: 24),
+
+              // Main Actions
+              Text(
                 "Quick Actions",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
 
-              GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: quickActions.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1.2,
-                ),
-                itemBuilder: (context, index) {
-                  final action = quickActions[index];
-                  return _buildActionCard(
-                    title: action["title"] as String,
-                    icon: action["icon"] as IconData,
-                    color: action["color"] as Color,
-                    onTap: action["onTap"] as VoidCallback,
-                  );
-                },
-              ),
+              // Dynamic Quick Actions
+              ...config.quickActions.map((action) => _buildQuickActionCard(action, config)).toList(),
             ],
           ),
         ),
@@ -201,65 +172,144 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
     );
   }
 
-  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Icon(icon, size: 28, color: color),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+  Widget _buildStatsGrid(List<StatCard> statCards) {
+    return Column(
+      children: [
+        // First row
+        Row(
+          children: [
+            Expanded(child: _buildStatCard(statCards[0])),
+            const SizedBox(width: 12),
+            Expanded(child: _buildStatCard(statCards[1])),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Second row
+        Row(
+          children: [
+            Expanded(child: _buildStatCard(statCards[2])),
+            const SizedBox(width: 12),
+            Expanded(child: _buildStatCard(statCards[3])),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(StatCard statCard) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(statCard.icon, size: 24, color: statCard.color),
+            const SizedBox(height: 8),
+            Text(
+              statCard.title,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              statCard.value,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: statCard.color,
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildActionCard({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
+  Widget _buildQuickActionCard(QuickAction action, ProviderCategoryConfig config) {
+    return Column(
+      children: [
+        Card(
+          child: ListTile(
+            leading: Icon(action.icon, color: action.color),
+            title: Text(action.title),
+            subtitle: Text(action.subtitle),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: action.isComingSoon
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("${action.title} section coming soon...")),
+                    );
+                  }
+                : () {
+                    if (action.title == 'Service Logs' || action.title == 'Claims Processing') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => config.businessType == ProviderBusinessType.insuranceDocumentation
+                              ? InsuranceLogServicePage(providerId: widget.providerId)
+                              : ProviderLogServicePage(providerId: widget.providerId),
+                        ),
+                      );
+                    } else if (action.onTap != null) {
+                      action.onTap!();
+                    }
+                  },
           ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Future<void> _showProviderPreferences() async {
+    await showPreferencesPopover(
+      context: context,
+      recommendedOnly: _showVerifiedOnly,
+      isPurchaseMode: false, // Provider mode
+      onRecommendedOnlyChanged: (value) {
+        setState(() => _showVerifiedOnly = value);
+      },
+      onApply: () {
+        // Refresh provider data if needed
+        _loadProviderDetails();
+      },
+      onLogout: () async {
+        // Handle logout
+        await _handleLogout();
+      },
+      onManageStaff: () {
+        // Navigate to staff management page
+        _navigateToStaffManagement();
+      },
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      // Clear user context and navigate to login
+      await UserContextService.clearContext();
+      
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login',
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      debugPrint("Error during logout: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error during logout. Please try again.")),
+        );
+      }
+    }
+  }
+
+  void _navigateToStaffManagement() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StaffManagementPage(
+          providerId: widget.providerId,
         ),
       ),
     );

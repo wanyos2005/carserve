@@ -3,9 +3,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:car_platform/services/user_context_service.dart';
 
 class ApiService {
-  static const String baseGatewayUrl = "http://192.168.0.107:8000"; 
+  static const String baseGatewayUrl = "http://192.168.0.104:8000";//"http://192.168.0.107:8000"; 
   // Alternate gateways:
   // peter -> "http://192.168.0.107:8000"
   // alex  -> "http://192.168.2.116:8000"
@@ -15,6 +16,13 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString("token");
   }
+
+  // --- USER CONTEXT INTEGRATION ---
+  static String? getCurrentUserId() {
+    return UserContextService.currentContext?.id;
+  }
+
+  static bool get isLoggedIn => UserContextService.isLoggedIn;
 
   // --- GENERIC GET ---
   static Future<dynamic> get(String path, {Map<String, String>? query}) async {

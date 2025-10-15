@@ -1,4 +1,4 @@
-#vehicle_Service/main.py
+#insurance_service/main.py
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -6,10 +6,13 @@ import logging
 from core.db import Base, engine
 from core.config import ALLOWED_ORIGINS
 from routes.insurance import router as insurance_router
+from routes.claims import router as claims_router
+from routes.risk_scoring import router as risk_scoring_router
 from models import insurance as _models  # ensure model is imported before create_all
 
-app = FastAPI(title="Insurance", version="1.0.0")
+app = FastAPI(title="Insurance Service", version="2.0.0", description="Enhanced insurance service with claims, risk scoring, and partner management")
 
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS != ["*"] else ["*"],
@@ -17,6 +20,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     body = await request.body()
@@ -26,8 +31,32 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     return response
 
-app.include_router(insurance_router, prefix="/insurance", tags=["insurance"])
+# Include routers
+app.include_router(insurance_router, prefix="/insurance", tags=["insurance-policies"])
+app.include_router(claims_router, prefix="/insurance/claims", tags=["insurance-claims"])
+app.include_router(risk_scoring_router, prefix="/insurance/risk", tags=["risk-scoring"])
 
+# Health check endpoint
 @app.get("/insurance/health")
 def health():
-    return {"status": "insurance-service healthy"}
+    return {
+        "status": "insurance-service healthy",
+        "version": "2.0.0",
+        "features": [
+            "Enhanced policy management",
+            "Claims processing",
+            "Risk scoring engine",
+            "Insurance partner management",
+            "Quote marketplace"
+        ]
+    }
+
+# Root endpoint
+@app.get("/")
+def root():
+    return {
+        "service": "insurance-service",
+        "version": "2.0.0",
+        "status": "running",
+        "docs": "/docs"
+    }

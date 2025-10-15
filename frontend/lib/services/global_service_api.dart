@@ -14,7 +14,7 @@ class GlobalServiceApi {
 
   // 🔹 Global Services
   static Future<List<dynamic>> getAllGlobalServices() async {
-    final res = await ApiService.get("/service-providers/services");
+    final res = await ApiService.get("/service-providers/services-with-categories");
     return res is List ? res : [];
   }
 

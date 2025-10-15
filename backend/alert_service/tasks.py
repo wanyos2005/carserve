@@ -1,0 +1,59 @@
+from celery_app import celery_app
+from core.db import SessionLocal
+from crud.alert import get_alert as crud_get_alert
+from models.alert import AlertStatus
+from services.notification_service import NotificationService
+from services.rule_engine import RuleEngine
+from datetime import datetime
+import logging
+import asyncio
+from services.metrics import inc, mark_rule_run
+
+
+@celery_app.task(name="deliver_alert")
+def deliver_alert_task(alert_id: str) -> None:
+    logger = logging.getLogger("uvicorn")
+    db = SessionLocal()
+    try:
+        alert = crud_get_alert(db, alert_id)
+        if not alert:
+            logger.error(f"deliver_alert_task: alert not found id={alert_id}")
+            return
+        service = NotificationService(db)
+        try:
+            inc("deliveries_attempted")
+            asyncio.run(service.send_alert(alert))
+            alert.status = AlertStatus.DELIVERED
+            alert.delivered_at = datetime.utcnow()
+            inc("deliveries_succeeded")
+        except Exception as exc:
+            logger.error(f"deliver_alert_task: delivery failed for {alert_id}: {exc}")
+            alert.status = AlertStatus.FAILED
+            alert.error_message = str(exc)
+            inc("deliveries_failed")
+        finally:
+            db.commit()
+    finally:
+        db.close()
+
+
+@celery_app.task(name="run_rule_check")
+def run_rule_check(rule_key: str) -> None:
+    logger = logging.getLogger("uvicorn")
+    db = SessionLocal()
+    try:
+        logger.info(f"run_rule_check: start rule={rule_key}")
+        engine = RuleEngine(db)
+        if rule_key == "insurance_expiry":
+            asyncio.run(engine.check_insurance_expiry())
+        elif rule_key == "service_due":
+            asyncio.run(engine.check_service_due())
+        else:
+            logger.error(f"run_rule_check: unknown rule key '{rule_key}'")
+            return
+        mark_rule_run(rule_key)
+        logger.info(f"run_rule_check: completed rule={rule_key}")
+    finally:
+        db.close()
+
+

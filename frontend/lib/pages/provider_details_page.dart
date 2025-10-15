@@ -1,7 +1,7 @@
 //provider_details_page
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/provider_service.dart';
-import 'booking_page.dart';
+import 'enhanced_booking_page.dart';
 
 class ProviderDetailsPage extends StatefulWidget {
   final String providerId; // UUID string
@@ -159,7 +159,7 @@ class _ProviderDetailsPageState extends State<ProviderDetailsPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => BookingPage(
+                            builder: (_) => EnhancedBookingPage(
                               provider: provider,
                               service: s,
                             ),

@@ -17,8 +17,10 @@ class UserRead(UserBase):
     name: Optional[str] = None
     phone: Optional[str] = None
     provider_id: Optional[str] = None  # ✅ NEW FIELD
+    is_admin: Optional[bool] = None  # ✅ ADMIN FIELD
+    role: Optional[str] = None  # ✅ ROLE FIELD
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class LinkUserToProviderRequest(BaseModel):
     user_id: int

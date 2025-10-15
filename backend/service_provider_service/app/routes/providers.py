@@ -21,6 +21,7 @@ from app.models.provider import Service, ServiceTemplate, ProviderService
 from app.crud import provider as crud_provider
 from app.crud import service as crud_service
 from app.crud import category as crud_category
+from sqlalchemy import text
 
 router = APIRouter()
 
@@ -93,13 +94,51 @@ def delete_service(service_id: str, db: Session = Depends(get_db)):
 
 
 # -----------------------
+# Services with categories (DB view)
+# -----------------------
+@router.get("/services-with-categories")
+def list_services_with_categories(db: Session = Depends(get_db)):
+    """
+    Read-only endpoint backed by the DB view service_providers.services_with_categories.
+    Returns service + category fields in a flattened shape for consumers.
+    """
+    rows = db.execute(text(
+        """
+        SELECT 
+            service_id,
+            service_name,
+            service_description,
+            service_requirements,
+            service_created_at,
+            service_category_id,
+            service_category_name
+        FROM service_providers.services_with_categories
+        ORDER BY service_category_name NULLS LAST, service_name
+        """
+    )).mappings().all() #mappings() is used to return a dictionary of the result
+
+    return [
+        {
+            "service_id": r["service_id"],
+            "service_name": r["service_name"],
+            "service_description": r["service_description"],
+            "service_requirements": r["service_requirements"],
+            "service_created_at": r["service_created_at"],
+            "service_category_id": r["service_category_id"],
+            "service_category_name": r["service_category_name"],
+        }
+        for r in rows
+    ]
+
+
+# -----------------------
 # Providers
 # -----------------------
 @router.post("/", response_model=Provider)
 def create_provider(payload: ProviderCreate, db: Session = Depends(get_db)):
     return crud_provider.create_provider(db, payload)
 
-DEFAULT_CATEGORY_ID = 5  # Default category for quick-created providers
+DEFAULT_CATEGORY_ID = 1  # Default category for quick-created providers
 
 
 @router.post("/quick-provider", response_model=ProviderQuickOut)
@@ -240,29 +279,53 @@ def search_providers(
         db,
         service_ids,
         match_all,
-        category_id,
         search,
+        category_id,
     )
 
     grouped = {}
     for r in rows:
         if r.provider_id not in grouped:
+            # Format location data to be more user-friendly
+            location_data = r.provider_location or {}
+            formatted_location = {
+                "area": location_data.get("name", "Nairobi"),
+                "coordinates": {
+                    "lat": location_data.get("lat"),
+                    "lng": location_data.get("lng")
+                },
+                "address": f"{location_data.get('name', 'Nairobi')}, Kenya"
+            }
+            
             grouped[r.provider_id] = {
-                 "provider_id": r.provider_id,
+                "provider_id": r.provider_id,
                 "provider_name": r.provider_name,
                 "description": r.provider_description,
                 "contact_info": r.provider_contact_info,
-                "location": r.provider_location,
+                "location": formatted_location,
                 "rating": float(r.provider_rating) if r.provider_rating else 0.0,
                 "is_registered": r.provider_is_registered,
                 "created_at": r.provider_created_at,
+                "category": {
+                    "id": r.provider_category_id,
+                    "name": r.provider_category_name
+                },
                 "services": []
             }
         grouped[r.provider_id]["services"].append({
             "service_id": r.service_id,
             "service_name": r.service_name,
+            "service_description": r.service_description,
             "price": r.price,
+            "duration": r.duration,
             "display_name": r.display_name,
+            "booking_required": r.booking_required,
+            "extra_data": r.extra_data,
+            "category": {
+                "id": r.service_category_id,
+                "name": r.service_category_name
+            },
+            "requirements": r.service_requirements
         })
 
     return list(grouped.values())
