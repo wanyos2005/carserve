@@ -32,14 +32,16 @@ for service in "${services[@]}"; do
         service_path="backend/${service//-/_}"
     fi
     
-    # Step 1: Delete and recreate empty alembic/versions folder
+    # Step 1: Delete and recreate empty alembic/versions folder INSIDE the container
     echo "  🔹 Cleaning migration files for $service..."
-    if [ -d "$service_path/alembic/versions" ]; then
-        rm -rf "$service_path/alembic/versions"
-        echo "    ✅ Deleted existing versions folder"
-    fi
-    mkdir -p "$service_path/alembic/versions"
-    echo "    ✅ Created empty versions folder"
+    docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
+        if [ -d '/app/alembic/versions' ]; then
+            rm -rf /app/alembic/versions/*
+            echo '    ✅ Deleted existing migration files'
+        fi
+        mkdir -p /app/alembic/versions
+        echo '    ✅ Created empty versions folder'
+    "
     
     # Step 2: Generate new initial migration
     echo "  🔹 Generating initial migration for $service..."
