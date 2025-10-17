@@ -154,7 +154,6 @@ services:
       - SMTP_TLS=${SMTP_TLS}
       - SMTP_SSL=${SMTP_SSL}
       - FCM_SERVER_KEY=${FCM_SERVER_KEY}
-      
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - SMS_PROVIDER=${SMS_PROVIDER}
       - AT_USERNAME=${AT_USERNAME}
@@ -203,7 +202,6 @@ services:
       - AT_API_KEY=${AT_API_KEY}
       - AT_SENDER_ID=${AT_SENDER_ID}
       - FCM_SERVER_KEY=${FCM_SERVER_KEY}
-      
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
     restart: unless-stopped
