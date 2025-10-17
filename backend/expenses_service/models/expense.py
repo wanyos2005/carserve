@@ -5,7 +5,7 @@ from core.db import Base
 
 class Expense(Base):
     __tablename__ = "expenses"
-    __table_args__ = {"schema": "expense"}
+    __table_args__ = {"schema": "expenses"}
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     owner_id = Column(Integer, index=True)

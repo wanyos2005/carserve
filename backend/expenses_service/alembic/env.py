@@ -21,7 +21,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # --- 🔹 3. Change this per service (schema name) ---
-SERVICE_SCHEMA = "expense"   # 👈 change per service
+SERVICE_SCHEMA = "expenses"   # 👈 change per service
 
 
 def include_object(object, name, type_, reflected, compare_to):
