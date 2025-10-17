@@ -1,0 +1,383 @@
+services:
+  # External databases (Neon Postgres + Upstash Redis)
+  # Remove postgres and redis services since we'll use external ones
+  
+  user-service:
+    build:
+      context: ./backend/user_service
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - REDIS_URL=${UPSTASH_REDIS_URL}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8001/health'); print('ok')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network
+
+  vehicle-service:
+    build:
+      context: ./backend/vehicle_service
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - REDIS_URL=${UPSTASH_REDIS_URL}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8002/health'); print('ok')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network
+
+  service-provider:
+    build:
+      context: ./backend/service_provider_service
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8003/health'); print('ok')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network
+
+  booking-service:
+    build:
+      context: ./backend/booking_service
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8004/health'); print('ok')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network
+
+  insurance-service:
+    build:
+      context: ./backend/insurance_service
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - REDIS_URL=${UPSTASH_REDIS_URL}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8005/health'); print('ok')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network
+
+  alert-service:
+    build:
+      context: ./backend/alert_service
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8006:8006"
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - REDIS_URL=${UPSTASH_REDIS_URL}
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_TLS=${SMTP_TLS}
+      - SMTP_SSL=${SMTP_SSL}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - SMS_PROVIDER=${SMS_PROVIDER}
+      - AT_USERNAME=${AT_USERNAME}
+      - AT_API_KEY=${AT_API_KEY}
+      - AT_SENDER_ID=${AT_SENDER_ID}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8006/health'); print('ok')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network
+
+  alert-worker:
+    build:
+      context: ./backend/alert_service
+      dockerfile: Dockerfile.prod
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - REDIS_URL=${UPSTASH_REDIS_URL}
+      - CELERY_BROKER_URL=${UPSTASH_REDIS_URL}
+      - CELERY_RESULT_BACKEND=${UPSTASH_REDIS_URL}
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_TLS=${SMTP_TLS}
+      - SMTP_SSL=${SMTP_SSL}
+      - SMS_PROVIDER=${SMS_PROVIDER}
+      - AT_USERNAME=${AT_USERNAME}
+      - AT_API_KEY=${AT_API_KEY}
+      - AT_SENDER_ID=${AT_SENDER_ID}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    command: ["celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    networks:
+      - backend-network
+
+  alert-beat:
+    build:
+      context: ./backend/alert_service
+      dockerfile: Dockerfile.prod
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - REDIS_URL=${UPSTASH_REDIS_URL}
+      - CELERY_BROKER_URL=${UPSTASH_REDIS_URL}
+      - CELERY_RESULT_BACKEND=${UPSTASH_REDIS_URL}
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    command: ["celery", "-A", "celery_app.celery_app", "beat", "--loglevel=INFO"]
+    networks:
+      - backend-network
+
+  expenses-service:
+    build:
+      context: ./backend/expenses_service
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8007:8007"
+    environment:
+      - DATABASE_URL=${NEON_DATABASE_URL}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8007/health'); print('ok')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend-network
+
+  gateway:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - user-service
+      - vehicle-service
+      - service-provider
+      - booking-service
+      - insurance-service
+      - alert-service
+      - expenses-service
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - backend-network
+
+  # Monitoring and Logging (optional - can be enabled if needed)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    networks:
+      - backend-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    networks:
+      - backend-network
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  backend-network:
+    driver: bridge
