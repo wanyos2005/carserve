@@ -3,9 +3,7 @@ services:
   # Remove postgres and redis services since we'll use external ones
   
   user-service:
-    build:
-      context: ./backend/user_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/user-service:latest
     ports:
       - "8001:8001"
     environment:
@@ -32,9 +30,7 @@ services:
       - backend-network
 
   vehicle-service:
-    build:
-      context: ./backend/vehicle_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/vehicle-service:latest
     ports:
       - "8002:8002"
     environment:
@@ -61,9 +57,7 @@ services:
       - backend-network
 
   service-provider:
-    build:
-      context: ./backend/service_provider_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/service-provider-service:latest
     ports:
       - "8003:8003"
     environment:
@@ -89,9 +83,7 @@ services:
       - backend-network
 
   booking-service:
-    build:
-      context: ./backend/booking_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/booking-service:latest
     ports:
       - "8004:8004"
     environment:
@@ -117,9 +109,7 @@ services:
       - backend-network
 
   insurance-service:
-    build:
-      context: ./backend/insurance_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/insurance-service:latest
     ports:
       - "8005:8005"
     environment:
@@ -146,9 +136,7 @@ services:
       - backend-network
 
   alert-service:
-    build:
-      context: ./backend/alert_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/alert-service:latest
     ports:
       - "8006:8006"
     environment:
@@ -195,9 +183,7 @@ services:
       - backend-network
 
   alert-worker:
-    build:
-      context: ./backend/alert_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/alert-service:latest
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -238,9 +224,7 @@ services:
       - backend-network
 
   alert-beat:
-    build:
-      context: ./backend/alert_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/alert-service:latest
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -265,9 +249,7 @@ services:
       - backend-network
 
   expenses-service:
-    build:
-      context: ./backend/expenses_service
-      dockerfile: Dockerfile.prod
+    image: ghcr.io/wanyos2005/expenses-service:latest
     ports:
       - "8007:8007"
     environment:
