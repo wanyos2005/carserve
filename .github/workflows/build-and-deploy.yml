@@ -87,7 +87,7 @@ jobs:
             --push backend/alert_service
       
 
-  deploy:
+    deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -102,6 +102,18 @@ jobs:
             cd /opt/car-platform
             git fetch --all
             git reset --hard origin/main
-            docker compose -f docker-compose.oracle.yml pull
+            
+            # Pull images one by one to avoid timeout
+            echo "Pulling images..."
+            docker pull ghcr.io/wanyos2005/user-service:latest || echo "Failed to pull user-service"
+            docker pull ghcr.io/wanyos2005/vehicle-service:latest || echo "Failed to pull vehicle-service"
+            docker pull ghcr.io/wanyos2005/booking-service:latest || echo "Failed to pull booking-service"
+            docker pull ghcr.io/wanyos2005/insurance-service:latest || echo "Failed to pull insurance-service"
+            docker pull ghcr.io/wanyos2005/expenses-service:latest || echo "Failed to pull expenses-service"
+            docker pull ghcr.io/wanyos2005/service-provider-service:latest || echo "Failed to pull service-provider"
+            docker pull ghcr.io/wanyos2005/alert-service:latest || echo "Failed to pull alert-service"
+            
+            # Start services
+            echo "Starting services..."
             docker compose -f docker-compose.oracle.yml up -d
             docker compose -f docker-compose.oracle.yml ps
