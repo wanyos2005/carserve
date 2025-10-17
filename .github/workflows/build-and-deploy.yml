@@ -88,6 +88,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -95,96 +96,49 @@ jobs:
           host: ${{ secrets.ORACLE_HOST }}
           username: ubuntu
           key: ${{ secrets.ORACLE_SSH_KEY }}
+          command_timeout: 25m
           script: |
             set -e
             cd /opt/car-platform
-            git fetch --all
-            git reset --hard origin/main
+            git fetch --all #this is to fetch the latest changes from the remote repository
+            git reset --hard origin/main #this is to reset the local repository to the latest changes from the remote repository
             
             # Configure Docker for better network handling
             sudo mkdir -p /etc/docker
-            echo '{"max-concurrent-downloads": 1, "max-concurrent-uploads": 1}' | sudo tee /etc/docker/daemon.json
+            echo '{"max-concurrent-downloads": 1, "max-concurrent-uploads": 1, "max-download-attempts": 5}' | sudo tee /etc/docker/daemon.json
             sudo systemctl restart docker
-            sleep 10
+            sleep 15
             
-            # Pull images with retry logic
+            # Pull images with retry logic and timeouts
             echo "Pulling images with retries..."
-            for i in {1..3}; do
-              echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/user-service:latest; then
-                echo "✓ user-service pulled successfully"
-                break
-              else
-                echo "✗ user-service failed, retrying..."
-                sleep 30
-              fi
-            done
             
-            for i in {1..3}; do
-              echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/vehicle-service:latest; then
-                echo "✓ vehicle-service pulled successfully"
-                break
-              else
-                echo "✗ vehicle-service failed, retrying..."
-                sleep 30
-              fi
-            done
+            # Function to pull image with retries
+            pull_image() {
+              local image=$1
+              local service_name=$2
+              for i in {1..5}; do
+                echo "Attempt $i for $service_name..."
+                if timeout 300 docker pull $image; then
+                  echo "✓ $service_name pulled successfully"
+                  return 0
+                else
+                  echo "✗ $service_name failed, retrying in 60s..."
+                  sleep 60
+                fi
+              done
+              echo "✗ $service_name failed after 5 attempts"
+              return 1
+            }
             
-            for i in {1..3}; do
-              echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/booking-service:latest; then
-                echo "✓ booking-service pulled successfully"
-                break
-              else
-                echo "✗ booking-service failed, retrying..."
-                sleep 30
-              fi
-            done
+            # Pull all images
+            pull_image "ghcr.io/wanyos2005/user-service:latest" "user-service"
             
-            for i in {1..3}; do
-              echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/insurance-service:latest; then
-                echo "✓ insurance-service pulled successfully"
-                break
-              else
-                echo "✗ insurance-service failed, retrying..."
-                sleep 30
-              fi
-            done
-            
-            for i in {1..3}; do
-              echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/expenses-service:latest; then
-                echo "✓ expenses-service pulled successfully"
-                break
-              else
-                echo "✗ expenses-service failed, retrying..."
-                sleep 30
-              fi
-            done
-            
-            for i in {1..3}; do
-              echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/service-provider:latest; then
-                echo "✓ service-provider pulled successfully"
-                break
-              else
-                echo "✗ service-provider failed, retrying..."
-                sleep 30
-              fi
-            done
-            
-            for i in {1..3}; do
-              echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/alert-service:latest; then
-                echo "✓ alert-service pulled successfully"
-                break
-              else
-                echo "✗ alert-service failed, retrying..."
-                sleep 30
-              fi
-            done
+            pull_image "ghcr.io/wanyos2005/vehicle-service:latest" "vehicle-service"
+            pull_image "ghcr.io/wanyos2005/booking-service:latest" "booking-service"
+            pull_image "ghcr.io/wanyos2005/insurance-service:latest" "insurance-service"
+            pull_image "ghcr.io/wanyos2005/expenses-service:latest" "expenses-service"
+            pull_image "ghcr.io/wanyos2005/service-provider:latest" "service-provider"
+            pull_image "ghcr.io/wanyos2005/alert-service:latest" "alert-service"
             
             # Start services
             echo "Starting services..."
