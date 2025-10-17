@@ -15,6 +15,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:buildx-stable-1
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -27,6 +30,8 @@ jobs:
             -f backend/user_service/Dockerfile.prod \
             -t $IMAGE_NS/user-service:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/user_service
       - name: Build and push vehicle-service
         run: |
@@ -34,6 +39,8 @@ jobs:
             -f backend/vehicle_service/Dockerfile.prod \
             -t $IMAGE_NS/vehicle-service:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/vehicle_service
       - name: Build and push service-provider
         run: |
@@ -41,6 +48,8 @@ jobs:
             -f backend/service_provider_service/Dockerfile.prod \
             -t $IMAGE_NS/service-provider:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/service_provider_service
       - name: Build and push booking-service
         run: |
@@ -48,6 +57,8 @@ jobs:
             -f backend/booking_service/Dockerfile.prod \
             -t $IMAGE_NS/booking-service:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/booking_service
       - name: Build and push insurance-service
         run: |
@@ -55,6 +66,8 @@ jobs:
             -f backend/insurance_service/Dockerfile.prod \
             -t $IMAGE_NS/insurance-service:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/insurance_service
       - name: Build and push alert-service
         run: |
@@ -62,6 +75,8 @@ jobs:
             -f backend/alert_service/Dockerfile.prod \
             -t $IMAGE_NS/alert-service:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/alert_service
       - name: Build and push expenses-service
         run: |
@@ -69,6 +84,8 @@ jobs:
             -f backend/expenses_service/Dockerfile.prod \
             -t $IMAGE_NS/expenses-service:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/expenses_service
       - name: Build and push alert-worker
         run: |
@@ -76,6 +93,8 @@ jobs:
             -f backend/alert_service/Dockerfile.prod \
             -t $IMAGE_NS/alert-worker:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/alert_service
       - name: Build and push alert-beat
         run: |
@@ -83,6 +102,8 @@ jobs:
             -f backend/alert_service/Dockerfile.prod \
             -t $IMAGE_NS/alert-beat:latest \
             --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push backend/alert_service
 
   deploy:
