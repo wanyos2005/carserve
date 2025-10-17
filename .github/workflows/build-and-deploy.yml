@@ -35,12 +35,11 @@ jobs:
             -t $IMAGE_NS/vehicle-service:latest \
             --platform linux/amd64 \
             --push backend/vehicle_service
-      # Add other services similarly...
       - name: Build and push service-provider
         run: |
           docker buildx build \
             -f backend/service_provider_service/Dockerfile.prod \
-            -t $IMAGE_NS/service-provider-service:latest \
+            -t $IMAGE_NS/service-provider:latest \
             --platform linux/amd64 \
             --push backend/service_provider_service
       - name: Build and push booking-service
@@ -85,9 +84,8 @@ jobs:
             -t $IMAGE_NS/alert-beat:latest \
             --platform linux/amd64 \
             --push backend/alert_service
-      
 
-    deploy:
+  deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -110,7 +108,7 @@ jobs:
             docker pull ghcr.io/wanyos2005/booking-service:latest || echo "Failed to pull booking-service"
             docker pull ghcr.io/wanyos2005/insurance-service:latest || echo "Failed to pull insurance-service"
             docker pull ghcr.io/wanyos2005/expenses-service:latest || echo "Failed to pull expenses-service"
-            docker pull ghcr.io/wanyos2005/service-provider-service:latest || echo "Failed to pull service-provider"
+            docker pull ghcr.io/wanyos2005/service-provider:latest || echo "Failed to pull service-provider"
             docker pull ghcr.io/wanyos2005/alert-service:latest || echo "Failed to pull alert-service"
             
             # Start services

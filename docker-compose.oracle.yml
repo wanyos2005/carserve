@@ -57,7 +57,7 @@ services:
       - backend-network
 
   service-provider:
-    image: ghcr.io/wanyos2005/service-provider-service:latest
+    image: ghcr.io/wanyos2005/service-provider:latest
     ports:
       - "8003:8003"
     environment:
