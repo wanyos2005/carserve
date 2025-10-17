@@ -2,13 +2,16 @@
 
 # Script to bootstrap database migrations for all services
 # This script will:
-# 1. Stamp services (except alert-service) to base
-# 2. Generate new initial migrations
+# 1. Delete and recreate empty alembic/versions folders
+# 2. Generate new initial migrations for Neon database
 # 3. Run migrations to create all tables
+# NOTE: Assumes schemas are created manually in Neon
 
 echo "🚀 Bootstrapping database migrations for all services..."
+echo "⚠️  WARNING: This will delete existing migration files and create new ones!"
+echo ""
 
-# List of services to bootstrap (excluding alert-service which already has tables)
+# List of services to bootstrap
 services=(
     "user-service"
     "vehicle-service" 
@@ -16,18 +19,31 @@ services=(
     "insurance-service"
     "expenses-service"
     "service-provider"
+    "alert-service"
 )
 
 for service in "${services[@]}"; do
     echo "📝 Processing $service..."
     
-    # Step 1: Stamp to base (this tells Alembic the database is at the initial state)
-    echo "  🔹 Stamping $service to base..."
-    docker compose -f docker-compose.oracle.yml run --rm $service alembic stamp base
+    # Get the correct service path
+    if [ "$service" == "service-provider" ]; then
+        service_path="backend/service_provider_service"
+    else
+        service_path="backend/${service//-/_}"
+    fi
+    
+    # Step 1: Delete and recreate empty alembic/versions folder
+    echo "  🔹 Cleaning migration files for $service..."
+    if [ -d "$service_path/alembic/versions" ]; then
+        rm -rf "$service_path/alembic/versions"
+        echo "    ✅ Deleted existing versions folder"
+    fi
+    mkdir -p "$service_path/alembic/versions"
+    echo "    ✅ Created empty versions folder"
     
     # Step 2: Generate new initial migration
     echo "  🔹 Generating initial migration for $service..."
-    docker compose -f docker-compose.oracle.yml run --rm $service alembic revision --autogenerate -m "initial $service tables"
+    docker compose -f docker-compose.oracle.yml run --rm $service alembic revision --autogenerate -m "initial $service tables for Neon"
     
     # Step 3: Run the migration to create tables
     echo "  🔹 Running migration for $service..."

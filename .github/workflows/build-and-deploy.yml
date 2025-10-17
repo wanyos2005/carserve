@@ -142,17 +142,8 @@ jobs:
             
            
             
-            echo "Running database migrations, upgrade head..."
-            docker compose -f docker-compose.oracle.yml run --rm user-service alembic upgrade head
-            docker compose -f docker-compose.oracle.yml run --rm vehicle-service alembic upgrade head
-            docker compose -f docker-compose.oracle.yml run --rm booking-service alembic upgrade head
-            docker compose -f docker-compose.oracle.yml run --rm insurance-service alembic upgrade head
-            docker compose -f docker-compose.oracle.yml run --rm expenses-service alembic upgrade head
-            docker compose -f docker-compose.oracle.yml run --rm service-provider alembic upgrade head
-            
-            # For alert-service, stamp head since tables already exist
-            echo "Stamping alert-service head (tables already exist)..."
-            docker compose -f docker-compose.oracle.yml run --rm alert-service alembic stamp head
+            # Note: Database migrations are handled manually using bootstrap_migrations.sh
+            echo "Skipping database migrations - handled manually"
             
             # Start services
             echo "Starting services..."
