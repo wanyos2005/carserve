@@ -85,7 +85,7 @@ jobs:
             --platform linux/amd64 \
             --push backend/alert_service
 
-    deploy:
+  deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -166,7 +166,7 @@ jobs:
             
             for i in {1..3}; do
               echo "Attempt $i..."
-              if docker pull ghcr.io/wanyos2005/service-provider-service:latest; then
+              if docker pull ghcr.io/wanyos2005/service-provider:latest; then
                 echo "✓ service-provider pulled successfully"
                 break
               else
