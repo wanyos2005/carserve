@@ -140,7 +140,69 @@ jobs:
             pull_image "ghcr.io/wanyos2005/service-provider:latest" "service-provider"
             pull_image "ghcr.io/wanyos2005/alert-service:latest" "alert-service"
             
-            # Run database migrations before starting services
+            # Create database schemas first (if they don't exist)
+            echo "Creating database schemas..."
+            docker compose -f docker-compose.oracle.yml run --rm user-service python -c "
+            import os
+            from sqlalchemy import create_engine, text
+            engine = create_engine(os.getenv('DATABASE_URL'))
+            with engine.connect() as conn:
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS users'))
+                conn.commit()
+            print('✓ users schema created')
+            "
+            
+            docker compose -f docker-compose.oracle.yml run --rm vehicle-service python -c "
+            import os
+            from sqlalchemy import create_engine, text
+            engine = create_engine(os.getenv('DATABASE_URL'))
+            with engine.connect() as conn:
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS vehicles'))
+                conn.commit()
+            print('✓ vehicles schema created')
+            "
+            
+            docker compose -f docker-compose.oracle.yml run --rm booking-service python -c "
+            import os
+            from sqlalchemy import create_engine, text
+            engine = create_engine(os.getenv('DATABASE_URL'))
+            with engine.connect() as conn:
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS bookings'))
+                conn.commit()
+            print('✓ bookings schema created')
+            "
+            
+            docker compose -f docker-compose.oracle.yml run --rm insurance-service python -c "
+            import os
+            from sqlalchemy import create_engine, text
+            engine = create_engine(os.getenv('DATABASE_URL'))
+            with engine.connect() as conn:
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS insurance'))
+                conn.commit()
+            print('✓ insurance schema created')
+            "
+            
+            docker compose -f docker-compose.oracle.yml run --rm expenses-service python -c "
+            import os
+            from sqlalchemy import create_engine, text
+            engine = create_engine(os.getenv('DATABASE_URL'))
+            with engine.connect() as conn:
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS expenses'))
+                conn.commit()
+            print('✓ expenses schema created')
+            "
+            
+            docker compose -f docker-compose.oracle.yml run --rm service-provider python -c "
+            import os
+            from sqlalchemy import create_engine, text
+            engine = create_engine(os.getenv('DATABASE_URL'))
+            with engine.connect() as conn:
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS service_providers'))
+                conn.commit()
+            print('✓ service_providers schema created')
+            "
+            
+            # Run database migrations after schemas are created
             echo "Running database migrations..."
             docker compose -f docker-compose.oracle.yml run --rm user-service alembic upgrade head
             docker compose -f docker-compose.oracle.yml run --rm vehicle-service alembic upgrade head
