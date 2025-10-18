@@ -20,28 +20,72 @@ declare -A services=(
 
 for service in "${!services[@]}"; do
     echo "  🔹 Creating tables for $service..."
-    docker compose -f docker-compose.oracle.yml run --rm $service python -c "
+    
+    # Special handling for service-provider (has app/ subdirectory)
+    if [ "$service" == "service-provider" ]; then
+        docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
+cd /app
+python -c \"
+from core.db import Base, engine
+Base.metadata.create_all(bind=engine)
+print('✅ Tables created for $service')
+\"
+"
+    else
+        docker compose -f docker-compose.oracle.yml run --rm $service python -c "
 from core.db import Base, engine
 Base.metadata.create_all(bind=engine)
 print(f'✅ Tables created for $service')
 "
+    fi
+    
+    echo "  ✅ $service tables created"
+    echo ""
 done
 
 echo ""
 echo "📝 Step 2: Setting up Alembic migration history..."
 
-# Step 2: Create initial Alembic migrations and stamp them
-for service in "${!services[@]}"; do
-    echo "  🔹 Setting up Alembic for $service..."
-    
-    # Create a new initial migration
-    docker compose -f docker-compose.oracle.yml run --rm $service alembic revision --autogenerate -m "initial tables (created directly)" || echo "    ⚠️  Migration generation failed, continuing..."
-    
-    # Stamp the database as being at the latest revision
-    docker compose -f docker-compose.oracle.yml run --rm $service alembic stamp head || echo "    ⚠️  Stamping failed, continuing..."
-    
-    echo "    ✅ Alembic setup completed for $service"
-done
+    # Step 2: Create initial Alembic migrations and stamp them
+    for service in "${!services[@]}"; do
+        echo "  🔹 Setting up Alembic for $service..."
+        
+        # Special handling for service-provider (has app/ subdirectory)
+        if [ "$service" == "service-provider" ]; then
+            # Ensure alembic/versions directory exists inside container
+            docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
+                cd /app
+                mkdir -p alembic/versions
+                echo 'Created /app/alembic/versions directory'
+            "
+            
+            # Create a new initial migration
+            docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
+                cd /app
+                alembic revision --autogenerate -m 'initial tables (created directly)'
+            " || echo "    ⚠️  Migration generation failed, continuing..."
+            
+            # Stamp the database as being at the latest revision
+            docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
+                cd /app
+                alembic stamp head
+            " || echo "    ⚠️  Stamping failed, continuing..."
+        else
+            # Ensure alembic/versions directory exists inside container
+            docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
+                mkdir -p /app/alembic/versions
+                echo 'Created /app/alembic/versions directory'
+            "
+            
+            # Create a new initial migration
+            docker compose -f docker-compose.oracle.yml run --rm $service alembic revision --autogenerate -m "initial tables (created directly)" || echo "    ⚠️  Migration generation failed, continuing..."
+            
+            # Stamp the database as being at the latest revision
+            docker compose -f docker-compose.oracle.yml run --rm $service alembic stamp head || echo "    ⚠️  Stamping failed, continuing..."
+        fi
+        
+        echo "    ✅ Alembic setup completed for $service"
+    done
 
 echo ""
 echo "🎉 Database setup completed!"
