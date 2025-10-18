@@ -326,7 +326,16 @@ def create_or_get_guest_user(
         user = None
 
     if user:
-        return user
+        # Return properly formatted user data
+        return {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "phone": user.phone,
+            "provider_id": None,  # Will be set if linked
+            "is_admin": False,    # Guest users are not admins
+            "role": "guest"       # Guest role
+        }
 
     guest = User(
         email=req.email,
@@ -339,7 +348,17 @@ def create_or_get_guest_user(
     db.add(guest)
     db.commit()
     db.refresh(guest)
-    return guest
+    
+    # Return properly formatted guest data
+    return {
+        "id": guest.id,
+        "email": guest.email,
+        "name": guest.name,
+        "phone": guest.phone,
+        "provider_id": req.provider_id,  # Link to provider if provided
+        "is_admin": False,               # Guest users are not admins
+        "role": "guest"                  # Guest role
+    }
 
 # --------------------------
 # Admin Management Endpoints

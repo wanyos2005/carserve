@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 //
 
 class AuthService {
-  static const String baseUrl = "http://192.168.0.104:8000";//"http://192.168.0.107:8000/users";
+  static const String baseUrl = "http://152.70.28.112";
 
   // Send OTP
   // Send OTP

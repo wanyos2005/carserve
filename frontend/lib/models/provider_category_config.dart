@@ -96,6 +96,7 @@ class ProviderCategoryConfigs {
           subtitle: 'Log completed services and maintenance',
           icon: Icons.check_circle_outline,
           color: Colors.green,
+          route: '/provider-log-service',
         ),
         QuickAction(
           title: 'Orders & Parts',
@@ -140,6 +141,14 @@ class ProviderCategoryConfigs {
           subtitle: 'Log insurance services and claims',
           icon: Icons.assignment,
           color: Colors.blue,
+          isComingSoon: true,
+        ),
+        QuickAction(
+          title: 'Log Insurance Policy',
+          subtitle: 'Create and log new insurance policies',
+          icon: Icons.policy,
+          color: Colors.green,
+          route: '/insurance-log-service',
         ),
         QuickAction(
           title: 'Client Portal',
@@ -178,6 +187,13 @@ class ProviderCategoryConfigs {
           icon: Icons.dashboard,
           color: Colors.orange,
           isComingSoon: true,
+        ),
+        QuickAction(
+          title: 'Service Logs',
+          subtitle: 'Log fuel services and transactions',
+          icon: Icons.check_circle_outline,
+          color: Colors.green,
+          route: '/provider-log-service',
         ),
         QuickAction(
           title: 'Inventory',
@@ -229,6 +245,7 @@ class ProviderCategoryConfigs {
           subtitle: 'Log completed wash and detailing services',
           icon: Icons.check_circle_outline,
           color: Colors.green,
+          route: '/provider-log-service',
         ),
         QuickAction(
           title: 'Facility Status',
@@ -267,6 +284,13 @@ class ProviderCategoryConfigs {
           icon: Icons.inventory_2,
           color: Colors.deepPurple,
           isComingSoon: true,
+        ),
+        QuickAction(
+          title: 'Service Logs',
+          subtitle: 'Log parts installation and services',
+          icon: Icons.check_circle_outline,
+          color: Colors.green,
+          route: '/provider-log-service',
         ),
         QuickAction(
           title: 'Orders',

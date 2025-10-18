@@ -240,14 +240,12 @@ class _ProviderHomePageState extends State<ProviderHomePage> {
                     );
                   }
                 : () {
-                    if (action.title == 'Service Logs' || action.title == 'Claims Processing') {
-                      Navigator.push(
+                    // Handle navigation based on route
+                    if (action.route != null) {
+                      Navigator.pushNamed(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => config.businessType == ProviderBusinessType.insuranceDocumentation
-                              ? InsuranceLogServicePage(providerId: widget.providerId)
-                              : ProviderLogServicePage(providerId: widget.providerId),
-                        ),
+                        action.route!,
+                        arguments: {'providerId': widget.providerId},
                       );
                     } else if (action.onTap != null) {
                       action.onTap!();

@@ -49,22 +49,28 @@ class _EditProviderPageState extends State<EditProviderPage> {
     });
 
     for (var a in attached) {
-      final sid = a["service_id"] ?? a["service"]["id"] ?? a["id"];
-      if (sid != null) {
+      // Handle the new data structure - service_id is directly available
+      final sid = a["service_id"]?.toString();
+      if (sid != null && sid.isNotEmpty) {
         _selectedServiceIds.add(sid);
 
+        // Handle price - it's now a string like "KSh 8,000 - 18,000"
+        final price = a["price"]?.toString() ?? "";
         _priceControllers.putIfAbsent(
-          sid, () => TextEditingController(text: a["price"]?.toString() ?? "")
+          sid, () => TextEditingController(text: price)
         );
 
+        // Handle display_name
+        final displayName = a["display_name"]?.toString() ?? "";
         _displayNameControllers.putIfAbsent(
-          sid, () => TextEditingController(text: a["display_name"] ?? "")
+          sid, () => TextEditingController(text: displayName)
         );
 
-        final meta = a["metadata"] ?? a["requirements"] ?? {};
+        // Handle metadata/extra_data - the new structure uses extra_data
+        final meta = a["extra_data"] as Map<String, dynamic>? ?? {};
         _serviceFieldControllers.putIfAbsent(sid, () {
           final map = <String, TextEditingController>{};
-          (meta as Map<String, dynamic>).forEach((k, v) {
+          meta.forEach((k, v) {
             map[k] = TextEditingController(text: v?.toString() ?? "");
           });
           return map;
@@ -74,18 +80,24 @@ class _EditProviderPageState extends State<EditProviderPage> {
   }
 
   Widget _buildField(String serviceId, Map<String, dynamic> fieldDef) {
-    final fname = fieldDef["name"];
-    final ftype = fieldDef["type"];
-    final label = fieldDef["label"] ?? fname;
+    final fname = fieldDef["name"]?.toString() ?? "";
+    final ftype = fieldDef["type"]?.toString() ?? "string";
+    final label = fieldDef["label"]?.toString() ?? fname;
     final controllers = _serviceFieldControllers.putIfAbsent(serviceId, () => {});
     final controller = controllers.putIfAbsent(fname, () => TextEditingController());
 
     switch (ftype) {
       case "string":
+      case "text":
+        return TextField(
+          controller: controller,
+          keyboardType: TextInputType.text,
+          decoration: InputDecoration(labelText: label),
+        );
       case "number":
         return TextField(
           controller: controller,
-          keyboardType: ftype == "number" ? TextInputType.number : TextInputType.text,
+          keyboardType: TextInputType.number,
           decoration: InputDecoration(labelText: label),
         );
       case "textarea":
@@ -108,7 +120,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
         final options = List<String>.from(fieldDef["options"] ?? []);
         String current = controller.text.isNotEmpty ? controller.text : (options.isNotEmpty ? options[0] : "");
         return DropdownButtonFormField<String>(
-          initialValue: current.isNotEmpty ? current : null,
+          value: current.isNotEmpty ? current : null,
           items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
           onChanged: (v) {
             controller.text = v ?? "";
@@ -127,17 +139,28 @@ class _EditProviderPageState extends State<EditProviderPage> {
       final metaControllers = _serviceFieldControllers[sid] ?? {};
       final metadata = <String, dynamic>{};
       metaControllers.forEach((k, c) {
-        final val = c.text;
-        // coerce booleans/numbers if you want; keep strings for simplicity
-        metadata[k] = val;
+        final val = c.text.trim();
+        // Handle different data types
+        if (val.toLowerCase() == 'true') {
+          metadata[k] = true;
+        } else if (val.toLowerCase() == 'false') {
+          metadata[k] = false;
+        } else if (val.isNotEmpty && RegExp(r'^\d+$').hasMatch(val)) {
+          metadata[k] = int.tryParse(val);
+        } else if (val.isNotEmpty && RegExp(r'^\d*\.?\d+$').hasMatch(val)) {
+          metadata[k] = double.tryParse(val);
+        } else {
+          metadata[k] = val;
+        }
       });
+
+      final displayName = _displayNameControllers[sid]?.text.trim();
+      final price = _priceControllers[sid]?.text.trim();
 
       payload.add({
         "service_id": sid,
-        "display_name": _displayNameControllers[sid]?.text.trim().isNotEmpty == true
-          ? _displayNameControllers[sid]?.text.trim()
-          : null,
-        "price": _priceControllers[sid]?.text,
+        "display_name": displayName?.isNotEmpty == true ? displayName : null,
+        "price": price?.isNotEmpty == true ? price : null,
         "metadata": metadata
       });
     }
@@ -156,18 +179,20 @@ class _EditProviderPageState extends State<EditProviderPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Edit ${_provider!["provider_name"] ?? ""}")),
+      appBar: AppBar(title: Text("Edit ${_provider!["name"] ?? _provider!["provider_name"] ?? ""}")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_provider!["description"] ?? ""),
+            Text(_provider!["description"]?.toString() ?? ""),
             const Divider(),
             const Text("Attach Services", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             ..._allServices.map<Widget>((srv) {
-              final sid = srv["id"];
+              final sid = srv["service_id"]?.toString() ?? srv["id"]?.toString();
+              if (sid == null || sid.isEmpty) return const SizedBox.shrink();
+              
               final isSelected = _selectedServiceIds.contains(sid);
               _priceControllers.putIfAbsent(sid, () => TextEditingController());
 
@@ -187,7 +212,7 @@ class _EditProviderPageState extends State<EditProviderPage> {
                           });
                         },
                       ),
-                      Expanded(child: Text(srv["name"] ?? "")),
+                      Expanded(child: Text(srv["service_name"]?.toString() ?? srv["name"]?.toString() ?? "")),
                     ],
                   ),
                   onExpansionChanged: (expanded) {
@@ -200,11 +225,11 @@ class _EditProviderPageState extends State<EditProviderPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
                       child: Column(
                         children: [
-                          Text(srv["description"] ?? ""),
+                          Text(srv["service_description"]?.toString() ?? srv["description"]?.toString() ?? ""),
                           if (isSelected) ...[
                             TextField(
                               controller: _priceControllers[sid],
-                              decoration: const InputDecoration(labelText: "Price", prefixText:"\KSH "),
+                              decoration: const InputDecoration(labelText: "Price", prefixText:"KSh "),
                               keyboardType: TextInputType.text,
                             ),
                             const SizedBox(height: 8),
@@ -217,9 +242,9 @@ class _EditProviderPageState extends State<EditProviderPage> {
                             ),
                             const SizedBox(height: 8),
                             // ✅ render requirement-defined fields (from lazy-loaded details)
-                            if (_serviceDetails[sid]?["requirements"] != null)
+                            if (_serviceDetails[sid]?["service_requirements"] != null)
                               ...List<Widget>.from(
-                                (_serviceDetails[sid]["requirements"]["fields"] as List<dynamic>? ?? [])
+                                (_serviceDetails[sid]["service_requirements"]["fields"] as List<dynamic>? ?? [])
                                     .map((f) => _buildField(sid, f as Map<String, dynamic>))
                               ),
                           ],

@@ -33,6 +33,7 @@ celery_app.conf.beat_schedule = {
         "schedule": 30 * 60,
         "args": ["service_due"],
     },
+    #
 }
 
 

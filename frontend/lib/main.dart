@@ -8,6 +8,8 @@ import 'package:car_platform/pages/login_page.dart';
 import 'package:car_platform/pages/home_page.dart';
 import 'package:car_platform/pages/insurance_policy_page.dart';
 import 'package:car_platform/pages/ProviderPages/provider_homepage.dart';
+import 'package:car_platform/pages/ProviderPages/provider_log_service_page.dart';
+import 'package:car_platform/pages/ProviderPages/insurance_log_service_page.dart';
 import 'package:car_platform/pages/AdminPages/admin_dashboard.dart';
 import 'package:car_platform/pages/expenses_page.dart';
 import 'package:car_platform/pages/add_expense_page.dart';
@@ -55,6 +57,28 @@ class CarPlatformApp extends StatelessWidget {
         
         // Alerts Routes
         "/alerts": (context) => const AlertsInboxPage(),
+        
+        // Provider Routes
+        "/provider-log-service": (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          final providerId = args?['providerId'] as String?;
+          if (providerId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Provider ID is required')),
+            );
+          }
+          return ProviderLogServicePage(providerId: providerId);
+        },
+        "/insurance-log-service": (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          final providerId = args?['providerId'] as String?;
+          if (providerId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Provider ID is required')),
+            );
+          }
+          return InsuranceLogServicePage(providerId: providerId);
+        },
        
       },
       home: FutureBuilder<UserContext?>(

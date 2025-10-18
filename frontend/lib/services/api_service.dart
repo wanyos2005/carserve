@@ -6,10 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:car_platform/services/user_context_service.dart';
 
 class ApiService {
-  static const String baseGatewayUrl = "http://192.168.0.104:8000";//"http://192.168.0.107:8000"; 
-  // Alternate gateways:
-  // peter -> "http://192.168.0.107:8000"
-  // alex  -> "http://192.168.2.116:8000"
+  static const String baseGatewayUrl = "http://152.70.28.112"; 
+  // Production gateway:
+  // Oracle Cloud VM -> "http://152.70.28.112"
 
   // --- TOKEN HANDLER ---
   static Future<String?> _getToken() async {
