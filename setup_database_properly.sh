@@ -24,7 +24,7 @@ for service in "${!services[@]}"; do
     # Special handling for service-provider (has app/ subdirectory)
     if [ "$service" == "service-provider" ]; then
         docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
-cd /app
+cd /app/app
 python -c \"
 from core.db import Base, engine
 Base.metadata.create_all(bind=engine)
@@ -54,22 +54,15 @@ echo "📝 Step 2: Setting up Alembic migration history..."
         if [ "$service" == "service-provider" ]; then
             # Ensure alembic/versions directory exists inside container
             docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
-                cd /app
-                mkdir -p alembic/versions
+                mkdir -p /app/alembic/versions
                 echo 'Created /app/alembic/versions directory'
             "
             
             # Create a new initial migration
-            docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
-                cd /app
-                alembic revision --autogenerate -m 'initial tables (created directly)'
-            " || echo "    ⚠️  Migration generation failed, continuing..."
+            docker compose -f docker-compose.oracle.yml run --rm $service alembic revision --autogenerate -m "initial tables (created directly)" || echo "    ⚠️  Migration generation failed, continuing..."
             
             # Stamp the database as being at the latest revision
-            docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
-                cd /app
-                alembic stamp head
-            " || echo "    ⚠️  Stamping failed, continuing..."
+            docker compose -f docker-compose.oracle.yml run --rm $service alembic stamp head || echo "    ⚠️  Stamping failed, continuing..."
         else
             # Ensure alembic/versions directory exists inside container
             docker compose -f docker-compose.oracle.yml run --rm $service sh -c "

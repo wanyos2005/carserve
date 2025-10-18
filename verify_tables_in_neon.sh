@@ -27,7 +27,7 @@ for service in "${!services[@]}"; do
     # List tables in the schema
     if [ "$service" == "service-provider" ]; then
         docker compose -f docker-compose.oracle.yml run --rm $service sh -c "
-cd /app
+cd /app/app
 python -c \"
 import psycopg2
 import os
