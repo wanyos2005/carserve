@@ -109,7 +109,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -117,7 +117,7 @@ jobs:
           host: ${{ secrets.ORACLE_HOST }}
           username: ubuntu
           key: ${{ secrets.ORACLE_SSH_KEY }}
-          command_timeout: 25m
+          command_timeout: 40m
           script: |
             set -e
             cd /opt/car-platform
@@ -126,9 +126,9 @@ jobs:
             
             # Configure Docker for better network handling
             sudo mkdir -p /etc/docker
-            echo '{"max-concurrent-downloads": 1, "max-concurrent-uploads": 1, "max-download-attempts": 5}' | sudo tee /etc/docker/daemon.json
+            echo '{"max-concurrent-downloads": 1, "max-concurrent-uploads": 1, "max-download-attempts": 10, "registry-mirrors": [], "insecure-registries": [], "dns": ["8.8.8.8", "8.8.4.4"]}' | sudo tee /etc/docker/daemon.json
             sudo systemctl restart docker
-            sleep 15
+            sleep 20
             
             # Pull images with retry logic and timeouts
             echo "Pulling images with retries..."
@@ -137,17 +137,17 @@ jobs:
             pull_image() {
               local image=$1
               local service_name=$2
-              for i in {1..5}; do
+              for i in {1..8}; do
                 echo "Attempt $i for $service_name..."
-                if timeout 300 docker pull $image; then
+                if timeout 600 docker pull $image; then
                   echo "✓ $service_name pulled successfully"
                   return 0
                 else
-                  echo "✗ $service_name failed, retrying in 60s..."
-                  sleep 60
+                  echo "✗ $service_name failed, retrying in 90s..."
+                  sleep 90
                 fi
               done
-              echo "✗ $service_name failed after 5 attempts"
+              echo "✗ $service_name failed after 8 attempts"
               return 1
             }
             
