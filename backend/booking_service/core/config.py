@@ -1,14 +1,19 @@
 from pydantic_settings import BaseSettings
+import os
 
 class Settings(BaseSettings):
-    db_user: str
-    db_password: str
-    db_name: str
-    db_host: str
-    db_port: str
-    secret_key: str
-    allowed_origins: str
-    database_url: str  # e.g. postgresql+psycopg2://user:password@localhost:5432/car_platform
+    # Use DATABASE_URL directly from environment (for Neon/external DB)
+    database_url: str = os.getenv("DATABASE_URL", "postgresql://AdminDb:Ngojakwanza@postgres:5432/car_platform")
+    
+    # Fallback individual components for local development
+    db_user: str = "AdminDb"
+    db_password: str = "Ngojakwanza"
+    db_name: str = "car_platform"
+    db_host: str = "postgres"
+    db_port: str = "5432"
+    
+    secret_key: str = "supersecret"
+    allowed_origins: str = "*"
 
     class Config:
         env_file = ".env"

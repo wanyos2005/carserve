@@ -2,10 +2,11 @@
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from typing import List, Union
+import os
 
 class Settings(BaseSettings):
-    # Database
-    DATABASE_URL: str = "postgresql://AdminDb:Ngojakwanza@postgres:5432/car_platform"
+    # Database - Use DATABASE_URL from environment (for Neon/external DB)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://AdminDb:Ngojakwanza@postgres:5432/car_platform")
     
     # Redis for event streaming and caching
     REDIS_URL: str = "redis://localhost:6379"
