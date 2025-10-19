@@ -106,11 +106,11 @@ class ProviderCategoryConfigs {
           isComingSoon: true,
         ),
         QuickAction(
-          title: 'History',
+          title: 'WorkFlows',
           subtitle: 'View past services and transactions',
           icon: Icons.history,
           color: Colors.purple,
-          isComingSoon: true,
+          route: '/history',
         ),
       ],
     ),
@@ -156,6 +156,13 @@ class ProviderCategoryConfigs {
           icon: Icons.people,
           color: Colors.purple,
           isComingSoon: true,
+        ),
+        QuickAction(
+          title: 'WorkFlows',
+          subtitle: 'View past policies and transactions',
+          icon: Icons.history,
+          color: Colors.purple,
+          route: '/history',
         ),
         QuickAction(
           title: 'Reports',
@@ -210,6 +217,13 @@ class ProviderCategoryConfigs {
           isComingSoon: true,
         ),
         QuickAction(
+          title: 'WorkFlows',
+          subtitle: 'View past sales and transactions',
+          icon: Icons.history,
+          color: Colors.purple,
+          route: '/history',
+        ),
+        QuickAction(
           title: 'Reports',
           subtitle: 'View sales and operational reports',
           icon: Icons.analytics,
@@ -253,6 +267,13 @@ class ProviderCategoryConfigs {
           icon: Icons.build,
           color: Colors.blue,
           isComingSoon: true,
+        ),
+        QuickAction(
+          title: 'WorkFlows',
+          subtitle: 'View past wash and detailing services',
+          icon: Icons.history,
+          color: Colors.purple,
+          route: '/history',
         ),
         QuickAction(
           title: 'Packages',
@@ -305,6 +326,13 @@ class ProviderCategoryConfigs {
           icon: Icons.list_alt,
           color: Colors.green,
           isComingSoon: true,
+        ),
+        QuickAction(
+          title: 'WorkFlows',
+          subtitle: 'View past parts sales and services',
+          icon: Icons.history,
+          color: Colors.purple,
+          route: '/history',
         ),
         QuickAction(
           title: 'Suppliers',

@@ -11,6 +11,15 @@ class BookingService {
     return data ?? [];
   }
 
+  static Future<List<dynamic>> listBookingsForProvider(String providerId) async {
+    final data = await ApiService.get("/bookings/provider/$providerId");
+    return data ?? [];
+  }
+
+
+  static Future<bool> updateBooking(String id, Map<String, dynamic> updates) async {
+    return await ApiService.put("/bookings/$id", updates);
+  }
 
   static Future<bool> deleteBooking(String id) async {  // 🔄 UUID is a string
     return await ApiService.delete("/bookings/$id");
@@ -28,6 +37,11 @@ class BookingService {
 
   static Future<List<dynamic>> listServiceLogsForUser(int userId) async {
     final data = await ApiService.get("/service-logs/user/$userId");
+    return data ?? [];
+  }
+
+  static Future<List<dynamic>> listServiceLogsForProvider(String providerId) async {
+    final data = await ApiService.get("/service-logs/provider/$providerId");
     return data ?? [];
   }
 

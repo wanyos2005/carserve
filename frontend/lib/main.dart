@@ -11,6 +11,7 @@ import 'package:car_platform/pages/ProviderPages/provider_homepage.dart';
 import 'package:car_platform/pages/ProviderPages/provider_log_service_page.dart';
 import 'package:car_platform/pages/ProviderPages/insurance_log_service_page.dart';
 import 'package:car_platform/pages/AdminPages/admin_dashboard.dart';
+import 'package:car_platform/pages/history_page.dart';
 import 'package:car_platform/pages/expenses_page.dart';
 import 'package:car_platform/pages/add_expense_page.dart';
 import 'package:car_platform/pages/alerts_inbox_page.dart';
@@ -79,6 +80,7 @@ class CarPlatformApp extends StatelessWidget {
           }
           return InsuranceLogServicePage(providerId: providerId);
         },
+        "/history": (context) => const HistoryPage(),
        
       },
       home: FutureBuilder<UserContext?>(

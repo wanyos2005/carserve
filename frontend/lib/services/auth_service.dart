@@ -207,4 +207,26 @@ class AuthService {
     }
     return [];
   }
+
+  // Look up multiple users by their IDs
+  static Future<List<dynamic>> lookupUsersByIds(List<int> userIds) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return [];
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/users/lookup"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(userIds),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return [];
+  }
+
 }

@@ -231,6 +231,29 @@ def get_user_fcm_token(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return {"fcm_token": None}
 
+@router.post("/users/lookup")
+def lookup_users_by_ids(
+    user_ids: list[int],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Look up multiple users by their IDs (authenticated users only)"""
+    # This endpoint allows any authenticated user to look up user info by ID
+    # This is reasonable for customer names in booking/service logs
+    
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
+    
+    result = []
+    for user in users:
+        result.append({
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "phone": user.phone,
+        })
+    
+    return result
+
 # --------------------------
 # Get all users (Admin only)
 # --------------------------
@@ -469,3 +492,4 @@ def list_admin_users(
             })
     
     return {"admins": result}
+

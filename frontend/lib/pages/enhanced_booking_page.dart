@@ -554,10 +554,28 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
                   )
                 : _selectedProvider == null
                     ? const Icon(Icons.arrow_forward_ios)
-                    : Chip(
-                        label: Text(_selectedProvider!["rating"]?.toString() ?? "0.0"),
-                        backgroundColor: Colors.green[100],
-                        avatar: const Icon(Icons.star, size: 16),
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Call button
+                          IconButton(
+                            icon: const Icon(Icons.phone, color: Colors.green),
+                            onPressed: () => _callProvider(_selectedProvider!),
+                            tooltip: "Call Provider",
+                          ),
+                          // Message button
+                          IconButton(
+                            icon: const Icon(Icons.message, color: Colors.blue),
+                            onPressed: () => _messageProvider(_selectedProvider!),
+                            tooltip: "Message Provider",
+                          ),
+                          // Rating chip
+                          Chip(
+                            label: Text(_selectedProvider!["rating"]?.toString() ?? "0.0"),
+                            backgroundColor: Colors.green[100],
+                            avatar: const Icon(Icons.star, size: 16),
+                          ),
+                        ],
                       ),
             onTap: _matchedProviders.isEmpty ? null : _showProviderSelector,
           ),
@@ -649,6 +667,182 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           _fetchMatchedProviders();
         }
       },
+    );
+  }
+
+  Future<void> _callProvider(Map<String, dynamic> provider) async {
+    final phone = provider["contact_info"]?["phone"] ?? provider["phone"];
+    if (phone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Provider phone number not available")),
+      );
+      return;
+    }
+
+    // Show call confirmation dialog
+    final shouldCall = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Call Provider"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Call ${provider["provider_name"] ?? "Provider"}?"),
+            const SizedBox(height: 8),
+            Text("Phone: $phone"),
+            const SizedBox(height: 8),
+            const Text(
+              "💡 Tip: Discuss pricing, availability, and service details before booking!",
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Call"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCall == true) {
+      // Use url_launcher to make the call
+      // final url = "tel:$phone";
+      // if (await canLaunchUrl(Uri.parse(url))) {
+      //   await launchUrl(Uri.parse(url));
+      // }
+      
+      // For now, show a message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Calling $phone...")),
+      );
+    }
+  }
+
+  Future<void> _messageProvider(Map<String, dynamic> provider) async {
+    // Show messaging options
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Message ${provider["provider_name"] ?? "Provider"}",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.whatsapp, color: Colors.green),
+              title: const Text("WhatsApp"),
+              subtitle: const Text("Quick messaging"),
+              onTap: () {
+                Navigator.pop(context);
+                _openWhatsApp(provider);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sms, color: Colors.blue),
+              title: const Text("SMS"),
+              subtitle: const Text("Text message"),
+              onTap: () {
+                Navigator.pop(context);
+                _sendSMS(provider);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.email, color: Colors.orange),
+              title: const Text("Email"),
+              subtitle: const Text("Detailed inquiry"),
+              onTap: () {
+                Navigator.pop(context);
+                _sendEmail(provider);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openWhatsApp(Map<String, dynamic> provider) async {
+    final phone = provider["contact_info"]?["phone"] ?? provider["phone"];
+    if (phone == null) return;
+    
+    // Remove any non-digit characters and add country code if needed
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
+    final whatsappPhone = cleanPhone.startsWith('254') ? cleanPhone : '254$cleanPhone';
+    
+    final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
+    final url = "https://wa.me/$whatsappPhone?text=${Uri.encodeComponent(message)}";
+    
+    // Use url_launcher
+    // if (await canLaunchUrl(Uri.parse(url))) {
+    //   await launchUrl(Uri.parse(url));
+    // }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Opening WhatsApp...")),
+    );
+  }
+
+  Future<void> _sendSMS(Map<String, dynamic> provider) async {
+    final phone = provider["contact_info"]?["phone"] ?? provider["phone"];
+    if (phone == null) return;
+    
+    final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
+    final url = "sms:$phone?body=${Uri.encodeComponent(message)}";
+    
+    // Use url_launcher
+    // if (await canLaunchUrl(Uri.parse(url))) {
+    //   await launchUrl(Uri.parse(url));
+    // }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Opening SMS...")),
+    );
+  }
+
+  Future<void> _sendEmail(Map<String, dynamic> provider) async {
+    final email = provider["contact_info"]?["email"] ?? provider["email"];
+    if (email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Provider email not available")),
+      );
+      return;
+    }
+    
+    final subject = "Service Inquiry - ${provider["provider_name"] ?? "Provider"}";
+    final body = """
+Hello,
+
+I'm interested in your automotive services and would like to discuss:
+
+1. Pricing for the services I need
+2. Availability and scheduling
+3. Any special requirements or questions
+
+Please let me know when would be a good time to discuss.
+
+Thank you!
+""";
+    
+    final url = "mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}";
+    
+    // Use url_launcher
+    // if (await canLaunchUrl(Uri.parse(url))) {
+    //   await launchUrl(Uri.parse(url));
+    // }
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Opening email...")),
     );
   }
 

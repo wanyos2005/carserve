@@ -63,6 +63,9 @@ def delete_booking(db: Session, booking_id: str):
 
 def list_bookings_for_user(db: Session, user_id: int, limit: int = 50, offset: int = 0) -> List[Booking]:
     return db.query(Booking).filter(Booking.user_id == user_id).order_by(Booking.created_at.desc()).offset(offset).limit(limit).all()
+
+def list_bookings_for_provider(db: Session, provider_id: str, limit: int = 50, offset: int = 0) -> List[Booking]:
+    return db.query(Booking).filter(Booking.provider_id == provider_id).order_by(Booking.created_at.desc()).offset(offset).limit(limit).all()
 def create_bulk_service_logs(db: Session, payloads: List[ServiceLogCreate]):
     logs = [ServiceLog(**p.dict()) for p in payloads]
     db.add_all(logs)

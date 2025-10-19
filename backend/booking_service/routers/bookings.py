@@ -10,6 +10,7 @@ from crud.booking import (
     create_booking,
     get_booking,
     list_bookings_for_user,
+    list_bookings_for_provider,
     update_booking,
     delete_booking,
 )
@@ -51,6 +52,10 @@ def delete(booking_id: str, db: Session = Depends(get_db)):
 @router.get("/user/{user_id}", response_model=List[BookingOut])
 def list_for_user(user_id: int, db: Session = Depends(get_db)):
     return list_bookings_for_user(db, user_id)
+
+@router.get("/provider/{provider_id}", response_model=List[BookingOut])
+def list_for_provider(provider_id: str, db: Session = Depends(get_db)):
+    return list_bookings_for_provider(db, provider_id)
 
 
 
