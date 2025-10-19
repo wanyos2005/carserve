@@ -276,13 +276,20 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - user-service
-      - vehicle-service
-      - service-provider
-      - booking-service
-      - insurance-service
-      - alert-service
-      - expenses-service
+      user-service:
+        condition: service_healthy
+      vehicle-service:
+        condition: service_healthy
+      service-provider:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
+      insurance-service:
+        condition: service_healthy
+      alert-service:
+        condition: service_healthy
+      expenses-service:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:

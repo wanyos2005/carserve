@@ -230,10 +230,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - user-service
-      # - vehicle-service
-      # - booking-service
-      - service-provider
+      user-service:
+        condition: service_healthy
+      service-provider:
+        condition: service_healthy
 
 volumes:
   postgres-data:
