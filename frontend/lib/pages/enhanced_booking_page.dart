@@ -4,6 +4,9 @@ import 'package:car_platform/services/vehicle_service.dart';
 import 'package:car_platform/services/auth_service.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/services/global_service_api.dart';
+import 'package:car_platform/services/location_service.dart';
+import 'package:car_platform/components/location_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Enhanced Helpers
 import 'package:car_platform/BookingPageHelpers/enhanced_service_selector.dart';
@@ -61,6 +64,13 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   bool _loading = false;
   bool _initialLoading = true;
   bool _providersLoading = false;
+  
+  // Communication tracking
+  List<Map<String, dynamic>> _contactHistory = [];
+  
+  // Location tracking
+  Map<String, dynamic>? _customerLocation;
+  Map<String, dynamic>? _serviceLocation;
 
   @override
   void initState() {
@@ -206,6 +216,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
         recommendedOnly: _recommendedOnly,
         selectedProvider: _selectedProvider,
         onSelect: (p) => setState(() => _selectedProvider = p),
+        customerLocation: _serviceLocation,
       ),
     );
   }
@@ -300,6 +311,8 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           "agreed_price": negotiatedPrice,
           "has_negotiated": _hasNegotiated,
           "negotiation_notes": _hasNegotiated ? "Price negotiated with provider" : null,
+          "service_location": _serviceLocation,
+          "customer_location": _customerLocation,
         });
       }
 
@@ -387,6 +400,15 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
               )
             : _buildServiceBookingUI(),
       ),
+      floatingActionButton: _selectedProvider != null && !_isPurchaseMode
+          ? FloatingActionButton.extended(
+              onPressed: () => _showQuickContactOptions(),
+              icon: const Icon(Icons.contact_phone),
+              label: const Text("Contact"),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            )
+          : null,
     );
   }
 
@@ -564,6 +586,19 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
                                     style: TextStyle(color: Colors.white, fontSize: 10),
                                   ),
                                 ),
+                          if (_contactHistory.isNotEmpty)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    "${_contactHistory.length}",
+                                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                                  ),
+                                ),
                             ],
                           ),
                         ],
@@ -708,6 +743,62 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           ],
         ),
 
+        const SizedBox(height: 12),
+
+        // Location Selection Section
+        Card(
+          color: Colors.blue[50],
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.blue[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Service Location",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "💡 Specify where you need the service (home, office, roadside, etc.)",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.blue[600],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Service location picker
+                LocationPicker(
+                  label: "Where do you need the service?",
+                  hint: "Tap to select service location",
+                  onLocationSelected: (location) {
+                    setState(() => _serviceLocation = location);
+                    _calculateProviderDistances();
+                  },
+                  showCurrentLocationButton: true,
+                ),
+                
+                // Show distance to selected provider
+                if (_selectedProvider != null && _serviceLocation != null) ...[
+                  const SizedBox(height: 12),
+                  _buildDistanceInfo(),
+                ],
+              ],
+            ),
+          ),
+        ),
+
         const Spacer(),
 
         // Book Button with Pricing Summary
@@ -844,16 +935,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
     );
 
     if (shouldCall == true) {
-      // Use url_launcher to make the call
-      // final url = "tel:$phone";
-      // if (await canLaunchUrl(Uri.parse(url))) {
-      //   await launchUrl(Uri.parse(url));
-      // }
-      
-      // For now, show a message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Calling $phone...")),
-      );
+      await _makePhoneCall(phone);
     }
   }
 
@@ -898,6 +980,16 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
                 _sendEmail(provider);
               },
             ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.phone, color: Colors.green),
+              title: const Text("Call Directly"),
+              subtitle: const Text("Make a phone call"),
+              onTap: () {
+                Navigator.pop(context);
+                _callProvider(provider);
+              },
+            ),
           ],
         ),
       ),
@@ -906,38 +998,68 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
 
   Future<void> _openWhatsApp(Map<String, dynamic> provider) async {
     final phone = provider["contact_info"]?["phone"] ?? provider["phone"];
-    if (phone == null) return;
+    if (phone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Provider phone number not available")),
+      );
+      return;
+    }
     
     // Remove any non-digit characters and add country code if needed
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
     final whatsappPhone = cleanPhone.startsWith('254') ? cleanPhone : '254$cleanPhone';
     
-    // TODO: Implement url_launcher for WhatsApp
-    // final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
-    // final url = "https://wa.me/$whatsappPhone?text=${Uri.encodeComponent(message)}";
-    // if (await canLaunchUrl(Uri.parse(url))) {
-    //   await launchUrl(Uri.parse(url));
-    // }
+    // Create a contextual message based on selected services
+    final serviceNames = _selectedServices.map((s) => s["name"] ?? "Service").join(", ");
+    final message = _selectedServices.isNotEmpty 
+        ? "Hello! I'm interested in your services for: $serviceNames. Can we discuss pricing and availability?"
+        : "Hello! I'm interested in your automotive services. Can we discuss pricing and availability?";
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Opening WhatsApp for $whatsappPhone...")),
-    );
+    final url = "https://wa.me/$whatsappPhone?text=${Uri.encodeComponent(message)}";
+    
+    try {
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        _trackCommunication("whatsapp", phone);
+      } else {
+        throw Exception("Cannot launch WhatsApp");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to open WhatsApp: $e")),
+      );
+    }
   }
 
   Future<void> _sendSMS(Map<String, dynamic> provider) async {
     final phone = provider["contact_info"]?["phone"] ?? provider["phone"];
-    if (phone == null) return;
+    if (phone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Provider phone number not available")),
+      );
+      return;
+    }
     
-    // TODO: Implement url_launcher for SMS
-    // final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
-    // final url = "sms:$phone?body=${Uri.encodeComponent(message)}";
-    // if (await canLaunchUrl(Uri.parse(url))) {
-    //   await launchUrl(Uri.parse(url));
-    // }
+    // Create a contextual message based on selected services
+    final serviceNames = _selectedServices.map((s) => s["name"] ?? "Service").join(", ");
+    final message = _selectedServices.isNotEmpty 
+        ? "Hello! I'm interested in your services for: $serviceNames. Can we discuss pricing and availability?"
+        : "Hello! I'm interested in your automotive services. Can we discuss pricing and availability?";
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Opening SMS for $phone...")),
-    );
+    final url = "sms:$phone?body=${Uri.encodeComponent(message)}";
+    
+    try {
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        _trackCommunication("sms", phone);
+      } else {
+        throw Exception("Cannot launch SMS app");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to open SMS: $e")),
+      );
+    }
   }
 
   Future<void> _sendEmail(Map<String, dynamic> provider) async {
@@ -949,29 +1071,27 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
       return;
     }
     
-    // TODO: Implement url_launcher for email
-    // final subject = "Service Inquiry - ${provider["provider_name"] ?? "Provider"}";
-    // final body = """
-    // Hello,
-    //
-    // I'm interested in your automotive services and would like to discuss:
-    //
-    // 1. Pricing for the services I need
-    // 2. Availability and scheduling
-    // 3. Any special requirements or questions
-    //
-    // Please let me know when would be a good time to discuss.
-    //
-    // Thank you!
-    // """;
-    // final url = "mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}";
-    // if (await canLaunchUrl(Uri.parse(url))) {
-    //   await launchUrl(Uri.parse(url));
-    // }
+    // Create contextual subject and body based on selected services
+    final serviceNames = _selectedServices.map((s) => s["name"] ?? "Service").join(", ");
+    final subject = _selectedServices.isNotEmpty 
+        ? "Service Inquiry - $serviceNames"
+        : "Service Inquiry - ${provider["provider_name"] ?? "Provider"}";
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Opening email for $email...")),
-    );
+    final body = _buildEmailBody(provider, serviceNames);
+    final url = "mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}";
+    
+    try {
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        _trackCommunication("email", email);
+      } else {
+        throw Exception("Cannot launch email app");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to open email: $e")),
+      );
+    }
   }
 
   Widget _buildServicePricingCard(Map<String, dynamic> service) {
@@ -1286,6 +1406,452 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
     }
     
     return {"type": "free", "min_price": 0.0, "max_price": 0.0, "unit": null};
+  }
+
+  /// Helper method to make phone calls
+  Future<void> _makePhoneCall(String phone) async {
+    final url = "tel:$phone";
+    
+    try {
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        _trackCommunication("phone_call", phone);
+      } else {
+        throw Exception("Cannot make phone call");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to make phone call: $e")),
+      );
+    }
+  }
+
+  /// Track communication attempts for analytics and user experience
+  void _trackCommunication(String method, String contact) {
+    final timestamp = DateTime.now();
+    final entry = {
+      "method": method,
+      "contact": contact,
+      "timestamp": timestamp,
+      "provider_id": _selectedProvider?["provider_id"] ?? _selectedProvider?["id"],
+      "provider_name": _selectedProvider?["provider_name"],
+      "services": _selectedServices.map((s) => s["name"]).toList(),
+    };
+    
+    setState(() {
+      _contactHistory.add(entry);
+    });
+    
+    // Show helpful tip after first contact
+    if (_contactHistory.length == 1) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("💡 Tip: After contacting the provider, you can update prices in the pricing section!"),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  /// Show quick contact options for the selected provider
+  Future<void> _showQuickContactOptions() async {
+    if (_selectedProvider == null) return;
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Contact ${_selectedProvider!["provider_name"] ?? "Provider"}",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            
+            // Quick action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _callProvider(_selectedProvider!);
+                    },
+                    icon: const Icon(Icons.phone, color: Colors.white),
+                    label: const Text("Call", style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _openWhatsApp(_selectedProvider!);
+                    },
+                    icon: const Icon(Icons.chat, color: Colors.white),
+                    label: const Text("WhatsApp", style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _sendSMS(_selectedProvider!);
+                    },
+                    icon: const Icon(Icons.sms),
+                    label: const Text("SMS"),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _sendEmail(_selectedProvider!);
+                    },
+                    icon: const Icon(Icons.email),
+                    label: const Text("Email"),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Contact history
+            if (_contactHistory.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.history, size: 16, color: Colors.blue[700]),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Contact History (${_contactHistory.length})",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ..._contactHistory.take(3).map((entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _getContactIcon(entry["method"]),
+                            size: 12,
+                            color: Colors.blue[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "${_formatContactMethod(entry["method"])} - ${_formatTime(entry["timestamp"])}",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )).toList(),
+                    if (_contactHistory.length > 3)
+                      Text(
+                        "+${_contactHistory.length - 3} more contacts",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue[500],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            
+            // Provider info
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Provider Information:",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text("Name: ${_selectedProvider!["provider_name"] ?? "N/A"}"),
+                  Text("Location: ${_selectedProvider!["location"]?["area"] ?? "N/A"}"),
+                  if (_selectedProvider!["contact_info"]?["phone"] != null)
+                    Text("Phone: ${_selectedProvider!["contact_info"]?["phone"]}"),
+                  if (_selectedProvider!["contact_info"]?["email"] != null)
+                    Text("Email: ${_selectedProvider!["contact_info"]?["email"]}"),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Helper method to build email body
+  String _buildEmailBody(Map<String, dynamic> provider, String serviceNames) {
+    final providerName = provider["provider_name"] ?? "Provider";
+    final location = provider["location"]?["area"] ?? "Nairobi";
+    
+    return """
+Hello $providerName,
+
+I hope this email finds you well. I'm interested in your automotive services and would like to discuss the following:
+
+${_selectedServices.isNotEmpty ? "Services I'm interested in: $serviceNames" : "General automotive services"}
+
+I would like to discuss:
+1. Pricing for the services I need
+2. Availability and scheduling
+3. Any special requirements or questions I might have
+
+${_selectedVehicleId != null ? "Vehicle Details: ${_vehicles.firstWhere((v) => v["id"].toString() == _selectedVehicleId, orElse: () => {})["make"] ?? "N/A"} ${_vehicles.firstWhere((v) => v["id"].toString() == _selectedVehicleId, orElse: () => {})["model"] ?? "N/A"}" : ""}
+
+I'm located in the $location area and would appreciate if you could provide:
+- A quote for the services
+- Your availability for the next few days
+- Any additional information about your services
+
+Please let me know when would be a good time to discuss this further. You can reach me via:
+- Phone: [Your phone number]
+- Email: [Your email]
+
+Thank you for your time, and I look forward to hearing from you soon.
+
+Best regards,
+[Your name]
+
+---
+This inquiry was sent through the Car Platform app.
+""";
+  }
+
+  /// Helper method to get contact icon based on method
+  IconData _getContactIcon(String method) {
+    switch (method) {
+      case "phone_call":
+        return Icons.phone;
+      case "whatsapp":
+        return Icons.chat;
+      case "sms":
+        return Icons.sms;
+      case "email":
+        return Icons.email;
+      default:
+        return Icons.contact_phone;
+    }
+  }
+
+  /// Helper method to format contact method for display
+  String _formatContactMethod(String method) {
+    switch (method) {
+      case "phone_call":
+        return "Phone Call";
+      case "whatsapp":
+        return "WhatsApp";
+      case "sms":
+        return "SMS";
+      case "email":
+        return "Email";
+      default:
+        return "Contact";
+    }
+  }
+
+  /// Helper method to format timestamp for display
+  String _formatTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    
+    if (difference.inMinutes < 1) {
+      return "Just now";
+    } else if (difference.inMinutes < 60) {
+      return "${difference.inMinutes}m ago";
+    } else if (difference.inHours < 24) {
+      return "${difference.inHours}h ago";
+    } else {
+      return "${difference.inDays}d ago";
+    }
+  }
+
+  /// Calculate distances to all matched providers
+  void _calculateProviderDistances() {
+    if (_serviceLocation == null || _matchedProviders.isEmpty) return;
+    
+    for (var provider in _matchedProviders) {
+      final providerLocation = provider["location"];
+      if (providerLocation != null && 
+          providerLocation["latitude"] != null && 
+          providerLocation["longitude"] != null) {
+        
+        final distance = LocationService.calculateProviderDistance(
+          _serviceLocation!,
+          providerLocation,
+        );
+        
+        if (distance != null) {
+          provider["distance_km"] = distance;
+          provider["distance_display"] = LocationService.formatDistance(distance);
+        }
+      }
+    }
+    
+    // Sort providers by distance
+    _matchedProviders.sort((a, b) {
+      final distanceA = a["distance_km"] ?? double.infinity;
+      final distanceB = b["distance_km"] ?? double.infinity;
+      return distanceA.compareTo(distanceB);
+    });
+    
+    setState(() {});
+  }
+
+  /// Build distance information widget
+  Widget _buildDistanceInfo() {
+    if (_selectedProvider == null || _serviceLocation == null) {
+      return const SizedBox.shrink();
+    }
+    
+    final providerLocation = _selectedProvider!["location"];
+    if (providerLocation == null) {
+      return const SizedBox.shrink();
+    }
+    
+    final distance = LocationService.calculateProviderDistance(
+      _serviceLocation!,
+      providerLocation,
+    );
+    
+    if (distance == null) {
+      return const SizedBox.shrink();
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.directions, color: Colors.blue[600], size: 16),
+          const SizedBox(width: 8),
+          Text(
+            "Distance to provider: ",
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.blue[700],
+            ),
+          ),
+          Text(
+            LocationService.formatDistance(distance),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue[700],
+            ),
+          ),
+          const Spacer(),
+          if (distance < 5)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.green[100],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                "Nearby",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.green[700],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          else if (distance < 20)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                "Moderate",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.orange[700],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red[100],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                "Far",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.red[700],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
 }

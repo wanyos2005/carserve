@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/components/modal_bottom_sheet.dart';
+import 'package:car_platform/services/location_service.dart';
 
 class EnhancedProviderSelector extends StatefulWidget {
   final List<Map<String, dynamic>> filteredProviders;
@@ -7,6 +8,7 @@ class EnhancedProviderSelector extends StatefulWidget {
   final bool recommendedOnly;
   final Map<String, dynamic>? selectedProvider;
   final Function(Map<String, dynamic>) onSelect;
+  final Map<String, dynamic>? customerLocation;
 
   const EnhancedProviderSelector({
     super.key,
@@ -15,6 +17,7 @@ class EnhancedProviderSelector extends StatefulWidget {
     required this.recommendedOnly,
     required this.selectedProvider,
     required this.onSelect,
+    this.customerLocation,
   });
 
   @override
@@ -114,10 +117,12 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             ),
-                            items: const [
-                              DropdownMenuItem(value: 'rating', child: Text('Rating')),
-                              DropdownMenuItem(value: 'price', child: Text('Price')),
-                              DropdownMenuItem(value: 'name', child: Text('Name')),
+                            items: [
+                              const DropdownMenuItem(value: 'rating', child: Text('Rating')),
+                              const DropdownMenuItem(value: 'price', child: Text('Price')),
+                              const DropdownMenuItem(value: 'name', child: Text('Name')),
+                              if (widget.customerLocation != null)
+                                const DropdownMenuItem(value: 'distance', child: Text('Distance')),
                             ],
                             onChanged: (value) => setState(() => _sortBy = value!),
                           ),
@@ -232,6 +237,24 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
                                     maxLines: 1,
                                   ),
                                 ),
+                                if (widget.customerLocation != null && provider['distance_display'] != null) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[100],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      provider['distance_display'],
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             if (provider['services'] != null)
@@ -338,6 +361,16 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
           final priceA = _getAveragePrice(a);
           final priceB = _getAveragePrice(b);
           return priceA.compareTo(priceB); // Ascending
+        case 'distance':
+          if (widget.customerLocation != null) {
+            final distanceA = a['distance_km'] as double? ?? double.infinity;
+            final distanceB = b['distance_km'] as double? ?? double.infinity;
+            return distanceA.compareTo(distanceB); // Ascending (closest first)
+          }
+          // Fallback to rating if no customer location
+          final ratingA = (a['rating'] as num?)?.toDouble() ?? 0.0;
+          final ratingB = (b['rating'] as num?)?.toDouble() ?? 0.0;
+          return ratingB.compareTo(ratingA);
         case 'name':
         default:
           final nameA = a['provider_name'] ?? '';

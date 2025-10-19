@@ -166,7 +166,20 @@ jobs:
             # Note: Database migrations are handled manually using bootstrap_migrations.sh
             echo "Skipping database migrations - handled manually"
             
-            # Start services
+            # Start services with better error handling
             echo "Starting services..."
-            docker compose -f docker-compose.oracle.yml up -d
+            docker compose -f docker-compose.oracle.yml up -d --remove-orphans
+            
+            # Wait for services to be ready
+            echo "Waiting for services to be ready..."
+            sleep 30
+            
+            # Check service status
+            echo "Service status:"
             docker compose -f docker-compose.oracle.yml ps
+            
+            # Check logs for any startup issues
+            echo "Checking for startup issues..."
+            docker compose -f docker-compose.oracle.yml logs --tail=50 user-service
+            docker compose -f docker-compose.oracle.yml logs --tail=50 vehicle-service
+            docker compose -f docker-compose.oracle.yml logs --tail=50 booking-service

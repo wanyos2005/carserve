@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/provider_service.dart';
+import 'package:car_platform/components/location_picker.dart';
 import 'edit_provider_page.dart';
 
 class ProviderManagementPage extends StatefulWidget {
@@ -75,13 +76,13 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
   Future<void> _showAddProviderDialog(int categoryId) async {
     final nameController = TextEditingController();
     final descController = TextEditingController();
-    final locationController = TextEditingController();
     final phoneController = TextEditingController();
     final emailController = TextEditingController();
     final websiteController = TextEditingController();
 
     final allServices = await ProviderService.getProviderServices(""); // Fetch global services
     final selectedServiceIds = <String>{};
+    Map<String, dynamic>? locationData;
 
     await showDialog(
       context: context,
@@ -95,7 +96,21 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
                 // Provider info
                 TextField(controller: nameController, decoration: const InputDecoration(labelText: "Provider Name")),
                 TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
-                TextField(controller: locationController, decoration: const InputDecoration(labelText: "Location Address")),
+                
+                // Location picker
+                const SizedBox(height: 16),
+                LocationPicker(
+                  label: "Business Location",
+                  hint: "Tap to select location",
+                  onLocationSelected: (location) {
+                    setState(() {
+                      locationData = location;
+                    });
+                  },
+                  showCurrentLocationButton: true,
+                  required: true,
+                ),
+                
                 TextField(controller: phoneController, decoration: const InputDecoration(labelText: "Phone")),
                 TextField(controller: emailController, decoration: const InputDecoration(labelText: "Email")),
                 TextField(controller: websiteController, decoration: const InputDecoration(labelText: "Website")),
@@ -129,19 +144,18 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
             ElevatedButton(
               onPressed: () async {
-                if (nameController.text.isNotEmpty) {
+                if (nameController.text.isNotEmpty && locationData != null) {
                   await ProviderService.createProvider({
                     "category_id": categoryId,
                     "name": nameController.text,
                     "description": descController.text,
-                    "location": {"address": locationController.text},
+                    "location": locationData,  // Use legacy-compatible location data
                     "contact_info": {
                       "phone": phoneController.text,
                       "email": emailController.text,
                       "website": websiteController.text,
                     },
                     "is_registered": true,
-                    
                   });
                   _reloadCategories();
                   Navigator.pop(ctx);

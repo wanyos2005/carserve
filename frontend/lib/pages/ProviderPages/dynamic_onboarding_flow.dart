@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:car_platform/models/onboarding_config.dart';
 import 'package:car_platform/services/insurance_service.dart';
 import 'package:car_platform/services/provider_service.dart';
+import 'package:car_platform/components/location_picker.dart';
+import 'package:car_platform/services/location_service.dart';
 
 class DynamicOnboardingFlow extends StatefulWidget {
   final OnboardingType type;
@@ -263,12 +265,34 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
       orElse: () => throw Exception('Category not found'),
     );
 
+    // Get location data if available
+    final locationData = _data.get<Map<String, dynamic>>('locationData');
+    
+    // Use legacy-compatible location format
+    Map<String, dynamic> locationInfo;
+    if (locationData != null) {
+      // Use the enhanced location data from location picker
+      locationInfo = Map<String, dynamic>.from(locationData);
+    } else {
+      // Fallback to basic location string
+      locationInfo = {
+        'name': 'Nairobi',
+        'lat': -1.2921,
+        'lng': 36.8219,
+        'address': location ?? 'Nairobi, Kenya',
+        'latitude': -1.2921,
+        'longitude': 36.8219,
+        'area': 'Nairobi',
+        'readable_name': 'Nairobi',
+      };
+    }
+    
     // Create provider
     final providerData = {
       'category_id': category['id'],
       'name': name,
       'description': description,
-      'location': {'address': location},
+      'location': locationInfo,  // This now includes both legacy and enhanced format
       'contact_info': {
         'phone': phone,
         'email': email,

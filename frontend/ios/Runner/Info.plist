@@ -45,5 +45,35 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Permissions for communication features -->
+	<key>NSPhoneNumberUsageDescription</key>
+	<string>This app needs access to make phone calls to contact service providers for automotive services.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app may need camera access for taking photos of vehicle issues or service requirements.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app may need microphone access for voice calls with service providers.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>This app may need access to contacts to save provider information for future reference.</string>
+	
+	<!-- Permissions for location features -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs location access to find nearby service providers, calculate distances, and provide accurate service delivery.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs location access to track service delivery, provide emergency roadside assistance, and optimize service routes.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs background location access to provide real-time service tracking and emergency assistance features.</string>
+	
+	<!-- URL Schemes for external app communication -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>sms</string>
+		<string>mailto</string>
+		<string>https</string>
+		<string>whatsapp</string>
+		<string>fb</string>
+		<string>twitter</string>
+	</array>
 </dict>
 </plist>

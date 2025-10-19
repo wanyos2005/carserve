@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/pages/ProviderPages/insurance_partner_steps.dart';
 import 'package:car_platform/pages/ProviderPages/provider_steps.dart';
+import 'package:car_platform/components/location_picker.dart';
 
 enum OnboardingType {
   serviceProvider,
@@ -114,6 +115,13 @@ class OnboardingConfigs {
           },
         ),
         OnboardingStep(
+          id: 'location',
+          title: 'Business Location',
+          description: 'Pinpoint your exact business location',
+          builder: _buildLocationStep,
+          validator: (data) => data.has('locationData'),
+        ),
+        OnboardingStep(
           id: 'services',
           title: 'Select Services',
           description: 'Choose the services you offer',
@@ -199,5 +207,118 @@ class OnboardingConfigs {
 
   static Widget _buildApiConfigForm(BuildContext context, OnboardingData data, Function(OnboardingData) onUpdate) {
     return InsurancePartnerSteps.buildApiConfigForm(context, data, onUpdate);
+  }
+
+  // Location step builder for service providers
+  static Widget _buildLocationStep(BuildContext context, OnboardingData data, Function(OnboardingData) onUpdate) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Text(
+            'Business Location',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pinpoint your exact business location to help customers find you easily.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Location picker
+          LocationPicker(
+            label: "Your Business Location",
+            hint: "Tap to select your workshop/garage location",
+            onLocationSelected: (location) {
+              onUpdate(data.updateData('locationData', location));
+            },
+            showCurrentLocationButton: true,
+            required: true,
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Information card
+          Card(
+            color: Colors.blue[50],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Why do we need your location?",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "• Help customers find nearby service providers\n"
+                    "• Calculate accurate distances for service delivery\n"
+                    "• Show your business in location-based searches\n"
+                    "• Enable route optimization for service calls",
+                    style: TextStyle(
+                      color: Colors.blue[600],
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Service area information
+          Card(
+            color: Colors.green[50],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.location_searching, color: Colors.green[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Service Coverage Area",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Your service area will be automatically set based on your location. "
+                    "You can adjust this later in your provider dashboard.",
+                    style: TextStyle(
+                      color: Colors.green[600],
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
