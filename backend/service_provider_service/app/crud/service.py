@@ -79,10 +79,22 @@ def create_provider_service(db: Session, provider_id: str, payload: Dict) -> Pro
     ps = ProviderService(
         provider_id=provider_id,
         service_id=payload.get("service_id"),
+        display_name=payload.get("display_name"),
+        
+        # Legacy price field
         price=payload.get("price"),
+        
+        # New structured pricing fields
+        min_price=payload.get("min_price"),
+        max_price=payload.get("max_price"),
+        price_type=payload.get("price_type", "range"),
+        currency=payload.get("currency", "KES"),
+        unit=payload.get("unit"),
+        negotiable=payload.get("negotiable", True),
+        
         duration=payload.get("duration"),
         booking_required=payload.get("booking_required", False),
-        metadata=payload.get("metadata") or {}
+        extra_data=payload.get("extra_data") or payload.get("metadata") or {}
     )
     db.add(ps)
     db.commit()
@@ -99,7 +111,18 @@ def upsert_provider_service(db: Session, provider_id: str, payload: dict):
 
     values = {
         "display_name": payload.get("display_name"),
+        
+        # Legacy price field
         "price": payload.get("price"),
+        
+        # New structured pricing fields
+        "min_price": payload.get("min_price"),
+        "max_price": payload.get("max_price"),
+        "price_type": payload.get("price_type", "range"),
+        "currency": payload.get("currency", "KES"),
+        "unit": payload.get("unit"),
+        "negotiable": payload.get("negotiable", True),
+        
         "duration": payload.get("duration"),
         "booking_required": payload.get("booking_required", False),
         "extra_data": payload.get("extra_data", {}),

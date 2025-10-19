@@ -77,7 +77,18 @@ class ProviderUpdate(BaseModel):
 class ProviderServiceCreate(BaseModel):
     service_id: str
     display_name: Optional[str] = None
+    
+    # Legacy price field (kept for backward compatibility)
     price: Optional[str] = None
+    
+    # New structured pricing fields
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    price_type: Optional[str] = "range"  # fixed, range, per_unit, free, variable
+    currency: Optional[str] = "KES"
+    unit: Optional[str] = None  # per_liter, per_hour, etc.
+    negotiable: Optional[bool] = True
+    
     duration: Optional[str] = None
     booking_required: Optional[bool] = False
 
@@ -94,7 +105,18 @@ class ProviderServiceCreate(BaseModel):
 class ProviderServiceAttach(BaseModel):
     service_id: str
     display_name: Optional[str] = None
+    
+    # Legacy price field (kept for backward compatibility and display)
     price: Optional[str] = None
+    
+    # New structured pricing fields
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    price_type: Optional[str] = None
+    currency: Optional[str] = None
+    unit: Optional[str] = None
+    negotiable: Optional[bool] = None
+    
     duration: Optional[str] = None
     booking_required: Optional[bool] = False
 

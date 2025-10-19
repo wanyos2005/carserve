@@ -289,10 +289,24 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
           final service = availableServices.firstWhere((s) => s['id'] == serviceId);
           final values = Map<String, dynamic>.from(valuesByService[serviceId] ?? {});
 
+          // Parse pricing information
+          final pricingInfo = _parsePricingFromValues(values, service);
+
           return {
             'service_id': serviceId,
             'display_name': service['name'],
-            'price': values['price'] ?? 'Contact for pricing',
+            
+            // Legacy price field (for backward compatibility)
+            'price': pricingInfo['display_price'],
+            
+            // New structured pricing fields
+            'min_price': pricingInfo['min_price'],
+            'max_price': pricingInfo['max_price'],
+            'price_type': pricingInfo['price_type'],
+            'currency': pricingInfo['currency'],
+            'unit': pricingInfo['unit'],
+            'negotiable': pricingInfo['negotiable'],
+            
             'duration': _getDefaultDuration(service['name'] ?? ''),
             'booking_required': _getDefaultBookingRequired(service['name'] ?? ''),
             'extra_data': _buildExtraData(values, service),
@@ -329,13 +343,161 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
   Map<String, dynamic> _buildExtraData(Map<String, dynamic> values, dynamic service) {
     final extraData = <String, dynamic>{};
     for (final key in values.keys) {
-      if (key != 'price') {
+      if (key != 'price' && key != 'min_price' && key != 'max_price' && 
+          key != 'price_type' && key != 'unit' && key != 'negotiable') {
         extraData[key] = values[key];
       }
     }
     extraData['service_category'] = service['category_name'];
     extraData['requirements_met'] = true;
     return extraData;
+  }
+
+  /// Parse pricing information from onboarding values
+  Map<String, dynamic> _parsePricingFromValues(Map<String, dynamic> values, dynamic service) {
+    // Check if we have structured pricing data from onboarding
+    if (values.containsKey('min_price') || values.containsKey('max_price')) {
+      final minPrice = values['min_price']?.toDouble();
+      final maxPrice = values['max_price']?.toDouble();
+      final priceType = values['price_type'] ?? 'range';
+      final unit = values['unit'];
+      final negotiable = values['negotiable'] ?? true;
+      
+      // Generate display price based on structured data
+      String displayPrice;
+      if (priceType == 'fixed' && minPrice != null) {
+        displayPrice = 'KES ${minPrice.toStringAsFixed(0)}';
+      } else if (priceType == 'range' && minPrice != null && maxPrice != null) {
+        displayPrice = 'KES ${minPrice.toStringAsFixed(0)} - ${maxPrice.toStringAsFixed(0)}';
+      } else if (priceType == 'per_unit' && minPrice != null && unit != null) {
+        final unitText = unit == 'per_liter' ? '/liter' : unit == 'per_hour' ? '/hour' : '/unit';
+        displayPrice = 'KES ${minPrice.toStringAsFixed(0)}$unitText';
+      } else if (priceType == 'free') {
+        displayPrice = 'Free';
+      } else if (priceType == 'variable') {
+        displayPrice = 'Contact for pricing';
+      } else {
+        displayPrice = 'Contact for pricing';
+      }
+      
+      return {
+        'display_price': displayPrice,
+        'min_price': minPrice,
+        'max_price': maxPrice,
+        'price_type': priceType,
+        'currency': 'KES',
+        'unit': unit,
+        'negotiable': negotiable,
+      };
+    }
+    
+    // Fall back to legacy price string parsing
+    final priceString = values['price']?.toString() ?? 'Contact for pricing';
+    return _parseLegacyPriceString(priceString);
+  }
+
+  /// Parse legacy price string format (e.g., "KSh 3,500 - 8,000", "KSh 1,500", "Free")
+  Map<String, dynamic> _parseLegacyPriceString(String priceString) {
+    if (priceString.isEmpty || priceString == 'Contact for pricing') {
+      return {
+        'display_price': 'Contact for pricing',
+        'min_price': null,
+        'max_price': null,
+        'price_type': 'variable',
+        'currency': 'KES',
+        'unit': null,
+        'negotiable': true,
+      };
+    }
+    
+    final lowerPrice = priceString.toLowerCase().trim();
+    
+    // Handle free services
+    if (lowerPrice == 'free') {
+      return {
+        'display_price': 'Free',
+        'min_price': 0.0,
+        'max_price': 0.0,
+        'price_type': 'free',
+        'currency': 'KES',
+        'unit': null,
+        'negotiable': false,
+      };
+    }
+    
+    // Handle variable pricing
+    if (lowerPrice.contains('varies') || lowerPrice.contains('contact')) {
+      return {
+        'display_price': 'Contact for pricing',
+        'min_price': null,
+        'max_price': null,
+        'price_type': 'variable',
+        'currency': 'KES',
+        'unit': null,
+        'negotiable': true,
+      };
+    }
+    
+    // Extract numbers from price string
+    final regex = RegExp(r'[\d,]+');
+    final matches = regex.allMatches(priceString);
+    final numbers = matches.map((m) => double.tryParse(m.group(0)?.replaceAll(',', '') ?? '0') ?? 0.0).toList();
+    
+    // Determine unit
+    String? unit;
+    if (lowerPrice.contains('/liter')) {
+      unit = 'per_liter';
+    } else if (lowerPrice.contains('/hour')) {
+      unit = 'per_hour';
+    }
+    
+    if (numbers.isEmpty) {
+      return {
+        'display_price': 'Contact for pricing',
+        'min_price': null,
+        'max_price': null,
+        'price_type': 'variable',
+        'currency': 'KES',
+        'unit': unit,
+        'negotiable': true,
+      };
+    }
+    
+    if (numbers.length == 1) {
+      return {
+        'display_price': priceString,
+        'min_price': numbers[0],
+        'max_price': numbers[0],
+        'price_type': unit != null ? 'per_unit' : 'fixed',
+        'currency': 'KES',
+        'unit': unit,
+        'negotiable': true,
+      };
+    }
+    
+    if (numbers.length >= 2) {
+      final minPrice = numbers.reduce((a, b) => a < b ? a : b);
+      final maxPrice = numbers.reduce((a, b) => a > b ? a : b);
+      return {
+        'display_price': priceString,
+        'min_price': minPrice,
+        'max_price': maxPrice,
+        'price_type': unit != null ? 'per_unit' : 'range',
+        'currency': 'KES',
+        'unit': unit,
+        'negotiable': true,
+      };
+    }
+    
+    return {
+      'display_price': 'Contact for pricing',
+      'min_price': null,
+      'max_price': null,
+      'price_type': 'variable',
+      'currency': 'KES',
+      'unit': null,
+      'negotiable': true,
+    };
   }
 
   Future<void> _completeInsurancePartnerRegistration() async {

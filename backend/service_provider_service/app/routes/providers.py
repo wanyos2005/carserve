@@ -220,7 +220,18 @@ def attach_services_to_provider(
         payload = {
             "service_id": s.service_id,
             "display_name": s.display_name,
+            
+            # Legacy price field
             "price": s.price,
+            
+            # New structured pricing fields
+            "min_price": s.min_price,
+            "max_price": s.max_price,
+            "price_type": s.price_type,
+            "currency": s.currency,
+            "unit": s.unit,
+            "negotiable": s.negotiable,
+            
             "duration": s.duration,
             "booking_required": s.booking_required,
             "extra_data": s.extra_data or {}
@@ -316,7 +327,18 @@ def search_providers(
             "service_id": r.service_id,
             "service_name": r.service_name,
             "service_description": r.service_description,
+            
+            # Legacy price field
             "price": r.price,
+            
+            # New structured pricing fields
+            "min_price": float(r.min_price) if r.min_price else None,
+            "max_price": float(r.max_price) if r.max_price else None,
+            "price_type": r.price_type,
+            "currency": r.currency,
+            "unit": r.unit,
+            "negotiable": r.negotiable,
+            
             "duration": r.duration,
             "display_name": r.display_name,
             "booking_required": r.booking_required,

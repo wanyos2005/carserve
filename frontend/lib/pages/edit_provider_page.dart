@@ -17,7 +17,12 @@ class _EditProviderPageState extends State<EditProviderPage> {
   List<dynamic> _allServices = [];
   final Map<String, Map<String, TextEditingController>> _serviceFieldControllers = {}; 
   final Map<String, TextEditingController> _displayNameControllers = {};
-  final Map<String, TextEditingController> _priceControllers = {};
+  final Map<String, TextEditingController> _priceControllers = {}; // Legacy price field
+  final Map<String, TextEditingController> _minPriceControllers = {}; // New structured pricing
+  final Map<String, TextEditingController> _maxPriceControllers = {};
+  final Map<String, String> _priceTypes = {}; // price_type for each service
+  final Map<String, String> _priceUnits = {}; // unit for each service
+  final Map<String, bool> _negotiableFlags = {}; // negotiable flag for each service
   final Set<String> _selectedServiceIds = {};
   final Map<String, dynamic> _serviceDetails = {};
 
@@ -54,11 +59,26 @@ class _EditProviderPageState extends State<EditProviderPage> {
       if (sid != null && sid.isNotEmpty) {
         _selectedServiceIds.add(sid);
 
-        // Handle price - it's now a string like "KSh 8,000 - 18,000"
+        // Handle legacy price field
         final price = a["price"]?.toString() ?? "";
         _priceControllers.putIfAbsent(
           sid, () => TextEditingController(text: price)
         );
+
+        // Handle new structured pricing fields
+        final minPrice = a["min_price"]?.toString() ?? "";
+        final maxPrice = a["max_price"]?.toString() ?? "";
+        _minPriceControllers.putIfAbsent(
+          sid, () => TextEditingController(text: minPrice)
+        );
+        _maxPriceControllers.putIfAbsent(
+          sid, () => TextEditingController(text: maxPrice)
+        );
+        
+        // Set pricing metadata
+        _priceTypes[sid] = a["price_type"]?.toString() ?? "range";
+        _priceUnits[sid] = a["unit"]?.toString() ?? "";
+        _negotiableFlags[sid] = a["negotiable"] ?? true;
 
         // Handle display_name
         final displayName = a["display_name"]?.toString() ?? "";
@@ -155,12 +175,25 @@ class _EditProviderPageState extends State<EditProviderPage> {
       });
 
       final displayName = _displayNameControllers[sid]?.text.trim();
-      final price = _priceControllers[sid]?.text.trim();
+      final price = _priceControllers[sid]?.text.trim(); // Legacy field
+      final minPrice = _minPriceControllers[sid]?.text.trim();
+      final maxPrice = _maxPriceControllers[sid]?.text.trim();
 
       payload.add({
         "service_id": sid,
         "display_name": displayName?.isNotEmpty == true ? displayName : null,
+        
+        // Legacy price field (kept for backward compatibility)
         "price": price?.isNotEmpty == true ? price : null,
+        
+        // New structured pricing fields
+        "min_price": minPrice?.isNotEmpty == true ? double.tryParse(minPrice!) : null,
+        "max_price": maxPrice?.isNotEmpty == true ? double.tryParse(maxPrice!) : null,
+        "price_type": _priceTypes[sid] ?? "range",
+        "currency": "KES", // Default to KES
+        "unit": _priceUnits[sid],
+        "negotiable": _negotiableFlags[sid] ?? true,
+        
         "metadata": metadata
       });
     }
@@ -227,10 +260,89 @@ class _EditProviderPageState extends State<EditProviderPage> {
                         children: [
                           Text(srv["service_description"]?.toString() ?? srv["description"]?.toString() ?? ""),
                           if (isSelected) ...[
+                            // Legacy price field (for display compatibility)
                             TextField(
                               controller: _priceControllers[sid],
-                              decoration: const InputDecoration(labelText: "Price", prefixText:"KSh "),
+                              decoration: const InputDecoration(
+                                labelText: "Display Price (e.g., KSh 3,500 - 8,000)",
+                                hintText: "KSh 3,500 - 8,000",
+                              ),
                               keyboardType: TextInputType.text,
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            // New structured pricing fields
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _minPriceControllers.putIfAbsent(sid, () => TextEditingController()),
+                                    decoration: const InputDecoration(
+                                      labelText: "Min Price",
+                                      prefixText: "KES ",
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _maxPriceControllers.putIfAbsent(sid, () => TextEditingController()),
+                                    decoration: const InputDecoration(
+                                      labelText: "Max Price",
+                                      prefixText: "KES ",
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            // Price type selector
+                            DropdownButtonFormField<String>(
+                              value: _priceTypes[sid] ?? "range",
+                              decoration: const InputDecoration(labelText: "Price Type"),
+                              items: const [
+                                DropdownMenuItem(value: "fixed", child: Text("Fixed Price")),
+                                DropdownMenuItem(value: "range", child: Text("Price Range")),
+                                DropdownMenuItem(value: "per_unit", child: Text("Per Unit")),
+                                DropdownMenuItem(value: "free", child: Text("Free Service")),
+                                DropdownMenuItem(value: "variable", child: Text("Variable Price")),
+                              ],
+                              onChanged: (value) {
+                                setState(() {
+                                  _priceTypes[sid] = value ?? "range";
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            // Unit field (for per_unit pricing)
+                            if (_priceTypes[sid] == "per_unit")
+                              TextField(
+                                controller: TextEditingController(text: _priceUnits[sid] ?? ""),
+                                decoration: const InputDecoration(
+                                  labelText: "Unit (e.g., per_liter, per_hour)",
+                                  hintText: "per_liter",
+                                ),
+                                onChanged: (value) {
+                                  _priceUnits[sid] = value.trim();
+                                },
+                              ),
+                            const SizedBox(height: 8),
+                            
+                            // Negotiable checkbox
+                            CheckboxListTile(
+                              title: const Text("Price is negotiable"),
+                              value: _negotiableFlags[sid] ?? true,
+                              onChanged: (value) {
+                                setState(() {
+                                  _negotiableFlags[sid] = value ?? true;
+                                });
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
                             ),
                             const SizedBox(height: 8),
                             TextField(

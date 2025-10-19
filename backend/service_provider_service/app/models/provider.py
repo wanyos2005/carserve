@@ -65,7 +65,18 @@ class ProviderService(Base):
     provider_id = Column(String, ForeignKey("service_providers.providers.id"))
     service_id = Column(String, ForeignKey("service_providers.services.id"))
     display_name = Column(String(255), nullable=True)  # provider-specific alias
+    
+    # Legacy price field (kept for backward compatibility and display)
     price = Column(String(50))
+    
+    # New structured pricing fields
+    min_price = Column(Numeric(10, 2), nullable=True)
+    max_price = Column(Numeric(10, 2), nullable=True)
+    price_type = Column(String(20), default='range')  # fixed, range, per_unit, free, variable
+    currency = Column(String(3), default='KES')
+    unit = Column(String(20), nullable=True)  # per_liter, per_hour, etc.
+    negotiable = Column(Boolean, default=True)
+    
     duration = Column(String(50))
     booking_required = Column(Boolean, default=False)
     extra_data = Column(JSON, default=dict)
@@ -115,7 +126,13 @@ class ProviderServiceView(Base):
 
     provider_service_id = Column(String)
     display_name = Column(String)
-    price = Column(String)
+    price = Column(String)  # Legacy field
+    min_price = Column(Numeric(10, 2))
+    max_price = Column(Numeric(10, 2))
+    price_type = Column(String(20))
+    currency = Column(String(3))
+    unit = Column(String(20))
+    negotiable = Column(Boolean)
     duration = Column(String)
     booking_required = Column(Boolean)
     extra_data = Column(JSON)

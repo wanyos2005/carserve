@@ -51,6 +51,12 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
+  // Pricing
+  Map<String, double> _servicePrices = {}; // serviceId -> base price
+  Map<String, double> _negotiatedPrices = {}; // serviceId -> negotiated price
+  Map<String, Map<String, dynamic>> _servicePricingInfo = {}; // serviceId -> full pricing info
+  bool _hasNegotiated = false;
+
   // Loading flags
   bool _loading = false;
   bool _initialLoading = true;
@@ -96,6 +102,14 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
             .cast<Map<String, dynamic>>();
         if (_vehicles.isNotEmpty && _selectedVehicleId == null) {
           _selectedVehicleId = _vehicles.first["id"].toString();
+        }
+
+        // Parse pricing information for all services
+        for (var service in _allServices) {
+          final serviceId = service["id"]?.toString() ?? "";
+          final pricingInfo = _parseServicePricing(service);
+          _servicePricingInfo[serviceId] = pricingInfo;
+          _servicePrices[serviceId] = pricingInfo["min_price"] ?? 0.0;
         }
 
         // If navigation passed in defaults
@@ -272,12 +286,20 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           throw Exception("Provider ID is missing");
         }
         
+        // Get negotiated price or use base price
+        final negotiatedPrice = _negotiatedPrices[serviceId] ?? _servicePrices[serviceId] ?? 0.0;
+        final basePrice = _servicePrices[serviceId] ?? 0.0;
+        
         await BookingService.createBooking({
           "user_id": _me!["id"],
           "vehicle_id": _selectedVehicleId,
           "provider_id": providerId,
           "service_id": serviceId,
           "scheduled_at": _selectedDate!.toUtc().toIso8601String(),
+          "base_price": basePrice,
+          "agreed_price": negotiatedPrice,
+          "has_negotiated": _hasNegotiated,
+          "negotiation_notes": _hasNegotiated ? "Price negotiated with provider" : null,
         });
       }
 
@@ -583,6 +605,70 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
 
         const SizedBox(height: 12),
 
+        // Price Negotiation Section (NEW)
+        if (_selectedProvider != null && _selectedServices.isNotEmpty)
+          Card(
+            color: Colors.blue[50],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.attach_money, color: Colors.blue[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Pricing & Negotiation",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "💡 Tip: Call or message the provider to discuss pricing before booking!",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.blue[600],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ..._selectedServices.map((service) => _buildServicePricingCard(service)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showPriceNegotiationDialog(),
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text("Update Prices"),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _hasNegotiated ? null : () => _markAsNegotiated(),
+                          icon: const Icon(Icons.check, size: 16),
+                          label: const Text("I've Negotiated"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _hasNegotiated ? Colors.green : Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        const SizedBox(height: 12),
+
         // Date and Time Selection
         Row(
           children: [
@@ -624,29 +710,75 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
 
         const Spacer(),
 
-        // Book Button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _loading ? null : _book,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+        // Book Button with Pricing Summary
+        Column(
+          children: [
+            // Pricing Summary
+            if (_selectedServices.isNotEmpty && _selectedProvider != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Total Cost:", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          "KES ${_calculateTotalCost().toStringAsFixed(0)}",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_hasNegotiated)
+                      const SizedBox(height: 4),
+                    if (_hasNegotiated)
+                      Text(
+                        "✅ Negotiated prices included",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green[600],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+            
+            // Book Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _book,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _loading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        _isSparePartsMode 
+                            ? "Confirm Parts Order" 
+                            : "Confirm Booking", 
+                        style: const TextStyle(fontSize: 16),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+              ),
             ),
-            child: _loading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    _isSparePartsMode 
-                        ? "Confirm Parts Order" 
-                        : "Confirm Booking", 
-                    style: const TextStyle(fontSize: 16),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-          ),
+          ],
         ),
       ],
     );
@@ -740,7 +872,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: const Icon(Icons.whatsapp, color: Colors.green),
+              leading: const Icon(Icons.chat, color: Colors.green),
               title: const Text("WhatsApp"),
               subtitle: const Text("Quick messaging"),
               onTap: () {
@@ -780,16 +912,15 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
     final whatsappPhone = cleanPhone.startsWith('254') ? cleanPhone : '254$cleanPhone';
     
-    final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
-    final url = "https://wa.me/$whatsappPhone?text=${Uri.encodeComponent(message)}";
-    
-    // Use url_launcher
+    // TODO: Implement url_launcher for WhatsApp
+    // final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
+    // final url = "https://wa.me/$whatsappPhone?text=${Uri.encodeComponent(message)}";
     // if (await canLaunchUrl(Uri.parse(url))) {
     //   await launchUrl(Uri.parse(url));
     // }
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Opening WhatsApp...")),
+      SnackBar(content: Text("Opening WhatsApp for $whatsappPhone...")),
     );
   }
 
@@ -797,16 +928,15 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
     final phone = provider["contact_info"]?["phone"] ?? provider["phone"];
     if (phone == null) return;
     
-    final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
-    final url = "sms:$phone?body=${Uri.encodeComponent(message)}";
-    
-    // Use url_launcher
+    // TODO: Implement url_launcher for SMS
+    // final message = "Hello! I'm interested in your services. Can we discuss pricing and availability?";
+    // final url = "sms:$phone?body=${Uri.encodeComponent(message)}";
     // if (await canLaunchUrl(Uri.parse(url))) {
     //   await launchUrl(Uri.parse(url));
     // }
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Opening SMS...")),
+      SnackBar(content: Text("Opening SMS for $phone...")),
     );
   }
 
@@ -819,31 +949,343 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
       return;
     }
     
-    final subject = "Service Inquiry - ${provider["provider_name"] ?? "Provider"}";
-    final body = """
-Hello,
-
-I'm interested in your automotive services and would like to discuss:
-
-1. Pricing for the services I need
-2. Availability and scheduling
-3. Any special requirements or questions
-
-Please let me know when would be a good time to discuss.
-
-Thank you!
-""";
-    
-    final url = "mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}";
-    
-    // Use url_launcher
+    // TODO: Implement url_launcher for email
+    // final subject = "Service Inquiry - ${provider["provider_name"] ?? "Provider"}";
+    // final body = """
+    // Hello,
+    //
+    // I'm interested in your automotive services and would like to discuss:
+    //
+    // 1. Pricing for the services I need
+    // 2. Availability and scheduling
+    // 3. Any special requirements or questions
+    //
+    // Please let me know when would be a good time to discuss.
+    //
+    // Thank you!
+    // """;
+    // final url = "mailto:$email?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}";
     // if (await canLaunchUrl(Uri.parse(url))) {
     //   await launchUrl(Uri.parse(url));
     // }
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Opening email...")),
+      SnackBar(content: Text("Opening email for $email...")),
     );
+  }
+
+  Widget _buildServicePricingCard(Map<String, dynamic> service) {
+    final serviceId = service["id"]?.toString() ?? "";
+    final serviceName = service["name"] ?? "Service";
+    final pricingInfo = _servicePricingInfo[serviceId] ?? {};
+    final basePrice = _servicePrices[serviceId] ?? 0.0;
+    final negotiatedPrice = _negotiatedPrices[serviceId] ?? basePrice;
+    
+    final priceType = pricingInfo["price_type"] ?? "range";
+    final minPrice = pricingInfo["min_price"] ?? 0.0;
+    final maxPrice = pricingInfo["max_price"] ?? 0.0;
+    final currency = pricingInfo["currency"] ?? "KES";
+    final unit = pricingInfo["unit"];
+    final isNegotiable = pricingInfo["negotiable"] ?? true;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      serviceName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    _buildPriceTypeIndicator(priceType, minPrice, maxPrice, currency, unit),
+                    if (isNegotiable)
+                      Text(
+                        "💬 Negotiable",
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.orange[600],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "${currency} ${negotiatedPrice.toStringAsFixed(0)}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: negotiatedPrice != basePrice ? Colors.green[700] : Colors.blue[700],
+                    ),
+                  ),
+                  if (negotiatedPrice != basePrice)
+                    Text(
+                      "✅ Negotiated",
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.green[600],
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceTypeIndicator(String priceType, double minPrice, double maxPrice, String currency, String? unit) {
+    switch (priceType) {
+      case "fixed":
+        return Text(
+          "Fixed: $currency ${minPrice.toStringAsFixed(0)}",
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        );
+      case "range":
+        return Text(
+          "Range: $currency ${minPrice.toStringAsFixed(0)} - ${maxPrice.toStringAsFixed(0)}",
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        );
+      case "per_unit":
+        final unitText = unit == "per_liter" ? "/liter" : unit == "per_hour" ? "/hour" : "/unit";
+        return Text(
+          "Per Unit: $currency ${minPrice.toStringAsFixed(0)}$unitText",
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        );
+      case "free":
+        return Text(
+          "Free Service",
+          style: TextStyle(fontSize: 12, color: Colors.green[600]),
+        );
+      case "variable":
+        return Text(
+          "Price Varies",
+          style: TextStyle(fontSize: 12, color: Colors.orange[600]),
+        );
+      default:
+        return Text(
+          "Price: $currency ${minPrice.toStringAsFixed(0)}",
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        );
+    }
+  }
+
+  Future<void> _showPriceNegotiationDialog() async {
+    final serviceId = _selectedServices.first["id"]?.toString() ?? "";
+    final serviceName = _selectedServices.first["name"] ?? "Service";
+    final pricingInfo = _servicePricingInfo[serviceId] ?? {};
+    final currentPrice = _negotiatedPrices[serviceId] ?? _servicePrices[serviceId] ?? 0.0;
+    
+    final priceController = TextEditingController(text: currentPrice > 0 ? currentPrice.toStringAsFixed(0) : "");
+    
+    final priceType = pricingInfo["price_type"] ?? "range";
+    final minPrice = pricingInfo["min_price"] ?? 0.0;
+    final maxPrice = pricingInfo["max_price"] ?? 0.0;
+    final currency = pricingInfo["currency"] ?? "KES";
+    final isNegotiable = pricingInfo["negotiable"] ?? true;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Update Service Price"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Service: $serviceName", style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            
+            // Show pricing information
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Provider's Pricing:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[700])),
+                  const SizedBox(height: 4),
+                  _buildPriceTypeIndicator(priceType, minPrice, maxPrice, currency, pricingInfo["unit"]),
+                  if (isNegotiable)
+                    Text("💬 This price is negotiable", style: TextStyle(fontSize: 12, color: Colors.orange[600])),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            TextField(
+              controller: priceController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "Agreed Price ($currency)",
+                border: const OutlineInputBorder(),
+                prefixText: "$currency ",
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "💡 Enter the price you agreed with the provider after negotiation",
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final price = double.tryParse(priceController.text) ?? 0.0;
+              if (price >= 0) { // Allow 0 for free services
+                setState(() {
+                  _negotiatedPrices[serviceId] = price;
+                  _hasNegotiated = true;
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Price updated successfully!")),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Please enter a valid price")),
+                );
+              }
+            },
+            child: const Text("Update"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _markAsNegotiated() {
+    setState(() {
+      _hasNegotiated = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Great! You can now proceed with booking.")),
+    );
+  }
+
+  double _calculateTotalCost() {
+    double total = 0.0;
+    for (var service in _selectedServices) {
+      final serviceId = service["id"]?.toString() ?? "";
+      final negotiatedPrice = _negotiatedPrices[serviceId] ?? _servicePrices[serviceId] ?? 0.0;
+      total += negotiatedPrice;
+    }
+    return total;
+  }
+
+  /// Parse pricing information from service data (handles both legacy and new formats)
+  Map<String, dynamic> _parseServicePricing(Map<String, dynamic> service) {
+    final serviceId = service["id"]?.toString() ?? "";
+    
+    // Check if we have new structured pricing fields
+    if (service["min_price"] != null || service["max_price"] != null) {
+      return {
+        "service_id": serviceId,
+        "price_type": service["price_type"] ?? "range",
+        "min_price": service["min_price"]?.toDouble() ?? 0.0,
+        "max_price": service["max_price"]?.toDouble() ?? 0.0,
+        "currency": service["currency"] ?? "KES",
+        "unit": service["unit"],
+        "negotiable": service["negotiable"] ?? true,
+        "display_price": service["price"], // Legacy field for display
+        "is_structured": true,
+      };
+    }
+    
+    // Fall back to legacy string parsing
+    final priceString = service["price"] ?? "";
+    final parsed = _parseLegacyPriceString(priceString);
+    
+    return {
+      "service_id": serviceId,
+      "price_type": parsed["type"],
+      "min_price": parsed["min_price"],
+      "max_price": parsed["max_price"],
+      "currency": "KES",
+      "unit": parsed["unit"],
+      "negotiable": true,
+      "display_price": priceString,
+      "is_structured": false,
+    };
+  }
+
+  /// Parse legacy price string format (e.g., "KSh 3,500 - 8,000", "KSh 1,500", "Free")
+  Map<String, dynamic> _parseLegacyPriceString(String priceString) {
+    if (priceString.isEmpty) {
+      return {"type": "free", "min_price": 0.0, "max_price": 0.0, "unit": null};
+    }
+    
+    final lowerPrice = priceString.toLowerCase().trim();
+    
+    // Handle free services
+    if (lowerPrice == "free") {
+      return {"type": "free", "min_price": 0.0, "max_price": 0.0, "unit": null};
+    }
+    
+    // Handle variable pricing
+    if (lowerPrice.contains("varies")) {
+      return {"type": "variable", "min_price": 0.0, "max_price": 0.0, "unit": null};
+    }
+    
+    // Extract numbers from price string
+    final regex = RegExp(r'[\d,]+');
+    final matches = regex.allMatches(priceString);
+    final numbers = matches.map((m) => double.tryParse(m.group(0)?.replaceAll(',', '') ?? '0') ?? 0.0).toList();
+    
+    // Determine unit
+    String? unit;
+    if (lowerPrice.contains('/liter')) {
+      unit = 'per_liter';
+    } else if (lowerPrice.contains('/hour')) {
+      unit = 'per_hour';
+    }
+    
+    if (numbers.isEmpty) {
+      return {"type": "free", "min_price": 0.0, "max_price": 0.0, "unit": unit};
+    }
+    
+    if (numbers.length == 1) {
+      return {
+        "type": unit != null ? "per_unit" : "fixed",
+        "min_price": numbers[0],
+        "max_price": numbers[0],
+        "unit": unit,
+      };
+    }
+    
+    if (numbers.length >= 2) {
+      final minPrice = numbers.reduce((a, b) => a < b ? a : b);
+      final maxPrice = numbers.reduce((a, b) => a > b ? a : b);
+      return {
+        "type": unit != null ? "per_unit" : "range",
+        "min_price": minPrice,
+        "max_price": maxPrice,
+        "unit": unit,
+      };
+    }
+    
+    return {"type": "free", "min_price": 0.0, "max_price": 0.0, "unit": null};
   }
 
 }
