@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/pages/admin/provider_user_link_page.dart';
 import 'package:car_platform/pages/provider_management_page.dart';
-import 'package:car_platform/pages/service_management_page.dart';
+import 'package:car_platform/pages/AdminPages/service_management_page.dart';
 import 'package:car_platform/pages/AdminPages/admin_management_page.dart';
 import 'package:car_platform/services/user_context_service.dart';
 
@@ -165,7 +165,7 @@ class AdminDashboard extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const ServiceManagementPage(),
+                      builder: (_) => ServiceManagementPage(),
                     ),
                   );
                 },

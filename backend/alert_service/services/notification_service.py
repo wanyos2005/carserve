@@ -5,7 +5,7 @@ import requests
 import logging
 from datetime import datetime
 
-from models.alert import Alert, AlertChannel, AlertStatus
+from models.alert import Alert, AlertChannel, AlertStatus, NotificationLog
 from services.alert_service import AlertService
 
 logger = logging.getLogger(__name__)
@@ -46,12 +46,60 @@ class NotificationService:
                 success = False
                 
         return success
+    
+    async def _log_notification(
+        self, 
+        alert: Alert, 
+        channel: AlertChannel, 
+        status: AlertStatus, 
+        external_id: str = None, 
+        external_response: Dict = None, 
+        error_message: str = None
+    ):
+        """Log notification delivery attempt"""
+        try:
+            notification_log = NotificationLog(
+                alert_id=alert.id,
+                user_id=alert.user_id,
+                channel=channel,
+                status=status,
+                external_id=external_id,
+                external_response=external_response,
+                error_message=error_message,
+                sent_at=datetime.utcnow()
+            )
+            
+            self.db.add(notification_log)
+            self.db.commit()
+            logger.info(f"Logged {channel} notification for alert {alert.id} with status {status}")
+            
+        except Exception as e:
+            logger.error(f"Failed to log notification: {str(e)}")
+            # Don't raise - logging failure shouldn't break notification flow
 
     async def _send_in_app_notification(self, alert: Alert):
         """Send in-app notification (store in database for app to fetch)"""
-        # In-app notifications are handled by the app polling the alerts endpoint
-        # This method can be used for additional processing if needed
-        logger.info(f"In-app notification created for alert {alert.id}")
+        try:
+            # In-app notifications are handled by the app polling the alerts endpoint
+            # This method can be used for additional processing if needed
+            logger.info(f"In-app notification created for alert {alert.id}")
+            
+            # Log successful in-app notification
+            await self._log_notification(
+                alert=alert,
+                channel=AlertChannel.IN_APP,
+                status=AlertStatus.SENT
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create in-app notification: {str(e)}")
+            await self._log_notification(
+                alert=alert,
+                channel=AlertChannel.IN_APP,
+                status=AlertStatus.FAILED,
+                error_message=str(e)
+            )
+            raise
 
     async def _send_push_notification(self, alert: Alert):
         """Send push notification via FCM"""
@@ -84,11 +132,33 @@ class NotificationService:
             response = await self._send_fcm_notification(payload)
             if response.get('success'):
                 logger.info(f"Push notification sent for alert {alert.id}")
+                
+                # Log successful push notification
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.PUSH,
+                    status=AlertStatus.SENT,
+                    external_id=response.get('response', {}).get('message_id'),
+                    external_response=response.get('response')
+                )
             else:
-                raise Exception(f"FCM error: {response.get('error')}")
+                error_msg = f"FCM error: {response.get('error')}"
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.PUSH,
+                    status=AlertStatus.FAILED,
+                    error_message=error_msg
+                )
+                raise Exception(error_msg)
                 
         except Exception as e:
             logger.error(f"Failed to send push notification: {str(e)}")
+            await self._log_notification(
+                alert=alert,
+                channel=AlertChannel.PUSH,
+                status=AlertStatus.FAILED,
+                error_message=str(e)
+            )
             raise
 
     async def _send_sms_notification(self, alert: Alert):
@@ -121,11 +191,33 @@ class NotificationService:
                 response = await self._send_twilio_sms(phone, message)
             if response.get('success'):
                 logger.info(f"SMS sent for alert {alert.id}")
+                
+                # Log successful SMS notification
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.SMS,
+                    status=AlertStatus.SENT,
+                    external_id=response.get('message_sid') or response.get('response', {}).get('SMSMessageData', {}).get('Recipients', [{}])[0].get('messageId'),
+                    external_response=response
+                )
             else:
-                raise Exception(f"SMS provider error: {response.get('error')}")
+                error_msg = f"SMS provider error: {response.get('error')}"
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.SMS,
+                    status=AlertStatus.FAILED,
+                    error_message=error_msg
+                )
+                raise Exception(error_msg)
                 
         except Exception as e:
             logger.error(f"Failed to send SMS: {str(e)}")
+            await self._log_notification(
+                alert=alert,
+                channel=AlertChannel.SMS,
+                status=AlertStatus.FAILED,
+                error_message=str(e)
+            )
             raise
 
     async def _send_email_notification(self, alert: Alert):
@@ -145,17 +237,57 @@ class NotificationService:
             response = await self._send_email(user_email, subject, body)
             if response.get('success'):
                 logger.info(f"Email sent for alert {alert.id}")
+                
+                # Log successful email notification
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.EMAIL,
+                    status=AlertStatus.SENT,
+                    external_response=response
+                )
             else:
-                raise Exception(f"Email error: {response.get('error')}")
+                error_msg = f"Email error: {response.get('error')}"
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.EMAIL,
+                    status=AlertStatus.FAILED,
+                    error_message=error_msg
+                )
+                raise Exception(error_msg)
                 
         except Exception as e:
             logger.error(f"Failed to send email: {str(e)}")
+            await self._log_notification(
+                alert=alert,
+                channel=AlertChannel.EMAIL,
+                status=AlertStatus.FAILED,
+                error_message=str(e)
+            )
             raise
 
     async def _send_whatsapp_notification(self, alert: Alert):
         """Send WhatsApp notification (placeholder for future implementation)"""
-        # WhatsApp Business API integration can be added here
-        logger.info(f"WhatsApp notification placeholder for alert {alert.id}")
+        try:
+            # WhatsApp Business API integration can be added here
+            logger.info(f"WhatsApp notification placeholder for alert {alert.id}")
+            
+            # Log WhatsApp notification as sent (placeholder)
+            await self._log_notification(
+                alert=alert,
+                channel=AlertChannel.WHATSAPP,
+                status=AlertStatus.SENT,
+                external_response={"status": "placeholder_implementation"}
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to send WhatsApp notification: {str(e)}")
+            await self._log_notification(
+                alert=alert,
+                channel=AlertChannel.WHATSAPP,
+                status=AlertStatus.FAILED,
+                error_message=str(e)
+            )
+            raise
 
     async def _get_user_fcm_token(self, user_id: int) -> str:
         """Get user's FCM token from user service"""

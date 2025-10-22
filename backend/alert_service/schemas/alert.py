@@ -120,3 +120,17 @@ class AlertRuleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AppDownloadPromptRequest(BaseModel):
+    user_id: int
+    vehicle_info: str
+    service_provider_name: str
+    service_type: str
+    discount_code: str = "FIRST10"
+
+class AppDownloadPromptResponse(BaseModel):
+    message: str
+    alert_id: Optional[str] = None
+    user_id: int
+    discount_code: str
+    success: bool = True

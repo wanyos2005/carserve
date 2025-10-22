@@ -128,4 +128,10 @@ def search_provider_view(
             q = q.filter(ProviderServiceView.service_id.in_(service_ids))
 
     print(q.statement.compile(compile_kwargs={"literal_binds": True}))
-    return q.all()
+    results = q.all()
+    print(f"Query returned {len(results)} rows")
+    # Debug: Check for None rows
+    none_count = sum(1 for r in results if r is None)
+    if none_count > 0:
+        print(f"WARNING: Found {none_count} None rows in results")
+    return results

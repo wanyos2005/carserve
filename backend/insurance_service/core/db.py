@@ -9,12 +9,7 @@ engine = create_engine(
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,  # Verify connections before use
-    pool_recycle=3600,   # Recycle connections every hour
-    connect_args={
-        "sslmode": "require",
-        "connect_timeout": 10,
-        "application_name": "insurance_service"
-    }
+    pool_recycle=3600    # Recycle connections every hour
 )
 
 # Session

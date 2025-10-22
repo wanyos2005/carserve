@@ -1,4 +1,5 @@
 import 'package:car_platform/services/api_service.dart';
+import 'package:car_platform/services/fcm_service.dart';
 
 class AlertsService {
   static Future<List<dynamic>> getPreferences(int userId) async {
@@ -67,6 +68,25 @@ class AlertsService {
   static Future<int> getUnreadCount(int userId) async {
     final res = await ApiService.get('/alerts/user/$userId/unread-count');
     return (res != null && res['unread_count'] is int) ? res['unread_count'] as int : 0;
+  }
+
+  // FCM token management
+  static Future<bool> registerFCMToken(int userId, String fcmToken) async {
+    try {
+      final response = await ApiService.post('/users/$userId/fcm-token', {'fcm_token': fcmToken});
+      return response != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> removeFCMToken(int userId) async {
+    try {
+      await ApiService.delete('/users/$userId/fcm-token');
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
 

@@ -12,3 +12,4 @@ alembic
 pydantic
 pydantic-settings
 sqlalchemy
+httpx

@@ -124,6 +124,12 @@ jobs:
             git fetch --all #this is to fetch the latest changes from the remote repository
             git reset --hard origin/main #this is to reset the local repository to the latest changes from the remote repository
             
+            # Run production environment setup
+            echo "🔧 Setting up production environment..."
+            chmod +x setup-prod-env.sh
+            ./setup-prod-env.sh
+            echo "✅ Production environment setup completed"
+            
             # Configure Docker for better network handling
             sudo mkdir -p /etc/docker
             echo '{"max-concurrent-downloads": 1, "max-concurrent-uploads": 1, "max-download-attempts": 10, "registry-mirrors": [], "insecure-registries": [], "dns": ["8.8.8.8", "8.8.4.4"]}' | sudo tee /etc/docker/daemon.json

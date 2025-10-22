@@ -10,7 +10,7 @@ class MainServiceNav extends StatefulWidget {
 }
 
 class _MainServiceNavState extends State<MainServiceNav> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 1;
 
   final List<Widget> _pages = const [
     EnhancedBookingPage(),
@@ -24,15 +24,28 @@ class _MainServiceNavState extends State<MainServiceNav> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: Colors.redAccent,
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: Colors.red[600],
+        unselectedItemColor: Colors.grey[600],
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        elevation: 8,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month),
+            icon: Icon(Icons.calendar_month, size: 28),
+            activeIcon: Icon(Icons.calendar_month, size: 32),
             label: 'Book Service',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history),
+            icon: Icon(Icons.history, size: 28),
+            activeIcon: Icon(Icons.history, size: 32),
             label: 'Service Logs',
           ),
         ],

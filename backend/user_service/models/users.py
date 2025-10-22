@@ -22,6 +22,7 @@ class User(Base):
     # 🔹 NEW FIELDS
     is_guest = Column(Boolean, default=False)  # True if created by provider
     created_by_provider_id = Column(String, nullable=True)  # link provider UUID
+    fcm_token = Column(String, nullable=True)  # Firebase Cloud Messaging token for push notifications
 
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

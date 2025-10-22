@@ -60,6 +60,14 @@ def get_vehicle(db: Session, user_id: str, vehicle_id: str) -> Vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     return v
 
+# --- READ (SINGLE) PUBLIC ---
+def get_vehicle_public(db: Session, vehicle_id: str) -> Vehicle:
+    """Public vehicle lookup for providers to get vehicle details for bookings/service logs"""
+    v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+    if not v:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    return v
+
 
 # --- UPDATE ---
 def update_vehicle(

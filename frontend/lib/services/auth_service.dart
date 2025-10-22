@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:car_platform/services/config.dart';
 import 'package:http/http.dart' as http;
 
 //
 
 class AuthService {
-  static const String baseUrl = "http://152.70.28.112";
+  static const String baseUrl = ApiConfig.baseUrl;
 
   // Send OTP
   // Send OTP
@@ -212,8 +213,14 @@ class AuthService {
   static Future<List<dynamic>> lookupUsersByIds(List<int> userIds) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
-    if (token == null) return [];
+    if (token == null) {
+      print('DEBUG AuthService: No token found for user lookup');
+      return [];
+    }
 
+    print('DEBUG AuthService: Looking up users with IDs: $userIds');
+    print('DEBUG AuthService: Making request to: $baseUrl/users/lookup');
+    
     final response = await http.post(
       Uri.parse("$baseUrl/users/lookup"),
       headers: {
@@ -223,10 +230,42 @@ class AuthService {
       body: jsonEncode(userIds),
     );
 
+    print('DEBUG AuthService: User lookup response status: ${response.statusCode}');
+    print('DEBUG AuthService: User lookup response body: ${response.body}');
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final result = jsonDecode(response.body);
+      print('DEBUG AuthService: Parsed user lookup result: $result');
+      return result;
     }
+    
+    print('DEBUG AuthService: User lookup failed with status: ${response.statusCode}');
     return [];
+  }
+
+  // Test method to check if user exists (no auth required)
+  static Future<Map<String, dynamic>?> testLookupUser(int userId) async {
+    print('DEBUG AuthService: Testing lookup for user ID: $userId');
+    print('DEBUG AuthService: Making request to: $baseUrl/users/test-lookup/$userId');
+    
+    final response = await http.get(
+      Uri.parse("$baseUrl/users/test-lookup/$userId"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    );
+
+    print('DEBUG AuthService: Test lookup response status: ${response.statusCode}');
+    print('DEBUG AuthService: Test lookup response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final result = jsonDecode(response.body);
+      print('DEBUG AuthService: Test lookup result: $result');
+      return result;
+    }
+    
+    print('DEBUG AuthService: Test lookup failed with status: ${response.statusCode}');
+    return null;
   }
 
 }

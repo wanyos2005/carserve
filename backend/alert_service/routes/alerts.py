@@ -3,10 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
+import json
 
 from core.db import get_db
 from models.alert import Alert, AlertType, AlertStatus, AlertChannel
-from schemas.alert import AlertCreate, AlertResponse, AlertUpdate
+from schemas.alert import AlertCreate, AlertResponse, AlertUpdate, AppDownloadPromptRequest, AppDownloadPromptResponse
 from services.rule_engine import RuleEngine
 from crud.alert import (
     create_alert as crud_create_alert,
@@ -136,6 +137,48 @@ async def trigger_service_due_alerts(
     rule_engine = RuleEngine(db)
     background_tasks.add_task(rule_engine.check_service_due)
     return {"message": "Service due check triggered"}
+
+@router.post("/trigger/app-download-prompt", response_model=AppDownloadPromptResponse)
+async def trigger_app_download_prompt(
+    request_data: AppDownloadPromptRequest,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db)
+):
+    """Trigger app download prompt when a service is logged for a user without the app"""
+    try:
+        from services.alert_service import AlertService
+        alert_service = AlertService(db)
+        
+        alert = await alert_service.trigger_app_download_prompt(
+            user_id=request_data.user_id,
+            vehicle_info=request_data.vehicle_info,
+            service_provider_name=request_data.service_provider_name,
+            service_type=request_data.service_type,
+            discount_code=request_data.discount_code
+        )
+        
+        if alert:
+            # Enqueue delivery to Celery (fire-and-forget)
+            celery_app.send_task("deliver_alert", args=[alert.id])
+            return AppDownloadPromptResponse(
+                message="App download prompt triggered successfully",
+                alert_id=alert.id,
+                user_id=request_data.user_id,
+                discount_code=request_data.discount_code,
+                success=True
+            )
+        else:
+            return AppDownloadPromptResponse(
+                message="App download prompt skipped - user already has app or prompt not needed",
+                alert_id=None,
+                user_id=request_data.user_id,
+                discount_code=request_data.discount_code,
+                success=False
+            )
+            
+    except Exception as e:
+        logging.getLogger("uvicorn").error(f"Failed to trigger app download prompt: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to trigger app download prompt: {str(e)}")
 
 @router.get("/user/{user_id}/unread-count")
 def get_unread_alert_count(user_id: int, db: Session = Depends(get_db)):

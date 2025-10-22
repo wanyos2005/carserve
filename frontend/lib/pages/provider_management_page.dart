@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/provider_service.dart';
 import 'package:car_platform/components/location_picker.dart';
-import 'edit_provider_page.dart';
+import 'package:car_platform/pages/AdminPages/edit_our_services_page.dart';
 
 class ProviderManagementPage extends StatefulWidget {
   const ProviderManagementPage({super.key});
@@ -31,15 +31,6 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
     return ProviderService.getProviders(categoryId: categoryId);
   }
 
-  Future<List<dynamic>> _fetchAllServices() async {
-    // fetch ALL available global services
-    final services = await ProviderService.getProviderServices(""); // adjust if endpoint differs
-    return services;
-  }
-
-  Future<Map<String, dynamic>?> _fetchProviderDetails(String providerId) {
-    return ProviderService.getProviderDetails(providerId);
-  }
 
   // -------------------------
   // Dialogs
@@ -242,7 +233,7 @@ class _ProviderManagementPageState extends State<ProviderManagementPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => EditProviderPage(providerId: prov["provider_id"]),
+                                        builder: (_) => EditOurServicesPage(providerId: prov["provider_id"]),
                                       ),
                                     );
                                   },

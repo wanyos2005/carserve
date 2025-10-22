@@ -67,7 +67,13 @@ class ProviderService {
   }
 
   static Future<dynamic> attachServicesToProvider(String providerId, List<Map<String,dynamic>> services) async {
-    return await ApiService.post("/service-providers/$providerId/services", services);
+    print("🔄 ProviderService: Attaching ${services.length} services to provider $providerId");
+    print("🔄 ProviderService: Services data: $services");
+    
+    final result = await ApiService.post("/service-providers/$providerId/services", services);
+    print("🔄 ProviderService: API response: $result");
+    
+    return result;
   }
   // 🔹 Categories
   static Future<List<dynamic>> getProviderCategories() async {

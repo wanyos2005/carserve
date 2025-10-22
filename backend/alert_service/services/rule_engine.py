@@ -11,6 +11,7 @@ from crud.alert import (
     create_alert as crud_create_alert,
     get_alert as crud_get_alert,
 )
+from services.alert_service import AlertService
 from celery_app import celery_app
 from services.metrics import inc
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 class RuleEngine:
     def __init__(self, db: Session):
         self.db = db
+        self.alert_service = AlertService(db)
 
     async def check_insurance_expiry(self):
         """Check for insurance policies expiring soon and create alerts"""
@@ -124,11 +126,11 @@ class RuleEngine:
                 "premium_amount": policy.get('premium_amount')
             }
         )
-        alert = crud_create_alert(self.db, alert_data)
+        # Use AlertService instead of direct CRUD
+        alert = await self.alert_service.create_alert(alert_data)
         # Enqueue delivery; worker updates status
         celery_app.send_task("deliver_alert", args=[alert.id])
         inc("alerts_enqueued")
-        self.db.commit()
 
     async def _create_service_due_alert(self, service: Dict[str, Any], days_until_service: int):
         """Create service due alert"""
@@ -161,11 +163,11 @@ class RuleEngine:
                 "service_type": service.get('service_type', 'Regular Maintenance')
             }
         )
-        alert = crud_create_alert(self.db, alert_data)
+        # Use AlertService instead of direct CRUD
+        alert = await self.alert_service.create_alert(alert_data)
         # Enqueue delivery; worker updates status
         celery_app.send_task("deliver_alert", args=[alert.id])
         inc("alerts_enqueued")
-        self.db.commit()
 
     def _calculate_days_until_expiry(self, expiry_date_str: str) -> int:
         """Calculate days until insurance expiry"""

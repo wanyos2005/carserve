@@ -18,7 +18,12 @@ class BookingService {
 
 
   static Future<bool> updateBooking(String id, Map<String, dynamic> updates) async {
-    return await ApiService.put("/bookings/$id", updates);
+    print('DEBUG BookingService: Updating booking $id with: $updates');
+    final result = await ApiService.put("/bookings/$id", updates);
+    print('DEBUG BookingService: Update result: $result');
+    final success = result != null;
+    print('DEBUG BookingService: Update success: $success');
+    return success; // Return true if we got a response, false if null
   }
 
   static Future<bool> deleteBooking(String id) async {  // 🔄 UUID is a string

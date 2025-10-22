@@ -6,19 +6,20 @@ import 'package:car_platform/pages/main_service_nav.dart';
 import 'package:car_platform/pages/welcome_screen.dart';
 import 'package:car_platform/pages/login_page.dart';
 import 'package:car_platform/pages/home_page.dart';
-import 'package:car_platform/pages/insurance_policy_page.dart';
+import 'package:car_platform/pages/Insurance/c_insurance_policy_page.dart';
 import 'package:car_platform/pages/ProviderPages/provider_homepage.dart';
 import 'package:car_platform/pages/ProviderPages/provider_log_service_page.dart';
-import 'package:car_platform/pages/ProviderPages/insurance_log_service_page.dart';
+import 'package:car_platform/pages/Insurance/p_insurance_log_service_page.dart';
 import 'package:car_platform/pages/AdminPages/admin_dashboard.dart';
 import 'package:car_platform/pages/history_page.dart';
 import 'package:car_platform/pages/expenses_page.dart';
 import 'package:car_platform/pages/add_expense_page.dart';
 import 'package:car_platform/pages/alerts_inbox_page.dart';
+import 'package:car_platform/pages/ProviderPages/provider_settings_page.dart';
 
 // Insurance Pages
-import 'package:car_platform/pages/InsurancePages/insurance_dashboard.dart';
-import 'package:car_platform/pages/InsurancePages/insurance_marketplace.dart';
+import 'package:car_platform/pages/Insurance/insurance_dashboard.dart';
+import 'package:car_platform/pages/Insurance/insurance_marketplace.dart';
 
 // Services
 import 'package:car_platform/services/user_context_service.dart';
@@ -45,7 +46,7 @@ class CarPlatformApp extends StatelessWidget {
         "/welcome": (context) => const WelcomeScreen(),
         "/login": (context) => const LoginPage(),
         "/home": (context) => const HomePage(),
-        "/insurance": (context) => const InsurancePolicyPage(),
+        "/insurance": (context) => const CInsurancePolicyPage(),
         "/services": (context) => const MainServiceNav(),
         
         // Insurance Routes
@@ -78,9 +79,19 @@ class CarPlatformApp extends StatelessWidget {
               body: Center(child: Text('Provider ID is required')),
             );
           }
-          return InsuranceLogServicePage(providerId: providerId);
+          return PInsuranceLogServicePage(providerId: providerId);
         },
         "/history": (context) => const HistoryPage(),
+        "/provider-settings": (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          final providerId = args?['providerId'] as String?;
+          if (providerId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Provider ID is required')),
+            );
+          }
+          return ProviderSettingsPage(providerId: providerId);
+        },
        
       },
       home: FutureBuilder<UserContext?>(

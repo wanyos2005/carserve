@@ -50,6 +50,14 @@ def create_log(payload: ServiceLogCreate, db: Session = Depends(get_db)):
 @router.post("/bulk", response_model=List[ServiceLog])
 def create_bulk_logs(payloads: List[ServiceLogCreate], db: Session = Depends(get_db)):
     logs = create_bulk_service_logs(db, payloads)
+    
+    # 🔥 NEW: Trigger app download prompts for guest users
+    try:
+        _trigger_app_download_prompts_for_logs(logs, db)
+    except Exception as e:
+        # Don't fail the service logging if alert trigger fails
+        print(f"Warning: Failed to trigger app download prompts: {e}")
+    
     return logs
 
 
@@ -105,3 +113,74 @@ def get_service_logs_due(
             })
     
     return due_services
+
+
+def _trigger_app_download_prompts_for_logs(logs: List[ServiceLog], db: Session):
+    """Trigger app download prompts for guest users after service logging"""
+    try:
+        # Group logs by user_id to avoid duplicate prompts
+        user_logs = {}
+        for log in logs:
+            if log.user_id not in user_logs:
+                user_logs[log.user_id] = []
+            user_logs[log.user_id].append(log)
+        
+        # Process each user's logs
+        for user_id, user_service_logs in user_logs.items():
+            # Get the first log for user info (all logs for same user will have same provider/vehicle info)
+            first_log = user_service_logs[0]
+            
+            # Prepare vehicle info
+            vehicle_info = f"{first_log.vehicle_id}"  # Could be enhanced with actual vehicle details
+            
+            # Prepare service info
+            service_names = [log.service_name for log in user_service_logs if log.service_name]
+            service_type = service_names[0] if service_names else "Service"
+            if len(service_names) > 1:
+                service_type = f"{service_type} and {len(service_names)-1} other services"
+            
+            # 🔥 AlertService will now handle app detection internally
+            # Just call the alert service - it will check if user has app
+            _call_alert_service_for_app_prompt(
+                user_id=user_id,
+                vehicle_info=vehicle_info,
+                service_provider_name=first_log.provider_name or "Service Provider",
+                service_type=service_type
+            )
+            
+    except Exception as e:
+        print(f"Error in _trigger_app_download_prompts_for_logs: {e}")
+
+
+def _call_alert_service_for_app_prompt(
+    user_id: int, 
+    vehicle_info: str, 
+    service_provider_name: str, 
+    service_type: str
+):
+    """Call alert service to trigger app download prompt"""
+    try:
+        alert_service_url = os.getenv("ALERT_SERVICE_URL", "http://alert-service:8006")
+        
+        payload = {
+            "user_id": user_id,
+            "vehicle_info": vehicle_info,
+            "service_provider_name": service_provider_name,
+            "service_type": service_type,
+            "discount_code": "FIRST10"
+        }
+        
+        # Fire and forget - don't block service logging
+        with httpx.Client(timeout=5.0) as client:
+            response = client.post(
+                f"{alert_service_url}/alerts/trigger/app-download-prompt",
+                json=payload
+            )
+            
+            if response.status_code == 200:
+                print(f"✅ App download prompt triggered for user {user_id}")
+            else:
+                print(f"⚠️ Alert service returned {response.status_code} for user {user_id}")
+                
+    except Exception as e:
+        print(f"❌ Failed to call alert service for user {user_id}: {e}")

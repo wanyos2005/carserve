@@ -4,9 +4,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:car_platform/services/user_context_service.dart';
+import 'package:car_platform/services/config.dart';
 
 class ApiService {
-  static const String baseGatewayUrl = "http://152.70.28.112"; 
+  static const String baseGatewayUrl = ApiConfig.baseUrl;
   // Production gateway:
   // Oracle Cloud VM -> "http://152.70.28.112"
 

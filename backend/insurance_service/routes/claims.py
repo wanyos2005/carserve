@@ -63,6 +63,7 @@ def create_claim(
 def get_claims(
     user_id: Optional[int] = None,
     vehicle_id: Optional[str] = None,
+    provider_id: Optional[str] = None,
     status: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
@@ -76,6 +77,10 @@ def get_claims(
         query = query.filter(Insurance_Claim.user_id == user_id)
     if vehicle_id:
         query = query.filter(Insurance_Claim.vehicle_id == vehicle_id)
+    if provider_id:
+        # Filter claims by provider through the policy
+        query = query.join(Insurance_Policy, Insurance_Claim.policy_id == Insurance_Policy.id)
+        query = query.filter(Insurance_Policy.provider_id == provider_id)
     if status:
         query = query.filter(Insurance_Claim.status == status)
     

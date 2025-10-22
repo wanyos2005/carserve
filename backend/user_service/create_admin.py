@@ -213,7 +213,7 @@ def main():
             print("  python create_admin.py list                     - List all admins")
             print("  python create_admin.py remove <email>           - Remove admin privileges")
             print("\nExamples:")
-            print("  python create_admin.py first admin@driveon.com 'System Admin'")
+            print("  python create_admin.py first bictoriadonovan@gmail.com 'System Admin'")
             print("  python create_admin.py add john@driveon.com 'John Doe'")
             print("  python create_admin.py list")
             print("  python create_admin.py remove john@driveon.com")

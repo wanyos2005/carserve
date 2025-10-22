@@ -47,6 +47,11 @@ app.include_router(alerts_router, prefix="/alerts", tags=["alerts"])
 app.include_router(rules_router, prefix="/rules", tags=["alert-rules"])
 app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
 
+# Add direct route for /rules (without trailing slash) to handle nginx forwarding
+from routes.rules import get_alert_rules
+from core.db import get_db
+app.get("/rules")(get_alert_rules)
+
 # Ensure schema and tables exist on startup (useful in dev without running migrations)
 @app.on_event("startup")
 def ensure_db_objects():

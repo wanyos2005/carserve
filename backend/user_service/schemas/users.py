@@ -19,6 +19,7 @@ class UserRead(UserBase):
     provider_id: Optional[str] = None  # ✅ NEW FIELD
     is_admin: Optional[bool] = None  # ✅ ADMIN FIELD
     role: Optional[str] = None  # ✅ ROLE FIELD
+    fcm_token: Optional[str] = None  # ✅ FCM TOKEN FIELD
     class Config:
         from_attributes = True
 
@@ -44,3 +45,10 @@ class GuestUserRequest(BaseModel):
     phone: str | None = None
     name: str | None = None
     provider_id: str | None = None
+
+class FCMTokenRequest(BaseModel):
+    fcm_token: str
+
+class FCMTokenResponse(BaseModel):
+    message: str
+    fcm_token: Optional[str] = None

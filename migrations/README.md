@@ -52,3 +52,5 @@ For each migration, consider creating a rollback script:
 - [ ] Migration status tracking table
 - [ ] Integration with CI/CD pipeline
 - [ ] Rollback automation
+
+

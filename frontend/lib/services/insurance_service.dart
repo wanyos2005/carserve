@@ -122,7 +122,7 @@ class InsuranceService {
         }
       }
 
-      final response = await ApiService.get('$_basePath/claims', query: queryParams);
+      final response = await ApiService.get('$_basePath/claims/', query: queryParams);
       if (response != null && response is List) {
         return response.cast<Map<String, dynamic>>();
       }
@@ -157,7 +157,7 @@ class InsuranceService {
         if (repairQuotes != null) 'repair_quotes': repairQuotes,
       };
 
-      final response = await ApiService.post('$_basePath/claims', body);
+      final response = await ApiService.post('$_basePath/claims/', body);
       return response != null ? Map<String, dynamic>.from(response) : null;
     } catch (e) {
       throw Exception('Error submitting insurance claim: $e');

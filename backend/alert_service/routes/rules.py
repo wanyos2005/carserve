@@ -36,6 +36,14 @@ async def create_alert_rule(
     db.refresh(rule)
     return rule
 
+# Support no-trailing-slash variant to avoid proxy redirect issues
+@router.post("", response_model=AlertRuleResponse)
+async def create_alert_rule_no_slash(
+    rule_data: AlertRuleCreate,
+    db: Session = Depends(get_db)
+):
+    return await create_alert_rule(rule_data, db)
+
 @router.get("/", response_model=List[AlertRuleResponse])
 async def get_alert_rules(
     alert_type: Optional[AlertType] = None,
@@ -53,6 +61,18 @@ async def get_alert_rules(
         query = query.filter(AlertRule.is_active == is_active)
         
     return query.offset(offset).limit(limit).all()
+
+# Support no-trailing-slash variant to avoid proxy redirect issues
+@router.get("", response_model=List[AlertRuleResponse])
+async def get_alert_rules_no_slash(
+    alert_type: Optional[AlertType] = None,
+    is_active: Optional[bool] = None,
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    return await get_alert_rules(alert_type, is_active, limit, offset, db)
+
 
 @router.get("/{rule_id}", response_model=AlertRuleResponse)
 async def get_alert_rule(rule_id: str, db: Session = Depends(get_db)):

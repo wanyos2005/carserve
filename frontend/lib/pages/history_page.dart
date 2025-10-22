@@ -22,7 +22,7 @@ class _HistoryPageState extends State<HistoryPage> {
   // Lookup caches
   final Map<String, String> _providers = {};
   final Map<String, String> _services = {};
-  final Map<String, String> _vehicles = {};
+  final Map<String, dynamic> _vehicles = {};
   final Map<String, String> _customers = {};
 
   @override
@@ -94,26 +94,39 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _loadCarOwnerVehicleInfo(List<dynamic> bookings, List<dynamic> logs) async {
-    // Collect unique vehicle IDs from bookings and logs
-    final vehicleIds = <String>{};
-    
-    for (final booking in bookings) {
-      if (booking["vehicle_id"] != null) vehicleIds.add(booking["vehicle_id"]);
+    // Fetch all user vehicles once
+    try {
+      final userVehicles = await VehicleService.listVehicles();
+      
+      // Create a map of vehicle_id -> vehicle object for quick lookup
+      for (final vehicle in userVehicles) {
+        final id = vehicle["id"]?.toString();
+        if (id != null) {
+          _vehicles[id] = vehicle; // Store the full vehicle object, not just the name
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading user vehicles: $e");
     }
-    
-    for (final log in logs) {
-      if (log["vehicle_id"] != null) vehicleIds.add(log["vehicle_id"]);
-    }
-    
-    // Load vehicle info using VehicleService
-    await _loadVehicleInfo(vehicleIds);
   }
 
   Future<void> _loadProviderHistory(String providerId) async {
     try {
+      debugPrint("Loading provider history for provider ID: $providerId");
+      
       // Load provider-specific bookings and service logs
       final bookings = await BookingService.listBookingsForProvider(providerId);
       final logs = await BookingService.listServiceLogsForProvider(providerId);
+      
+      debugPrint("Loaded ${bookings.length} bookings and ${logs.length} service logs");
+      
+      // Debug: Log sample booking and log data
+      if (bookings.isNotEmpty) {
+        debugPrint("Sample booking data: ${bookings.first}");
+      }
+      if (logs.isNotEmpty) {
+        debugPrint("Sample service log data: ${logs.first}");
+      }
       
       // Load lookup data for customers and vehicles
       await _loadProviderLookupData(bookings, logs);
@@ -122,6 +135,9 @@ class _HistoryPageState extends State<HistoryPage> {
         _bookings = bookings;
         _serviceLogs = logs;
       });
+      
+      debugPrint("Provider history loading completed successfully");
+      debugPrint("Final state - Customers: ${_customers.length}, Vehicles: ${_vehicles.length}, Services: ${_services.length}");
     } catch (e) {
       debugPrint("Error loading provider history: $e");
       setState(() {
@@ -132,93 +148,194 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _loadProviderLookupData(List<dynamic> bookings, List<dynamic> logs) async {
-    // Collect unique user IDs and vehicle IDs
+    // Collect unique user IDs, vehicle IDs, and service IDs
     final userIds = <int>{};
     final vehicleIds = <String>{};
+    final serviceIds = <String>{};
+    
+    debugPrint("Processing ${bookings.length} bookings and ${logs.length} logs for provider lookup data");
     
     for (final booking in bookings) {
+      debugPrint("Booking data: user_id=${booking["user_id"]}, vehicle_id=${booking["vehicle_id"]}, service_id=${booking["service_id"]}");
       if (booking["user_id"] != null) userIds.add(booking["user_id"]);
       if (booking["vehicle_id"] != null) vehicleIds.add(booking["vehicle_id"]);
+      if (booking["service_id"] != null) serviceIds.add(booking["service_id"]);
+      if (booking["service_ids"] != null && booking["service_ids"] is List) {
+        serviceIds.addAll((booking["service_ids"] as List).cast<String>());
+      }
     }
     
     for (final log in logs) {
+      debugPrint("Log data: user_id=${log["user_id"]}, vehicle_id=${log["vehicle_id"]}, service_id=${log["service_id"]}");
       if (log["user_id"] != null) userIds.add(log["user_id"]);
       if (log["vehicle_id"] != null) vehicleIds.add(log["vehicle_id"]);
+      if (log["service_id"] != null) serviceIds.add(log["service_id"]);
     }
     
-    // Load customer names using AuthService
-    await _loadCustomerNames(userIds);
+    debugPrint("Collected IDs - Users: $userIds, Vehicles: $vehicleIds, Services: $serviceIds");
     
-    // Load vehicle info using VehicleService
-    await _loadVehicleInfo(vehicleIds);
+    // Load all lookup data in parallel
+    await Future.wait([
+      _loadCustomerNames(userIds),
+      _loadProviderVehicleInfo(vehicleIds),
+      _loadProviderServiceInfo(serviceIds),
+    ]);
   }
 
   Future<void> _loadCustomerNames(Set<int> userIds) async {
     try {
       if (userIds.isEmpty) return;
       
+      debugPrint("🔍 Loading customer names for user IDs: $userIds");
+      
+      // Test lookup first (for debugging)
+      for (final userId in userIds) {
+        debugPrint("🧪 Testing lookup for user ID: $userId");
+        final testResult = await AuthService.testLookupUser(userId);
+        debugPrint("🧪 Test result: $testResult");
+      }
+      
       // Use the new lookup endpoint to get user info for specific IDs
       final users = await AuthService.lookupUsersByIds(userIds.toList());
+      debugPrint("📥 Received users from lookup: $users");
+      debugPrint("📥 Users type: ${users.runtimeType}, length: ${users.length}");
+      
+      if (users.isEmpty) {
+        debugPrint("⚠️ No users returned from lookup API");
+        // Fallback to generic names
+        for (final userId in userIds) {
+          _customers[userId.toString()] = "Customer (ID: $userId)";
+        }
+        return;
+      }
       
       for (final user in users) {
+        debugPrint("👤 Processing user: $user");
         final userId = user["id"];
         if (userId != null) {
-          final name = user["name"] ?? user["email"] ?? "Unknown Customer";
+          // Prefer name, then email, then phone as fallback
+          String name = "Unknown Customer";
+          if (user["name"] != null && user["name"].toString().trim().isNotEmpty) {
+            name = user["name"].toString().trim();
+          } else if (user["email"] != null && user["email"].toString().trim().isNotEmpty) {
+            name = user["email"].toString().trim();
+          } else if (user["phone"] != null && user["phone"].toString().trim().isNotEmpty) {
+            name = user["phone"].toString().trim();
+          }
+          
           _customers[userId.toString()] = name;
+          debugPrint("✅ Mapped user $userId to name: $name");
+        } else {
+          debugPrint("❌ User has no ID: $user");
         }
       }
       
       // For any remaining user IDs not found in the lookup, use a fallback
       for (final userId in userIds) {
         if (!_customers.containsKey(userId.toString())) {
-          _customers[userId.toString()] = "Customer #$userId";
+          _customers[userId.toString()] = "Customer (ID: $userId)";
+          debugPrint("⚠️ Fallback mapping for user $userId - user not found in database");
         }
       }
       
-    } catch (e) {
-      debugPrint("Error loading customer names: $e");
+      debugPrint("📋 Final customer map: $_customers");
+      
+    } catch (e, stackTrace) {
+      debugPrint("❌ Error loading customer names: $e");
+      debugPrint("❌ Stack trace: $stackTrace");
       // Fallback to generic names
       for (final userId in userIds) {
-        _customers[userId.toString()] = "Customer #$userId";
+        _customers[userId.toString()] = "Customer (ID: $userId)";
       }
     }
   }
 
-  Future<void> _loadVehicleInfo(Set<String> vehicleIds) async {
+  Future<void> _loadProviderVehicleInfo(Set<String> vehicleIds) async {
     try {
-      // Load vehicle details for each unique vehicle ID
+      if (vehicleIds.isEmpty) return;
+      
+      debugPrint("🚗 Loading vehicle info for vehicle IDs: $vehicleIds");
+      
+      // For providers, we need to fetch vehicle details by ID since they don't own the vehicles
       for (final vehicleId in vehicleIds) {
         try {
-          final vehicle = await VehicleService.getByVehicleId(vehicleId);
+          debugPrint("🔍 Fetching vehicle with ID: $vehicleId");
+          final vehicle = await VehicleService.getByVehicleIdPublic(vehicleId);
+          debugPrint("📥 Vehicle response: $vehicle");
+          
           if (vehicle != null) {
-            final plate = vehicle["plate"] ?? "Unknown Plate";
-            final make = vehicle["make"] ?? "";
-            final model = vehicle["model"] ?? "";
-            final year = vehicle["yom"]?.toString() ?? "";
-            
-            // Create a descriptive vehicle name
-            String vehicleName = plate;
-            if (make.isNotEmpty || model.isNotEmpty || year.isNotEmpty) {
-              final details = [make, model, year].where((s) => s?.isNotEmpty == true).join(" ");
-              vehicleName = "$plate ($details)";
-            }
-            
-            _vehicles[vehicleId] = vehicleName;
+            _vehicles[vehicleId] = vehicle; // Store the full vehicle object
+            final plate = vehicle["plate"] ?? "No Plate";
+            final make = vehicle["make"] ?? "Unknown Make";
+            final model = vehicle["model"] ?? "Unknown Model";
+            debugPrint("✅ Loaded vehicle $vehicleId: $plate $make $model");
           } else {
-            _vehicles[vehicleId] = "Vehicle #$vehicleId";
+            debugPrint("⚠️ Vehicle $vehicleId not found - storing placeholder");
+            // Store a placeholder to indicate vehicle not found
+            _vehicles[vehicleId] = {"plate": "Unknown", "make": "", "model": "", "yom": null};
           }
-        } catch (e) {
-          debugPrint("Error loading vehicle $vehicleId: $e");
-          _vehicles[vehicleId] = "Vehicle #$vehicleId";
+        } catch (e, stackTrace) {
+          debugPrint("❌ Error loading vehicle $vehicleId: $e");
+          debugPrint("❌ Stack trace: $stackTrace");
+          // Store a placeholder to indicate vehicle not found
+          _vehicles[vehicleId] = {"plate": "Unknown", "make": "", "model": "", "yom": null};
+        }
+      }
+      
+      debugPrint("📋 Final vehicle map keys: ${_vehicles.keys.toList()}");
+      debugPrint("📋 Final vehicle map values: ${_vehicles.values.map((v) => "${v["plate"]} ${v["make"]} ${v["model"]}").toList()}");
+      
+    } catch (e, stackTrace) {
+      debugPrint("❌ Error loading provider vehicle info: $e");
+      debugPrint("❌ Stack trace: $stackTrace");
+    }
+  }
+
+  Future<void> _loadProviderServiceInfo(Set<String> serviceIds) async {
+    try {
+      if (serviceIds.isEmpty) return;
+      
+      // Load provider's services to get service names
+      final providers = await ProviderService.getProviders();
+      
+      for (final provider in providers) {
+        final services = (provider["services"] as List?) ?? [];
+        for (final service in services) {
+          if (service is Map && service["service_id"] != null) {
+            final serviceId = service["service_id"].toString();
+            if (serviceIds.contains(serviceId)) {
+              _services[serviceId] = service["service_name"] ?? "Unknown Service";
+            }
+          }
         }
       }
     } catch (e) {
-      debugPrint("Error loading vehicle info: $e");
-      // Fallback to generic names
-      for (final vehicleId in vehicleIds) {
-        _vehicles[vehicleId] = "Vehicle #$vehicleId";
-      }
+      debugPrint("Error loading provider service info: $e");
     }
+  }
+
+
+  String _formatVehicleName(Map<String, dynamic> vehicle) {
+    final plate = (vehicle["plate"] ?? "").toString().trim();
+    final make = (vehicle["make"] ?? "").toString().trim();
+    final model = (vehicle["model"] ?? "").toString().trim();
+    final year = vehicle["yom"] != null ? vehicle["yom"].toString().trim() : "";
+
+    // If we have no meaningful data, return a generic name
+    if (plate.isEmpty && make.isEmpty && model.isEmpty && year.isEmpty) {
+      return "Unknown Vehicle";
+    }
+
+    // Build the vehicle details
+    final details = [make, model, year].where((s) => s.isNotEmpty).join(" ");
+    
+    // If we have details, format as "Plate (Make Model Year)" or "Details" if no plate
+    if (details.isNotEmpty) {
+      return plate.isNotEmpty ? "$plate ($details)" : details;
+    }
+    
+    // If we only have a plate, return just the plate
+    return plate.isNotEmpty ? plate : "Unknown Vehicle";
   }
 
   Future<void> _loadAdminHistory() async {
@@ -342,26 +459,98 @@ class _HistoryPageState extends State<HistoryPage> {
           serviceName = "N/A";
         }
 
-        final vehicleInfo = _vehicles[b["vehicle_id"]] ?? "Vehicle #${b["vehicle_id"]}";
+        final vehicleKey = b["vehicle_id"]?.toString() ?? "";
+        final vehicle = _vehicles[vehicleKey];
+        final vehicleInfo = vehicle != null ? _formatVehicleName(vehicle) : "Vehicle";
         
         return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.book_online)),
-            title: Text("Provider: $providerName"),
-            subtitle: Text(
-              "Vehicle: $vehicleInfo\n"
-              "Services: $serviceName\n"
-              "Status: ${b["status"]}\n"
-              "Scheduled: ${b["scheduled_at"] ?? "N/A"}",
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildBookingStatusChip(b["status"]),
-                if (_userContext?.isProvider == true) ...[
-                  const SizedBox(width: 8),
-                  _buildBookingActionButtons(b),
-                ],
+                // Line 1: Provider name
+                Row(
+                  children: [
+                    const Icon(Icons.business, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        providerName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 2: Vehicle
+                Row(
+                  children: [
+                    const Icon(Icons.directions_car, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        vehicleInfo,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 3: Service details
+                Row(
+                  children: [
+                    const Icon(Icons.build, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        serviceName,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 4: Scheduled time
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Scheduled: ${b["scheduled_at"] ?? "N/A"}",
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Line 5: Status chip (horizontal button)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildBookingStatusChip(
+                        b["status"],
+                        booking: b,
+                        onTap: _userContext?.isProvider == true 
+                          ? () => _showStatusChangeDialog(b)
+                          : null,
+                      ),
+                    ),
+                    if (_userContext?.isProvider == true) ...[
+                      const SizedBox(width: 8),
+                      _buildBookingActionButtons(b),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
@@ -390,18 +579,112 @@ class _HistoryPageState extends State<HistoryPage> {
           }
         }
         
-        final vehicleInfo = _vehicles[l["vehicle_id"]] ?? "Vehicle #${l["vehicle_id"]}";
+        final vehicleKey = l["vehicle_id"]?.toString() ?? "";
+        final vehicle = _vehicles[vehicleKey];
+        final vehicleInfo = vehicle != null ? _formatVehicleName(vehicle) : "Vehicle";
         
         return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.build)),
-            title: Text(l["service_name"] ?? "Service"),
-            subtitle: Text(
-              "Provider: ${l["provider_name"] ?? "N/A"}\n"
-              "Vehicle: $vehicleInfo\n"
-              "Performed: $performedDate\n"
-              "Cost: ${l["cost"] != null ? "₦${l["cost"]}" : "N/A"}\n"
-              "Mileage: ${l["mileage_km"] != null ? "${l["mileage_km"]} km" : "N/A"}",
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Line 1: Provider name
+                Row(
+                  children: [
+                    const Icon(Icons.business, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l["provider_name"] ?? "N/A",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 2: Vehicle
+                Row(
+                  children: [
+                    const Icon(Icons.directions_car, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        vehicleInfo,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 3: Service details
+                Row(
+                  children: [
+                    const Icon(Icons.build, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l["service_name"] ?? "Service",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 4: Service details (cost, mileage, date)
+                Row(
+                  children: [
+                    const Icon(Icons.info, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Cost: ${l["cost"] != null ? "₦${l["cost"]}" : "N/A"} • Mileage: ${l["mileage_km"] != null ? "${l["mileage_km"]} km" : "N/A"} • Performed: $performedDate",
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Line 5: Status chip (completed service)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.green.withOpacity(0.3)),
+                        ),
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                "Service Completed",
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         );
@@ -432,20 +715,112 @@ class _HistoryPageState extends State<HistoryPage> {
       itemCount: _bookings.length,
       itemBuilder: (context, i) {
         final b = _bookings[i];
-        final customerName = _customers[b["user_id"]] ?? "Customer";
-        final vehicleInfo = _vehicles[b["vehicle_id"]] ?? "Vehicle";
+        
+        // Get customer name with better fallback logic
+        String customerName = "Unknown Customer";
+        final userId = b["user_id"]?.toString();
+        if (userId != null && _customers.containsKey(userId)) {
+          customerName = _customers[userId]!;
+        } else if (userId != null) {
+          customerName = "Customer (ID: $userId)";
+        }
+        
+        // Get vehicle info with better fallback logic
+        String vehicleInfo = "Unknown Vehicle";
+        final vehicleId = b["vehicle_id"]?.toString();
+        if (vehicleId != null && _vehicles.containsKey(vehicleId)) {
+          final vehicle = _vehicles[vehicleId];
+          vehicleInfo = _formatVehicleName(vehicle);
+        } else if (vehicleId != null) {
+          vehicleInfo = "Vehicle (ID: $vehicleId)";
+        }
         
         return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person)),
-            title: Text("Customer: $customerName"),
-            subtitle: Text(
-              "Vehicle: $vehicleInfo\n"
-              "Services: ${_getServiceNames(b)}\n"
-              "Status: ${b["status"]}\n"
-              "Scheduled: ${b["scheduled_at"] ?? "N/A"}",
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Line 1: Customer name
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        customerName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 2: Vehicle
+                Row(
+                  children: [
+                    const Icon(Icons.directions_car, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        vehicleInfo,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 3: Service details
+                Row(
+                  children: [
+                    const Icon(Icons.build, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getServiceNames(b),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 4: Scheduled time
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Scheduled: ${b["scheduled_at"] ?? "N/A"}",
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Line 5: Status chip (horizontal button)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildBookingStatusChip(
+                        b["status"],
+                        booking: b,
+                        onTap: () => _showStatusChangeDialog(b),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildBookingActionButtons(b),
+                  ],
+                ),
+              ],
             ),
-            trailing: _buildBookingStatusChip(b["status"]),
           ),
         );
       },
@@ -473,8 +848,25 @@ class _HistoryPageState extends State<HistoryPage> {
       itemCount: _serviceLogs.length,
       itemBuilder: (context, i) {
         final l = _serviceLogs[i];
-        final customerName = _customers[l["user_id"]] ?? "Customer";
-        final vehicleInfo = _vehicles[l["vehicle_id"]] ?? "Vehicle";
+        
+        // Get customer name with better fallback logic
+        String customerName = "Unknown Customer";
+        final userId = l["user_id"]?.toString();
+        if (userId != null && _customers.containsKey(userId)) {
+          customerName = _customers[userId]!;
+        } else if (userId != null) {
+          customerName = "Customer (ID: $userId)";
+        }
+        
+        // Get vehicle info with better fallback logic
+        String vehicleInfo = "Unknown Vehicle";
+        final vehicleId = l["vehicle_id"]?.toString();
+        if (vehicleId != null && _vehicles.containsKey(vehicleId)) {
+          final vehicle = _vehicles[vehicleId];
+          vehicleInfo = _formatVehicleName(vehicle);
+        } else if (vehicleId != null) {
+          vehicleInfo = "Vehicle (ID: $vehicleId)";
+        }
         
         String performedDate = "N/A";
         if (l["performed_at"] != null) {
@@ -487,17 +879,108 @@ class _HistoryPageState extends State<HistoryPage> {
         }
         
         return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.build)),
-            title: Text(l["service_name"] ?? "Service"),
-            subtitle: Text(
-              "Customer: $customerName\n"
-              "Vehicle: $vehicleInfo\n"
-              "Performed: $performedDate\n"
-              "Cost: ${l["cost"] != null ? "₦${l["cost"]}" : "N/A"}\n"
-              "Mileage: ${l["mileage_km"] != null ? "${l["mileage_km"]} km" : "N/A"}",
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Line 1: Customer name
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        customerName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 2: Vehicle
+                Row(
+                  children: [
+                    const Icon(Icons.directions_car, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        vehicleInfo,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 3: Service details
+                Row(
+                  children: [
+                    const Icon(Icons.build, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l["service_name"] ?? "Service",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Line 4: Service details (cost, mileage, date)
+                Row(
+                  children: [
+                    const Icon(Icons.info, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Cost: ${l["cost"] != null ? "₦${l["cost"]}" : "N/A"} • Mileage: ${l["mileage_km"] != null ? "${l["mileage_km"]} km" : "N/A"} • Performed: $performedDate",
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Line 5: Status chip (completed service)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.green.withOpacity(0.3)),
+                        ),
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                "Service Completed",
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            trailing: const Icon(Icons.check_circle, color: Colors.green),
           ),
         );
       },
@@ -584,7 +1067,7 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  Widget _buildBookingStatusChip(String? status) {
+  Widget _buildBookingStatusChip(String? status, {Map<String, dynamic>? booking, VoidCallback? onTap}) {
     Color color;
     switch (status?.toLowerCase()) {
       case 'completed':
@@ -606,11 +1089,45 @@ class _HistoryPageState extends State<HistoryPage> {
         color = Colors.grey;
     }
     
-    return Chip(
-      label: Text(status ?? "Unknown"),
-      backgroundColor: color.withOpacity(0.2),
-      labelStyle: TextStyle(color: color, fontWeight: FontWeight.bold),
+    Widget chipWidget = Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
+      ),
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (onTap != null) ...[
+              Icon(Icons.touch_app, size: 16, color: color),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              status ?? "Unknown",
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+
+    if (onTap != null) {
+      return Tooltip(
+        message: "Tap to change status",
+        child: GestureDetector(
+          onTap: onTap,
+          child: chipWidget,
+        ),
+      );
+    } else {
+      return chipWidget;
+    }
   }
 
   Widget _buildBookingActionButtons(Map<String, dynamic> booking) {
@@ -719,6 +1236,67 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }//end of _buildBookingActionButtons
 
+  Future<void> _handleStatusChange(String bookingId, String newStatus, Map<String, dynamic> booking) async {
+    try {
+      debugPrint('🔄 Changing booking $bookingId status to: $newStatus');
+      
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Updating status...'),
+            ],
+          ),
+        ),
+      );
+      
+      final success = await BookingService.updateBooking(bookingId, {'status': newStatus});
+      
+      // Hide loading indicator
+      Navigator.of(context).pop();
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Booking status changed to ${newStatus.replaceAll('_', ' ')} successfully!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        // Refresh the data
+        await _loadHistory();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to change booking status'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      // Hide loading indicator if it's still showing
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      
+      debugPrint('❌ Error changing booking status: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleBookingAction(String action, String bookingId, Map<String, dynamic> booking) async {
     try {
       bool success = false;
@@ -763,6 +1341,82 @@ class _HistoryPageState extends State<HistoryPage> {
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
     }
+  }
+
+  void _showStatusChangeDialog(Map<String, dynamic> booking) {
+    final currentStatus = booking["status"]?.toString().toLowerCase();
+    final bookingId = booking["id"]?.toString();
+    
+    if (bookingId == null) return;
+    
+    // Define available status transitions
+    List<Map<String, dynamic>> availableStatuses = [];
+    
+    switch (currentStatus) {
+      case 'pending':
+        availableStatuses = [
+          {'status': 'accepted', 'label': 'Accept', 'icon': Icons.check, 'color': Colors.green},
+          {'status': 'cancelled', 'label': 'Cancel', 'icon': Icons.cancel, 'color': Colors.red},
+        ];
+        break;
+      case 'accepted':
+        availableStatuses = [
+          {'status': 'in_progress', 'label': 'Start Service', 'icon': Icons.play_arrow, 'color': Colors.blue},
+          {'status': 'cancelled', 'label': 'Cancel', 'icon': Icons.cancel, 'color': Colors.red},
+        ];
+        break;
+      case 'in_progress':
+        availableStatuses = [
+          {'status': 'completed', 'label': 'Complete', 'icon': Icons.check_circle, 'color': Colors.green},
+        ];
+        break;
+      case 'completed':
+      case 'cancelled':
+        // No status changes allowed for completed or cancelled bookings
+        _showBookingDetails(booking);
+        return;
+      default:
+        availableStatuses = [
+          {'status': 'accepted', 'label': 'Accept', 'icon': Icons.check, 'color': Colors.green},
+          {'status': 'cancelled', 'label': 'Cancel', 'icon': Icons.cancel, 'color': Colors.red},
+        ];
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Change Status - ${booking["status"]}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: availableStatuses.map((statusOption) {
+            return ListTile(
+              leading: Icon(
+                statusOption['icon'],
+                color: statusOption['color'],
+              ),
+              title: Text(statusOption['label']),
+              onTap: () {
+                Navigator.pop(context);
+                _handleStatusChange(bookingId, statusOption['status'], booking);
+              },
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showBookingDetails(booking);
+            },
+            child: const Text('View Details'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showBookingDetails(Map<String, dynamic> booking) {

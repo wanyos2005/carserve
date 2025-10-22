@@ -17,13 +17,431 @@ from app.schemas.category import (
     ProviderCategory, ProviderCategoryCreate,
     ServiceCategory, ServiceCategoryCreate,
 )
-from app.models.provider import Service, ServiceTemplate, ProviderService
+from app.models.provider import Service as ServiceModel, ServiceTemplate, ProviderService, Provider as ProviderModel, ServiceCategory as ServiceCategoryModel, ProviderCategory as ProviderCategoryModel
 from app.crud import provider as crud_provider
 from app.crud import service as crud_service
 from app.crud import category as crud_category
 from sqlalchemy import text
+import httpx
 
 router = APIRouter()
+
+# -----------------------
+# Statistics
+# -----------------------
+@router.get("/stats")
+def get_provider_stats(db: Session = Depends(get_db)):
+    """Get service provider statistics"""
+    from sqlalchemy import func
+    
+    # Total providers count
+    total_providers = db.query(ProviderModel).count()
+    
+    # Active providers count (assuming is_registered means active)
+    active_providers = db.query(ProviderModel).filter(ProviderModel.is_registered == True).count()
+    
+    # Total service categories count
+    total_categories = db.query(ServiceCategoryModel).count()
+    
+    # Total global services count
+    total_services = db.query(ServiceModel).count()
+    
+    # Provider categories count
+    provider_categories = db.query(ProviderCategoryModel).count()
+    
+    return {
+        "total_providers": total_providers,
+        "active_providers": active_providers,
+        "inactive_providers": total_providers - active_providers,
+        "service_categories": total_categories,
+        "provider_categories": provider_categories,
+        "total_services": total_services
+    }
+
+
+@router.get("/{provider_id}/stats")
+def get_provider_dashboard_stats(provider_id: str, db: Session = Depends(get_db)):
+    """Get provider-specific dashboard statistics"""
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+    import httpx
+    import os
+    
+    # Ensure provider exists
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    # Get provider category to determine stats type
+    category_name = provider.category.name.lower() if provider.category else ""
+    
+    # Initialize base stats
+    stats = {
+        "rating": float(provider.rating) if provider.rating else 0.0,
+        "provider_type": category_name,
+        "provider_name": provider.name
+    }
+    
+    # Get today's date for filtering
+    today = datetime.utcnow().date()
+    
+    try:
+        if "insurance" in category_name:
+            # Insurance partner stats
+            stats.update(_get_insurance_partner_stats(provider_id, today))
+        elif "fuel" in category_name:
+            # Fuel station stats
+            stats.update(_get_fuel_station_stats(provider_id, today))
+        elif "car wash" in category_name or "detailing" in category_name:
+            # Car wash stats
+            stats.update(_get_car_wash_stats(provider_id, today))
+        elif "spare parts" in category_name or "parts" in category_name:
+            # Spare parts dealer stats
+            stats.update(_get_spare_parts_stats(provider_id, today))
+        else:
+            # Default garage/mechanic stats
+            stats.update(_get_garage_stats(provider_id, today))
+            
+    except Exception as e:
+        print(f"Error fetching provider stats: {e}")
+        # Return default stats if external service fails
+        stats.update(_get_default_stats(category_name))
+    
+    print(f"Returning stats for provider {provider_id}: {stats}")
+    return stats
+
+
+def _get_insurance_partner_stats(provider_id: str, today) -> dict:
+    """Get insurance partner specific statistics"""
+    import httpx
+    import os
+    
+    stats = {
+        "active_policies": 0,
+        "todays_revenue": 0,
+        "pending_claims": 0,
+        "total_policies": 0,
+        "total_claims": 0,
+        "revenue_today": 0
+    }
+    
+    try:
+        insurance_service_url = os.getenv("INSURANCE_SERVICE_URL", "http://insurance-service:8005")
+        print(f"Fetching insurance stats for provider {provider_id} from {insurance_service_url}")
+        
+        with httpx.Client(timeout=5.0) as client:
+            # Get policies for this insurance partner
+            policies_response = client.get(f"{insurance_service_url}/policies?provider_id={provider_id}")
+            if policies_response.status_code == 200:
+                policies = policies_response.json()
+                active_policies = [p for p in policies if p.get('status') == 'active']
+                stats["active_policies"] = len(active_policies)
+                stats["total_policies"] = len(policies)
+            
+            # Get claims for this insurance partner
+            claims_response = client.get(f"{insurance_service_url}/claims?provider_id={provider_id}")
+            if claims_response.status_code == 200:
+                claims = claims_response.json()
+                pending_claims = [c for c in claims if c.get('status') in ['submitted', 'under_review']]
+                stats["pending_claims"] = len(pending_claims)
+                stats["total_claims"] = len(claims)
+                
+                # Calculate today's revenue from claims
+                today_claims = []
+                for claim in claims:
+                    if claim.get('payment_date'):
+                        from datetime import datetime
+                        claim_date = datetime.fromisoformat(claim['payment_date'].replace('Z', '+00:00')).date()
+                        if claim_date == today:
+                            today_claims.append(claim)
+                
+                revenue_today = 0
+                for claim in today_claims:
+                    if claim.get('approved_amount'):
+                        revenue_today += int(claim['approved_amount'])
+                
+                stats["todays_revenue"] = revenue_today
+                stats["revenue_today"] = revenue_today
+                
+    except Exception as e:
+        print(f"Error fetching insurance stats: {e}")
+    
+    return stats
+
+
+def _get_fuel_station_stats(provider_id: str, today) -> dict:
+    """Get fuel station specific statistics"""
+    import httpx
+    import os
+    
+    stats = {
+        "fuel_sales_liters": 0,
+        "todays_revenue": 0,
+        "inventory_alerts": 0,
+        "total_sales_today": 0,
+        "low_stock_items": 0
+    }
+    
+    try:
+        # For fuel stations, we might need to integrate with a fuel management system
+        # For now, we'll use service logs to track fuel sales
+        booking_service_url = os.getenv("BOOKING_SERVICE_URL", "http://booking-service:8004")
+        
+        with httpx.Client(timeout=5.0) as client:
+            # Get service logs for fuel services
+            service_logs_response = client.get(f"{booking_service_url}/service-logs/provider/{provider_id}")
+            if service_logs_response.status_code == 200:
+                service_logs = service_logs_response.json()
+                
+                # Filter today's fuel service logs
+                today_logs = []
+                for log in service_logs:
+                    if log.get('performed_at'):
+                        from datetime import datetime
+                        log_date = datetime.fromisoformat(log['performed_at'].replace('Z', '+00:00')).date()
+                        if log_date == today and 'fuel' in log.get('service_name', '').lower():
+                            today_logs.append(log)
+                
+                stats["total_sales_today"] = len(today_logs)
+                
+                # Calculate fuel sales and revenue
+                total_liters = 0
+                total_revenue = 0
+                for log in today_logs:
+                    if log.get('cost'):
+                        total_revenue += int(log['cost'])
+                    # Extract liters from service items if available
+                    service_items = log.get('service_items', {})
+                    if 'liters' in service_items:
+                        total_liters += int(service_items['liters'])
+                
+                stats["fuel_sales_liters"] = total_liters
+                stats["todays_revenue"] = total_revenue
+                
+                # Mock inventory alerts (would come from inventory system)
+                stats["inventory_alerts"] = 2  # Mock value
+                stats["low_stock_items"] = 2
+                
+    except Exception as e:
+        print(f"Error fetching fuel station stats: {e}")
+    
+    return stats
+
+
+def _get_car_wash_stats(provider_id: str, today) -> dict:
+    """Get car wash specific statistics"""
+    import httpx
+    import os
+    
+    stats = {
+        "todays_services": 0,
+        "todays_revenue": 0,
+        "queue_length": 0,
+        "completed_services": 0
+    }
+    
+    try:
+        booking_service_url = os.getenv("BOOKING_SERVICE_URL", "http://booking-service:8004")
+        
+        with httpx.Client(timeout=5.0) as client:
+            # Get service logs for car wash services
+            service_logs_response = client.get(f"{booking_service_url}/service-logs/provider/{provider_id}")
+            if service_logs_response.status_code == 200:
+                service_logs = service_logs_response.json()
+                
+                # Filter today's car wash service logs
+                today_logs = []
+                for log in service_logs:
+                    if log.get('performed_at'):
+                        from datetime import datetime
+                        log_date = datetime.fromisoformat(log['performed_at'].replace('Z', '+00:00')).date()
+                        if log_date == today and ('wash' in log.get('service_name', '').lower() or 'detailing' in log.get('service_name', '').lower()):
+                            today_logs.append(log)
+                
+                stats["todays_services"] = len(today_logs)
+                stats["completed_services"] = len(today_logs)
+                
+                # Calculate today's revenue
+                total_revenue = 0
+                for log in today_logs:
+                    if log.get('cost'):
+                        total_revenue += int(log['cost'])
+                
+                stats["todays_revenue"] = total_revenue
+                
+                # Get queue length from active bookings
+                bookings_response = client.get(f"{booking_service_url}/provider/{provider_id}")
+                if bookings_response.status_code == 200:
+                    bookings = bookings_response.json()
+                    queue_bookings = [b for b in bookings if b.get('status') in ['pending', 'confirmed']]
+                    stats["queue_length"] = len(queue_bookings)
+                
+    except Exception as e:
+        print(f"Error fetching car wash stats: {e}")
+    
+    return stats
+
+
+def _get_spare_parts_stats(provider_id: str, today) -> dict:
+    """Get spare parts dealer specific statistics"""
+    import httpx
+    import os
+    
+    stats = {
+        "active_orders": 0,
+        "todays_sales": 0,
+        "low_stock": 0,
+        "total_orders_today": 0,
+        "revenue_today": 0
+    }
+    
+    try:
+        booking_service_url = os.getenv("BOOKING_SERVICE_URL", "http://booking-service:8004")
+        
+        with httpx.Client(timeout=5.0) as client:
+            # Get service logs for parts sales
+            service_logs_response = client.get(f"{booking_service_url}/service-logs/provider/{provider_id}")
+            if service_logs_response.status_code == 200:
+                service_logs = service_logs_response.json()
+                
+                # Filter today's parts service logs
+                today_logs = []
+                for log in service_logs:
+                    if log.get('performed_at'):
+                        from datetime import datetime
+                        log_date = datetime.fromisoformat(log['performed_at'].replace('Z', '+00:00')).date()
+                        if log_date == today and ('parts' in log.get('service_name', '').lower() or 'spare' in log.get('service_name', '').lower()):
+                            today_logs.append(log)
+                
+                stats["total_orders_today"] = len(today_logs)
+                
+                # Calculate today's sales
+                total_sales = 0
+                for log in today_logs:
+                    if log.get('cost'):
+                        total_sales += int(log['cost'])
+                
+                stats["todays_sales"] = total_sales
+                stats["revenue_today"] = total_sales
+                
+                # Get active orders from bookings
+                bookings_response = client.get(f"{booking_service_url}/provider/{provider_id}")
+                if bookings_response.status_code == 200:
+                    bookings = bookings_response.json()
+                    active_orders = [b for b in bookings if b.get('status') in ['pending', 'confirmed', 'in_progress']]
+                    stats["active_orders"] = len(active_orders)
+                
+                # Mock low stock (would come from inventory system)
+                stats["low_stock"] = 7  # Mock value
+                
+    except Exception as e:
+        print(f"Error fetching spare parts stats: {e}")
+    
+    return stats
+
+
+def _get_garage_stats(provider_id: str, today) -> dict:
+    """Get garage/mechanic specific statistics"""
+    import httpx
+    import os
+    
+    stats = {
+        "active_bookings": 0,
+        "todays_earnings": 0,
+        "pending_tasks": 0,
+        "total_services_today": 0,
+        "completed_services_today": 0
+    }
+    
+    try:
+        booking_service_url = os.getenv("BOOKING_SERVICE_URL", "http://booking-service:8004")
+        print(f"Fetching garage stats for provider {provider_id} from {booking_service_url}")
+        
+        with httpx.Client(timeout=5.0) as client:
+            # Get provider's bookings
+            bookings_response = client.get(f"{booking_service_url}/provider/{provider_id}")
+            if bookings_response.status_code == 200:
+                bookings = bookings_response.json()
+                active_bookings = [b for b in bookings if b.get('status') in ['pending', 'confirmed', 'in_progress']]
+                stats["active_bookings"] = len(active_bookings)
+            
+            # Get service logs for this provider
+            service_logs_response = client.get(f"{booking_service_url}/service-logs/provider/{provider_id}")
+            if service_logs_response.status_code == 200:
+                service_logs = service_logs_response.json()
+                
+                # Filter today's service logs
+                today_logs = []
+                for log in service_logs:
+                    if log.get('performed_at'):
+                        from datetime import datetime
+                        log_date = datetime.fromisoformat(log['performed_at'].replace('Z', '+00:00')).date()
+                        if log_date == today:
+                            today_logs.append(log)
+                
+                stats["total_services_today"] = len(today_logs)
+                stats["completed_services_today"] = len(today_logs)
+                
+                # Calculate today's earnings
+                total_earnings = 0
+                for log in today_logs:
+                    if log.get('cost'):
+                        total_earnings += int(log['cost'])
+                
+                stats["todays_earnings"] = total_earnings
+                
+                # Calculate pending tasks (bookings + incomplete service logs)
+                pending_tasks = stats["active_bookings"] + len([log for log in service_logs if not log.get('performed_at')])
+                stats["pending_tasks"] = pending_tasks
+                
+    except Exception as e:
+        print(f"Error fetching garage stats: {e}")
+    
+    return stats
+
+
+def _get_default_stats(category_name: str) -> dict:
+    """Get default stats when external services fail"""
+    if "insurance" in category_name:
+        return {
+            "active_policies": 0,
+            "todays_revenue": 0,
+            "pending_claims": 0,
+            "total_policies": 0,
+            "total_claims": 0,
+            "revenue_today": 0
+        }
+    elif "fuel" in category_name:
+        return {
+            "fuel_sales_liters": 0,
+            "todays_revenue": 0,
+            "inventory_alerts": 0,
+            "total_sales_today": 0,
+            "low_stock_items": 0
+        }
+    elif "car wash" in category_name or "detailing" in category_name:
+        return {
+            "todays_services": 0,
+            "todays_revenue": 0,
+            "queue_length": 0,
+            "completed_services": 0
+        }
+    elif "spare parts" in category_name or "parts" in category_name:
+        return {
+            "active_orders": 0,
+            "todays_sales": 0,
+            "low_stock": 0,
+            "total_orders_today": 0,
+            "revenue_today": 0
+        }
+    else:
+        return {
+            "active_bookings": 0,
+            "todays_earnings": 0,
+            "pending_tasks": 0,
+            "total_services_today": 0,
+            "completed_services_today": 0
+        }
 
 # -----------------------
 # Categories
@@ -296,6 +714,10 @@ def search_providers(
 
     grouped = {}
     for r in rows:
+        # Skip None rows that might be returned from the view
+        if r is None or r.provider_id is None:
+            continue
+            
         if r.provider_id not in grouped:
             # Format location data to be more user-friendly
             location_data = r.provider_location or {}

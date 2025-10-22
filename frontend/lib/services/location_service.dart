@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../data/nairobi_areas.dart';
 
 class LocationService {
   static const double _defaultAccuracy = 10.0; // meters
@@ -89,11 +92,30 @@ class LocationService {
     return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000; // Convert to km
   }
   
-  /// Get address from coordinates (reverse geocoding)
+  /// Get address from coordinates (reverse geocoding) - Enhanced hybrid approach
   static Future<String?> getAddressFromCoordinates(double lat, double lon) async {
     try {
-      // Note: This would require a geocoding service like Google Maps API
-      // For now, return coordinates as string
+      // First try: Static mapping (fast, reliable, offline)
+      final staticResult = _getStaticLocationName(lat, lon);
+      if (staticResult != "Nairobi") {
+        return staticResult;
+      }
+      
+      // Second try: Cached geocoding results
+      final cachedResult = _getCachedLocationName(lat, lon);
+      if (cachedResult != null) {
+        return cachedResult;
+      }
+      
+      // Third try: OpenStreetMap API (when available)
+      final apiResult = await _getOpenStreetMapAddress(lat, lon);
+      if (apiResult != null) {
+        // Cache the result for future use
+        _cacheLocationName(lat, lon, apiResult);
+        return apiResult;
+      }
+      
+      // Fallback: Return coordinates
       return '$lat, $lon';
     } catch (e) {
       debugPrint('Error getting address: $e');
@@ -101,37 +123,96 @@ class LocationService {
     }
   }
 
-  /// Get readable location name from coordinates (Nairobi areas mapping)
-  static String getReadableLocationName(double lat, double lon) {
-    // Nairobi areas mapping (from seed data)
-    final nairobiAreas = [
-      {"name": "Westlands", "lat": -1.2657, "lng": 36.8065, "tolerance": 0.05},
-      {"name": "Karen", "lat": -1.3197, "lng": 36.6788, "tolerance": 0.05},
-      {"name": "Runda", "lat": -1.2000, "lng": 36.8000, "tolerance": 0.05},
-      {"name": "Kilimani", "lat": -1.3000, "lng": 36.7833, "tolerance": 0.05},
-      {"name": "Lavington", "lat": -1.2833, "lng": 36.7667, "tolerance": 0.05},
-      {"name": "Eastleigh", "lat": -1.2667, "lng": 36.8500, "tolerance": 0.05},
-      {"name": "South B", "lat": -1.3167, "lng": 36.8333, "tolerance": 0.05},
-      {"name": "Industrial Area", "lat": -1.3000, "lng": 36.8167, "tolerance": 0.05},
-      {"name": "CBD", "lat": -1.2921, "lng": 36.8219, "tolerance": 0.05},
-      {"name": "Kasarani", "lat": -1.2167, "lng": 36.9000, "tolerance": 0.05},
-      {"name": "Thika Road", "lat": -1.2000, "lng": 36.8500, "tolerance": 0.05},
-      {"name": "Mombasa Road", "lat": -1.3167, "lng": 36.8833, "tolerance": 0.05},
-    ];
-
-    // Find the closest area
-    for (final area in nairobiAreas) {
-      final areaLat = area["lat"] as double;
-      final areaLng = area["lng"] as double;
-      final tolerance = area["tolerance"] as double;
+  /// Get address from OpenStreetMap Nominatim API (free, no credit card required)
+  static Future<String?> _getOpenStreetMapAddress(double lat, double lon) async {
+    try {
+      // Using OpenStreetMap Nominatim (free, no credit card required)
+      final response = await http.get(
+        Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&addressdetails=1'),
+        headers: {'User-Agent': 'CarPlatform/1.0'}, // Required by Nominatim
+      );
       
-      if ((lat - areaLat).abs() <= tolerance && (lon - areaLng).abs() <= tolerance) {
-        return area["name"] as String;
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final address = data['display_name'] as String?;
+        
+        if (address != null && address.isNotEmpty) {
+          // Extract just the area name for better UX
+          return _extractAreaName(address);
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      debugPrint('Error getting address from OSM: $e');
+      return null;
+    }
+  }
+
+  /// Extract area name from full address
+  static String _extractAreaName(String fullAddress) {
+    // For Kenya addresses, try to extract the most relevant area
+    final parts = fullAddress.split(',');
+    
+    // Look for common Kenyan area indicators
+    for (final part in parts) {
+      final trimmed = part.trim();
+      if (trimmed.contains('Nairobi') || 
+          trimmed.contains('Mombasa') || 
+          trimmed.contains('Kisumu') ||
+          trimmed.contains('Nakuru') ||
+          trimmed.contains('CBD') ||
+          trimmed.contains('Road') ||
+          trimmed.contains('Area')) {
+        return trimmed;
       }
     }
     
-    // If no specific area found, return generic Nairobi
+    // Return first meaningful part
+    return parts.isNotEmpty ? parts.first.trim() : fullAddress;
+  }
+
+  /// Cache location name for future use
+  static void _cacheLocationName(double lat, double lon, String locationName) {
+    // Simple in-memory cache for now
+    // TODO: Implement persistent caching with SharedPreferences
+    final key = "location_${lat.toStringAsFixed(4)}_${lon.toStringAsFixed(4)}";
+    _locationCache[key] = locationName;
+  }
+
+  // Simple in-memory cache
+  static final Map<String, String> _locationCache = {};
+
+  /// Get readable location name from coordinates (Enhanced hybrid approach)
+  static String getReadableLocationName(double lat, double lon) {
+    // First try: Static mapping (fast, reliable, offline)
+    final staticResult = _getStaticLocationName(lat, lon);
+    if (staticResult != "Nairobi") {
+      return staticResult;
+    }
+    
+    // Second try: Cached geocoding results
+    final cachedResult = _getCachedLocationName(lat, lon);
+    if (cachedResult != null) {
+      return cachedResult;
+    }
+    
+    // Fallback: Generic location
     return "Nairobi";
+  }
+
+  /// Static mapping for known Nairobi areas (fast, offline, reliable)
+  /// Now uses comprehensive mapping with sub-areas
+  static String _getStaticLocationName(double lat, double lon) {
+    // Use the comprehensive Nairobi areas mapping
+    final areaName = NairobiAreas.getAreaByCoordinates(lat, lon);
+    return areaName ?? "Nairobi";
+  }
+
+  /// Get cached geocoding result (if available)
+  static String? _getCachedLocationName(double lat, double lon) {
+    final key = "location_${lat.toStringAsFixed(4)}_${lon.toStringAsFixed(4)}";
+    return _locationCache[key];
   }
 
   /// Create location data compatible with legacy format

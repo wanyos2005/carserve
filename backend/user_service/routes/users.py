@@ -17,7 +17,9 @@ from schemas.users import (
     LinkUserToProviderRequest,
     Token,
     EmailSchema,
-    UserRead,Role, GuestUserRequest
+    UserRead,Role, GuestUserRequest,
+    FCMTokenRequest,
+    FCMTokenResponse
 )
 from core.config import DATABASE_URL, SECRET_KEY, ALGORITHM
 from mailconfig import conf
@@ -222,16 +224,44 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
         "phone": user.phone,
     }
 
-@router.get("/users/{user_id}/fcm-token")
+@router.get("/users/{user_id}/fcm-token", response_model=FCMTokenResponse)
 def get_user_fcm_token(user_id: int, db: Session = Depends(get_db)):
-    """Return user's FCM token (placeholder if not stored)."""
-    # If you later store tokens in DB, fetch them here. For now, return None.
+    """Get user's FCM token."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"fcm_token": None}
+    return FCMTokenResponse(message="FCM token retrieved", fcm_token=user.fcm_token)
 
-@router.post("/users/lookup")
+@router.post("/users/{user_id}/fcm-token", response_model=FCMTokenResponse)
+def register_fcm_token(
+    user_id: int, 
+    token_request: FCMTokenRequest,
+    db: Session = Depends(get_db)
+):
+    """Register or update user's FCM token."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.fcm_token = token_request.fcm_token
+    db.commit()
+    return FCMTokenResponse(
+        message="FCM token registered successfully", 
+        fcm_token=token_request.fcm_token
+    )
+
+@router.delete("/users/{user_id}/fcm-token", response_model=FCMTokenResponse)
+def remove_fcm_token(user_id: int, db: Session = Depends(get_db)):
+    """Remove user's FCM token."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.fcm_token = None
+    db.commit()
+    return FCMTokenResponse(message="FCM token removed successfully")
+
+@router.post("/lookup")
 def lookup_users_by_ids(
     user_ids: list[int],
     current_user: User = Depends(get_current_user),
@@ -241,18 +271,47 @@ def lookup_users_by_ids(
     # This endpoint allows any authenticated user to look up user info by ID
     # This is reasonable for customer names in booking/service logs
     
+    print(f"DEBUG UserService: Looking up users with IDs: {user_ids}")
+    print(f"DEBUG UserService: Current user: {current_user.id} ({current_user.email})")
+    
     users = db.query(User).filter(User.id.in_(user_ids)).all()
+    print(f"DEBUG UserService: Found {len(users)} users in database")
     
     result = []
     for user in users:
-        result.append({
+        user_data = {
             "id": user.id,
             "email": user.email,
             "name": user.name,
             "phone": user.phone,
-        })
+        }
+        result.append(user_data)
+        print(f"DEBUG UserService: User {user.id}: {user_data}")
     
+    print(f"DEBUG UserService: Returning {len(result)} users")
     return result
+
+@router.get("/test-lookup/{user_id}")
+def test_lookup_user(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """Test endpoint to check if user exists (no auth required for debugging)"""
+    print(f"DEBUG UserService: Testing lookup for user ID: {user_id}")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "phone": user.phone,
+        }
+        print(f"DEBUG UserService: Found user: {user_data}")
+        return user_data
+    else:
+        print(f"DEBUG UserService: User {user_id} not found")
+        return {"error": f"User {user_id} not found"}
 
 # --------------------------
 # Get all users (Admin only)
@@ -492,4 +551,54 @@ def list_admin_users(
             })
     
     return {"admins": result}
+
+@router.get("/stats")
+def get_user_stats(
+    current_user: User = Depends(is_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get user statistics (admin only)"""
+    from sqlalchemy import func
+    
+    # Total users count
+    total_users = db.query(User).count()
+    
+    # Verified users count (using verified field instead of is_active)
+    verified_users = db.query(User).filter(User.verified == True).count()
+    
+    # Admin users count
+    admin_role = db.query(Roles).filter(Roles.name == "admin").first()
+    admin_count = 0
+    if admin_role:
+        admin_count = db.query(User_Roles).filter(
+            User_Roles.role_id == str(admin_role.id),
+            User_Roles.active == True
+        ).count()
+    
+    # Provider users count
+    provider_role = db.query(Roles).filter(Roles.name == "provider").first()
+    provider_count = 0
+    if provider_role:
+        provider_count = db.query(User_Roles).filter(
+            User_Roles.role_id == str(provider_role.id),
+            User_Roles.active == True
+        ).count()
+    
+    # Car owner users count
+    car_owner_role = db.query(Roles).filter(Roles.name == "carOwner").first()
+    car_owner_count = 0
+    if car_owner_role:
+        car_owner_count = db.query(User_Roles).filter(
+            User_Roles.role_id == str(car_owner_role.id),
+            User_Roles.active == True
+        ).count()
+    
+    return {
+        "total_users": total_users,
+        "active_users": verified_users,  # Using verified as active
+        "inactive_users": total_users - verified_users,
+        "admin_users": admin_count,
+        "provider_users": provider_count,
+        "car_owner_users": car_owner_count
+    }
 

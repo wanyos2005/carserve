@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/components/modal_bottom_sheet.dart';
+import 'package:car_platform/components/enhanced_pricing_form.dart';
+import 'package:car_platform/services/global_service_api.dart';
 
 class EnhancedServiceSelector extends StatefulWidget {
   final List<Map<String, dynamic>> allServices;
@@ -7,6 +9,12 @@ class EnhancedServiceSelector extends StatefulWidget {
   final Function(List<Map<String, dynamic>>) onConfirm;
   final bool isSparePartsMode;
   final bool isPurchaseMode;
+  final bool showPricingConfiguration;
+  final bool showServiceRequirements;
+  final Function(String serviceId, Map<String, dynamic> pricingData)? onPricingChanged;
+  final Function(String serviceId, String displayName)? onDisplayNameChanged;
+  final Map<String, Map<String, dynamic>>? initialPricingData;
+  final Map<String, String>? initialDisplayNames;
 
   const EnhancedServiceSelector({
     super.key,
@@ -15,6 +23,12 @@ class EnhancedServiceSelector extends StatefulWidget {
     required this.onConfirm,
     this.isSparePartsMode = false,
     this.isPurchaseMode = false,
+    this.showPricingConfiguration = false,
+    this.showServiceRequirements = false,
+    this.onPricingChanged,
+    this.onDisplayNameChanged,
+    this.initialPricingData,
+    this.initialDisplayNames,
   });
 
   @override
@@ -27,6 +41,12 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
   String _searchQuery = '';
   bool _showOnlySelected = false;
   String? _selectedRecommendedService; // Track which recommended service is selected
+  
+  // Enhanced configuration state
+  final Map<String, Map<String, dynamic>> _pricingData = {};
+  final Map<String, TextEditingController> _displayNameControllers = {};
+  final Map<String, Map<String, TextEditingController>> _serviceFieldControllers = {};
+  final Map<String, dynamic> _serviceDetails = {};
   
   // Recommended services data
   List<Map<String, dynamic>> get _recommendedServices {
@@ -119,6 +139,33 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
     _selectedServices = widget.selectedServices
         .map((s) => _normalizeServiceMap(Map<String, dynamic>.from(s)))
         .toList();
+    
+    // Initialize enhanced configuration data
+    _initializeConfigurationData();
+  }
+
+  void _initializeConfigurationData() {
+    // Initialize pricing data
+    if (widget.initialPricingData != null) {
+      _pricingData.addAll(widget.initialPricingData!);
+    }
+    
+    // Initialize display names
+    if (widget.initialDisplayNames != null) {
+      widget.initialDisplayNames!.forEach((serviceId, displayName) {
+        _displayNameControllers[serviceId] = TextEditingController(text: displayName);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose controllers
+    _displayNameControllers.values.forEach((controller) => controller.dispose());
+    _serviceFieldControllers.values.forEach((controllers) {
+      controllers.values.forEach((controller) => controller.dispose());
+    });
+    super.dispose();
   }
 
   @override
@@ -241,68 +288,171 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
                       
                       return Card(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: isSelected ? Colors.green : Colors.blue,
-                            child: Icon(
-                              isSelected 
-                                  ? Icons.check 
-                                  : (widget.isPurchaseMode || widget.isSparePartsMode 
-                                      ? Icons.inventory_2 
-                                      : Icons.build),
-                              color: Colors.white,
-                            ),
-                          ),
-                          title: Text(
-                            service['name'] ?? 'Unnamed Service',
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        child: ExpansionTile(
+                          title: Row(
                             children: [
-                              if (_extractCategoryName(service) != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[100],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    _extractCategoryName(service)!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.blue[800],
+                              Checkbox(
+                                value: isSelected,
+                                onChanged: (v) {
+                                  if (v == true) {
+                                    _addService(service);
+                                  } else {
+                                    _removeService(service);
+                                  }
+                                },
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      service['name'] ?? 'Unnamed Service',
+                                      style: TextStyle(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? Colors.blue[700] : Colors.black87,
+                                      ),
                                     ),
-                                  ),
+                                    if (_extractCategoryName(service) != null)
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue[100],
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          _extractCategoryName(service)!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.blue[800],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                              if (service['description'] != null)
-                                Text(
+                              ),
+                            ],
+                          ),
+                          subtitle: service['description'] != null
+                              ? Text(
                                   service['description'],
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[600],
                                   ),
-                                ),
-                            ],
-                          ),
-                          trailing: isSelected
-                              ? IconButton(
-                                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                                  onPressed: () => _removeService(service),
                                 )
-                              : IconButton(
-                                  icon: const Icon(Icons.add_circle, color: Colors.green),
-                                  onPressed: () => _addService(service),
-                                ),
-                          onTap: () {
-                            if (isSelected) {
-                              _removeService(service);
-                            } else {
-                              _addService(service);
+                              : null,
+                          onExpansionChanged: (expanded) {
+                            if (expanded && widget.showServiceRequirements) {
+                              _loadServiceDetails(service['id'].toString());
                             }
                           },
+                          children: widget.showPricingConfiguration && isSelected
+                              ? [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                                    child: Column(
+                                      children: [
+                                        // Enhanced Pricing Form
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[50],
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: Colors.grey[300]!),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.attach_money, color: Colors.green[700], size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    "Pricing Configuration",
+                                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.green[700],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 16),
+                                              EnhancedPricingForm(
+                                                currentValues: _pricingData[service['id'].toString()] ?? {},
+                                                onChanged: (values) {
+                                                  setState(() {
+                                                    _pricingData[service['id'].toString()] = values;
+                                                  });
+                                                  widget.onPricingChanged?.call(service['id'].toString(), values);
+                                                },
+                                                required: true,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        
+                                        const SizedBox(height: 16),
+                                        
+                                        // Display Name Field
+                                        TextField(
+                                          controller: _displayNameControllers.putIfAbsent(
+                                            service['id'].toString(), 
+                                            () => TextEditingController()
+                                          ),
+                                          decoration: const InputDecoration(
+                                            labelText: "Custom Display Name (optional)",
+                                            hintText: "e.g., Premium Castrol Oil Change",
+                                            prefixIcon: Icon(Icons.label),
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          onChanged: (value) {
+                                            widget.onDisplayNameChanged?.call(service['id'].toString(), value);
+                                          },
+                                        ),
+                                        
+                                        if (widget.showServiceRequirements) ...[
+                                          const SizedBox(height: 16),
+                                          
+                                          // Service Requirements Fields
+                                          if (_serviceDetails[service['id'].toString()]?["service_requirements"] != null)
+                                            Container(
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue[50],
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: Colors.blue[200]!),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Icon(Icons.settings, color: Colors.blue[700], size: 20),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        "Service Requirements",
+                                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Colors.blue[700],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  ...List<Widget>.from(
+                                                    (_serviceDetails[service['id'].toString()]["service_requirements"]["fields"] as List<dynamic>? ?? [])
+                                                        .map((f) => _buildField(service['id'].toString(), f as Map<String, dynamic>))
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ]
+                              : [],
                         ),
                       );
                     },
@@ -456,6 +606,18 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
     final normalized = _normalizeServiceMap(service);
     setState(() {
       _selectedServices.add(normalized);
+      // Initialize pricing data for new service if not already present
+      if (!_pricingData.containsKey(normalized['id'].toString())) {
+        _pricingData[normalized['id'].toString()] = {
+          'price_type': 'range',
+          'min_price': '',
+          'max_price': '',
+          'unit': '',
+          'negotiable': true,
+          'currency': 'KES',
+          'price': '',
+        };
+      }
     });
   }
 
@@ -463,7 +625,75 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
     final normalized = _normalizeServiceMap(service);
     setState(() {
       _selectedServices.removeWhere((s) => s['id'] == normalized['id']);
+      _pricingData.remove(normalized['id'].toString());
+      _displayNameControllers.remove(normalized['id'].toString());
+      _serviceFieldControllers.remove(normalized['id'].toString());
     });
+  }
+
+  Future<void> _loadServiceDetails(String serviceId) async {
+    if (_serviceDetails.containsKey(serviceId)) return; // already loaded
+
+    final details = await GlobalServiceApi.getGlobalService(serviceId);
+    if (details != null) {
+      setState(() {
+        _serviceDetails[serviceId] = details;
+      });
+    }
+  }
+
+  Widget _buildField(String serviceId, Map<String, dynamic> fieldDef) {
+    final fname = fieldDef["name"]?.toString() ?? "";
+    final ftype = fieldDef["type"]?.toString() ?? "string";
+    final label = fieldDef["label"]?.toString() ?? fname;
+    final controllers = _serviceFieldControllers.putIfAbsent(serviceId, () => {});
+    final controller = controllers.putIfAbsent(fname, () => TextEditingController());
+
+    switch (ftype) {
+      case "string":
+      case "text":
+        return TextField(
+          controller: controller,
+          keyboardType: TextInputType.text,
+          decoration: InputDecoration(labelText: label),
+        );
+      case "number":
+        return TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: label),
+        );
+      case "textarea":
+        return TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: InputDecoration(labelText: label),
+        );
+      case "boolean":
+        bool current = (controller.text.toLowerCase() == 'true');
+        return CheckboxListTile(
+          value: current,
+          title: Text(label),
+          onChanged: (v) {
+            controller.text = v == true ? "true" : "false";
+            setState(() {}); // update UI
+          },
+        );
+      case "select":
+        final options = List<String>.from(fieldDef["options"] ?? []);
+        String current = controller.text.isNotEmpty ? controller.text : (options.isNotEmpty ? options[0] : "");
+        return DropdownButtonFormField<String>(
+          value: current.isNotEmpty ? current : null,
+          items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+          onChanged: (v) {
+            controller.text = v ?? "";
+            setState(() {});
+          },
+          decoration: InputDecoration(labelText: label),
+        );
+      default:
+        return TextField(controller: controller, decoration: InputDecoration(labelText: label));
+    }
   }
 
   Widget _buildRecommendedServices() {

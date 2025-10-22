@@ -1,3 +1,4 @@
+//file used to configure the dashboards of different provider categories
 import 'package:flutter/material.dart';
 
 enum ProviderBusinessType {
@@ -68,6 +69,9 @@ class StatCard {
 }
 
 class ProviderCategoryConfigs {
+  // Cache for real-time stats
+  static Map<String, Map<String, dynamic>> _statsCache = {};
+  
   static final Map<String, ProviderCategoryConfig> _configs = {
     'garage / mechanic': ProviderCategoryConfig(
       name: 'Garage / Mechanic',
@@ -92,7 +96,7 @@ class ProviderCategoryConfigs {
           isComingSoon: true,
         ),
         QuickAction(
-          title: 'Service Logs',
+          title: 'Log Service',
           subtitle: 'Log completed services and maintenance',
           icon: Icons.check_circle_outline,
           color: Colors.green,
@@ -111,6 +115,13 @@ class ProviderCategoryConfigs {
           icon: Icons.history,
           color: Colors.purple,
           route: '/history',
+        ),
+        QuickAction(
+          title: 'Settings',
+          subtitle: 'Manage provider settings and templates',
+          icon: Icons.settings,
+          color: Colors.grey,
+          route: '/provider-settings',
         ),
       ],
     ),
@@ -171,6 +182,13 @@ class ProviderCategoryConfigs {
           color: Colors.orange,
           isComingSoon: true,
         ),
+        QuickAction(
+          title: 'Settings',
+          subtitle: 'Manage provider settings and templates',
+          icon: Icons.settings,
+          color: Colors.grey,
+          route: '/provider-settings',
+        ),
       ],
     ),
     'fuel station': ProviderCategoryConfig(
@@ -196,7 +214,7 @@ class ProviderCategoryConfigs {
           isComingSoon: true,
         ),
         QuickAction(
-          title: 'Service Logs',
+          title: 'Log Service',
           subtitle: 'Log fuel services and transactions',
           icon: Icons.check_circle_outline,
           color: Colors.green,
@@ -230,6 +248,13 @@ class ProviderCategoryConfigs {
           color: Colors.purple,
           isComingSoon: true,
         ),
+        QuickAction(
+          title: 'Settings',
+          subtitle: 'Manage provider settings and templates',
+          icon: Icons.settings,
+          color: Colors.grey,
+          route: '/provider-settings',
+        ),
       ],
     ),
     'car wash & detailing': ProviderCategoryConfig(
@@ -255,7 +280,7 @@ class ProviderCategoryConfigs {
           isComingSoon: true,
         ),
         QuickAction(
-          title: 'Service Logs',
+          title: 'Log Service',
           subtitle: 'Log completed wash and detailing services',
           icon: Icons.check_circle_outline,
           color: Colors.green,
@@ -282,6 +307,13 @@ class ProviderCategoryConfigs {
           color: Colors.purple,
           isComingSoon: true,
         ),
+        QuickAction(
+          title: 'Settings',
+          subtitle: 'Manage provider settings and templates',
+          icon: Icons.settings,
+          color: Colors.grey,
+          route: '/provider-settings',
+        ),
       ],
     ),
     'spare parts dealer': ProviderCategoryConfig(
@@ -307,7 +339,7 @@ class ProviderCategoryConfigs {
           isComingSoon: true,
         ),
         QuickAction(
-          title: 'Service Logs',
+          title: 'Log Service',
           subtitle: 'Log parts installation and services',
           icon: Icons.check_circle_outline,
           color: Colors.green,
@@ -340,6 +372,13 @@ class ProviderCategoryConfigs {
           icon: Icons.business,
           color: Colors.orange,
           isComingSoon: true,
+        ),
+        QuickAction(
+          title: 'Settings',
+          subtitle: 'Manage provider settings and templates',
+          icon: Icons.settings,
+          color: Colors.grey,
+          route: '/provider-settings',
         ),
       ],
     ),
@@ -385,7 +424,7 @@ class ProviderCategoryConfigs {
           subtitle: 'Configure your business settings',
           icon: Icons.settings,
           color: Colors.grey,
-          isComingSoon: true,
+          route: '/provider-settings',
         ),
       ],
     );
@@ -393,5 +432,243 @@ class ProviderCategoryConfigs {
 
   static List<ProviderCategoryConfig> getAllConfigs() {
     return _configs.values.toList();
+  }
+
+  // Method to update stats cache
+  static void updateStatsCache(String providerId, Map<String, dynamic> stats) {
+    _statsCache[providerId] = stats;
+  }
+
+  // Method to get cached stats
+  static Map<String, dynamic>? getCachedStats(String providerId) {
+    return _statsCache[providerId];
+  }
+
+  // Method to create dynamic stat cards based on real data
+  static List<StatCard> getDynamicStatCards(String providerId, String categoryName) {
+    final stats = getCachedStats(providerId);
+    if (stats == null) {
+      // Return default stats if no cached data
+      return getDefaultStatCards(categoryName);
+    }
+
+    // Get provider type from stats
+    final providerType = stats['provider_type']?.toString().toLowerCase() ?? categoryName.toLowerCase();
+    
+    if (providerType.contains('insurance')) {
+      return _getInsuranceStatCards(stats);
+    } else if (providerType.contains('fuel')) {
+      return _getFuelStationStatCards(stats);
+    } else if (providerType.contains('car wash') || providerType.contains('detailing')) {
+      return _getCarWashStatCards(stats);
+    } else if (providerType.contains('spare parts') || providerType.contains('parts')) {
+      return _getSparePartsStatCards(stats);
+    } else {
+      return _getGarageStatCards(stats);
+    }
+  }
+
+  static List<StatCard> _getInsuranceStatCards(Map<String, dynamic> stats) {
+    return [
+      StatCard(
+        title: 'Active Policies',
+        value: '${stats['active_policies'] ?? 0}',
+        icon: Icons.policy,
+        color: Colors.green,
+      ),
+      StatCard(
+        title: "Today's Revenue",
+        value: 'KES ${_formatCurrency(stats['todays_revenue'] ?? 0)}',
+        icon: Icons.trending_up,
+        color: Colors.blue,
+      ),
+      StatCard(
+        title: 'Pending Claims',
+        value: '${stats['pending_claims'] ?? 0}',
+        icon: Icons.assignment,
+        color: Colors.orange,
+      ),
+      StatCard(
+        title: 'Client Rating',
+        value: '${stats['rating']?.toStringAsFixed(1) ?? '0.0'} ★',
+        icon: Icons.star,
+        color: Colors.amber,
+      ),
+    ];
+  }
+
+  static List<StatCard> _getFuelStationStatCards(Map<String, dynamic> stats) {
+    return [
+      StatCard(
+        title: 'Fuel Sales',
+        value: '${stats['fuel_sales_liters'] ?? 0}L',
+        icon: Icons.local_gas_station,
+        color: Colors.orange,
+      ),
+      StatCard(
+        title: "Today's Revenue",
+        value: 'KES ${_formatCurrency(stats['todays_revenue'] ?? 0)}',
+        icon: Icons.trending_up,
+        color: Colors.green,
+      ),
+      StatCard(
+        title: 'Inventory Alert',
+        value: '${stats['inventory_alerts'] ?? 0}',
+        icon: Icons.warning,
+        color: Colors.red,
+      ),
+      StatCard(
+        title: 'Customer Rating',
+        value: '${stats['rating']?.toStringAsFixed(1) ?? '0.0'} ★',
+        icon: Icons.star,
+        color: Colors.amber,
+      ),
+    ];
+  }
+
+  static List<StatCard> _getCarWashStatCards(Map<String, dynamic> stats) {
+    return [
+      StatCard(
+        title: 'Today\'s Services',
+        value: '${stats['todays_services'] ?? 0}',
+        icon: Icons.local_car_wash,
+        color: Colors.cyan,
+      ),
+      StatCard(
+        title: "Today's Revenue",
+        value: 'KES ${_formatCurrency(stats['todays_revenue'] ?? 0)}',
+        icon: Icons.trending_up,
+        color: Colors.green,
+      ),
+      StatCard(
+        title: 'Queue Length',
+        value: '${stats['queue_length'] ?? 0}',
+        icon: Icons.queue,
+        color: Colors.orange,
+      ),
+      StatCard(
+        title: 'Rating',
+        value: '${stats['rating']?.toStringAsFixed(1) ?? '0.0'} ★',
+        icon: Icons.star,
+        color: Colors.amber,
+      ),
+    ];
+  }
+
+  static List<StatCard> _getSparePartsStatCards(Map<String, dynamic> stats) {
+    return [
+      StatCard(
+        title: 'Active Orders',
+        value: '${stats['active_orders'] ?? 0}',
+        icon: Icons.shopping_cart,
+        color: Colors.deepPurple,
+      ),
+      StatCard(
+        title: "Today's Sales",
+        value: 'KES ${_formatCurrency(stats['todays_sales'] ?? 0)}',
+        icon: Icons.trending_up,
+        color: Colors.green,
+      ),
+      StatCard(
+        title: 'Low Stock',
+        value: '${stats['low_stock'] ?? 0}',
+        icon: Icons.warning,
+        color: Colors.red,
+      ),
+      StatCard(
+        title: 'Rating',
+        value: '${stats['rating']?.toStringAsFixed(1) ?? '0.0'} ★',
+        icon: Icons.star,
+        color: Colors.amber,
+      ),
+    ];
+  }
+
+  static List<StatCard> _getGarageStatCards(Map<String, dynamic> stats) {
+    return [
+      StatCard(
+        title: 'Active Bookings',
+        value: '${stats['active_bookings'] ?? 0}',
+        icon: Icons.calendar_today,
+        color: Colors.blue,
+      ),
+      StatCard(
+        title: "Today's Earnings",
+        value: 'KES ${_formatCurrency(stats['todays_earnings'] ?? 0)}',
+        icon: Icons.trending_up,
+        color: Colors.green,
+      ),
+      StatCard(
+        title: 'Pending Tasks',
+        value: '${stats['pending_tasks'] ?? 0}',
+        icon: Icons.list_alt,
+        color: Colors.orange,
+      ),
+      StatCard(
+        title: 'Rating',
+        value: '${stats['rating']?.toStringAsFixed(1) ?? '0.0'} ★',
+        icon: Icons.star,
+        color: Colors.amber,
+      ),
+    ];
+  }
+
+  // Helper method to format currency
+  static String _formatCurrency(dynamic amount) {
+    if (amount is int || amount is double) {
+      return amount.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      );
+    }
+    return '0';
+  }
+
+  // Helper method to get default stat cards
+  static List<StatCard> getDefaultStatCards(String categoryName) {
+    switch (categoryName.toLowerCase()) {
+      case 'garage / mechanic':
+        return const [
+          StatCard(title: 'Active Bookings', value: '0', icon: Icons.calendar_today, color: Colors.blue),
+          StatCard(title: "Today's Earnings", value: 'KES 0', icon: Icons.trending_up, color: Colors.green),
+          StatCard(title: 'Pending Tasks', value: '0', icon: Icons.list_alt, color: Colors.orange),
+          StatCard(title: 'Rating', value: '0.0 ★', icon: Icons.star, color: Colors.amber),
+        ];
+      case 'insurance agency':
+        return const [
+          StatCard(title: 'Active Policies', value: '0', icon: Icons.policy, color: Colors.green),
+          StatCard(title: "Today's Revenue", value: 'KES 0', icon: Icons.trending_up, color: Colors.blue),
+          StatCard(title: 'Pending Claims', value: '0', icon: Icons.assignment, color: Colors.orange),
+          StatCard(title: 'Client Rating', value: '0.0 ★', icon: Icons.star, color: Colors.amber),
+        ];
+      case 'fuel station':
+        return const [
+          StatCard(title: 'Fuel Sales', value: '0L', icon: Icons.local_gas_station, color: Colors.orange),
+          StatCard(title: "Today's Revenue", value: 'KES 0', icon: Icons.trending_up, color: Colors.green),
+          StatCard(title: 'Inventory Alert', value: '0', icon: Icons.warning, color: Colors.red),
+          StatCard(title: 'Customer Rating', value: '0.0 ★', icon: Icons.star, color: Colors.amber),
+        ];
+      case 'car wash & detailing':
+        return const [
+          StatCard(title: 'Today\'s Services', value: '0', icon: Icons.local_car_wash, color: Colors.cyan),
+          StatCard(title: "Today's Revenue", value: 'KES 0', icon: Icons.trending_up, color: Colors.green),
+          StatCard(title: 'Queue Length', value: '0', icon: Icons.queue, color: Colors.orange),
+          StatCard(title: 'Rating', value: '0.0 ★', icon: Icons.star, color: Colors.amber),
+        ];
+      case 'spare parts dealer':
+        return const [
+          StatCard(title: 'Active Orders', value: '0', icon: Icons.shopping_cart, color: Colors.deepPurple),
+          StatCard(title: "Today's Sales", value: 'KES 0', icon: Icons.trending_up, color: Colors.green),
+          StatCard(title: 'Low Stock', value: '0', icon: Icons.warning, color: Colors.red),
+          StatCard(title: 'Rating', value: '0.0 ★', icon: Icons.star, color: Colors.amber),
+        ];
+      default:
+        return const [
+          StatCard(title: 'Active Items', value: '0', icon: Icons.list, color: Colors.grey),
+          StatCard(title: "Today's Activity", value: '0', icon: Icons.trending_up, color: Colors.grey),
+          StatCard(title: 'Pending Tasks', value: '0', icon: Icons.pending, color: Colors.grey),
+          StatCard(title: 'Rating', value: 'N/A', icon: Icons.star, color: Colors.grey),
+        ];
+    }
   }
 }

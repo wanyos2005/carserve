@@ -114,8 +114,28 @@ def create_default_alert_rules():
             version="1.0"
         )
         
+        # 6. App Download Prompt
+        app_download_rule = AlertRule(
+            id="app-download-prompt-rule",
+            name="App Download Prompt",
+            description="Prompts car owners to download the app when a service is logged for them",
+            alert_type=AlertType.APP_DOWNLOAD_PROMPT,
+            trigger_conditions={
+                "service_logged": True,
+                "user_has_app": False,
+                "check_frequency": "immediate"
+            },
+            message_template="🎉 Great news! A service has been logged for your vehicle {vehicle_info}. Download our app to track your service history, get maintenance reminders, and access exclusive offers. Get 10% off your next service when you download!",
+            title_template="📱 Download Our App - Get 10% Off!",
+            channels=["sms", "email", "whatsapp"],
+            priority=2,
+            is_active=True,
+            created_by="system",
+            version="1.0"
+        )
+        
         # Add all rules to database
-        rules = [insurance_rule, service_rule, maintenance_rule, promotional_rule, payment_rule]
+        rules = [insurance_rule, service_rule, maintenance_rule, promotional_rule, payment_rule, app_download_rule]
         
         for rule in rules:
             # Check if rule already exists
@@ -151,6 +171,7 @@ if __name__ == "__main__":
         print("3. Maintenance Reminders (oil, filters, tyres)")
         print("4. Promotional Alerts (partner offers)")
         print("5. Payment Reminders (insurance, services)")
+        print("6. App Download Prompts (when service is logged)")
         print("\n🚀 Ready for MVP testing!")
     else:
         print("\n❌ Failed to create alert rules. Check database connection.")

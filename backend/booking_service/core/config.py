@@ -6,14 +6,14 @@ class Settings(BaseSettings):
     database_url: str = os.getenv("DATABASE_URL", "postgresql://AdminDb:Ngojakwanza@postgres:5432/car_platform")
     
     # Fallback individual components for local development
-    db_user: str = "AdminDb"
-    db_password: str = "Ngojakwanza"
-    db_name: str = "car_platform"
-    db_host: str = "postgres"
-    db_port: str = "5432"
+    db_user: str = os.getenv("DB_USER", "AdminDb")
+    db_password: str = os.getenv("DB_PASSWORD", "Ngojakwanza")
+    db_name: str = os.getenv("DB_NAME", "car_platform")
+    db_host: str = os.getenv("DB_HOST", "postgres")
+    db_port: str = os.getenv("DB_PORT", "5432")
     
-    secret_key: str = "supersecret"
-    allowed_origins: str = "*"
+    secret_key: str = os.getenv("SECRET_KEY", "supersecret")
+    allowed_origins: str = os.getenv("ALLOWED_ORIGINS", "*")
 
     class Config:
         env_file = ".env"

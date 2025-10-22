@@ -16,21 +16,16 @@ if not DATABASE_URL:
     DB_PORT = os.getenv("DB_PORT", "5432")
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+# Redis configuration
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_URL = os.getenv("REDIS_URL", f"redis://{REDIS_HOST}:6379")
 
-# Use DATABASE_URL directly from environment (for Neon/external DB)
-# Fallback to individual components for local development
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    # Fallback for local development
-    DB_USER = os.getenv("DB_USER", "AdminDb")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "Ngojakwanza")
-    DB_NAME = os.getenv("DB_NAME", "car_platform")
-    DB_HOST = os.getenv("DB_HOST", "postgres")
-    DB_PORT = os.getenv("DB_PORT", "5432")
-    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
+# JWT Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# CORS Configuration
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
 

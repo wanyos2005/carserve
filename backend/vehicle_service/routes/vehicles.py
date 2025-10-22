@@ -12,6 +12,7 @@ from crud.vehicles import (
     create_vehicle,
     list_vehicles,
     get_vehicle,
+    get_vehicle_public,
     update_vehicle,
     delete_vehicle,
     create_guest_vehicle,
@@ -67,6 +68,15 @@ def get_vehicle_route(
     user_id: str = Depends(get_current_user_id),
 ):
     return get_vehicle(db, user_id, vehicle_id)
+
+@router.get("/public/{vehicle_id}", response_model=VehicleRead)
+def get_vehicle_public_route(
+    vehicle_id: str,
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
+    """Public vehicle lookup for providers to get vehicle details for bookings/service logs"""
+    return get_vehicle_public(db, vehicle_id)
 
 
 @router.put("/{vehicle_id}", response_model=VehicleRead)

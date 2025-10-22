@@ -4,7 +4,7 @@ from sqlalchemy import and_, or_, desc
 from typing import List, Optional
 from datetime import datetime
 
-from models.alert import Alert, AlertType, AlertStatus
+from models.alert import Alert, AlertType, AlertStatus, AlertChannel
 from schemas.alert import AlertCreate, AlertUpdate
 import logging
 
@@ -181,3 +181,54 @@ class AlertService:
             
         self.db.commit()
         return True
+
+    async def trigger_app_download_prompt(
+        self, 
+        user_id: int, 
+        vehicle_info: str, 
+        service_provider_name: str,
+        service_type: str,
+        discount_code: str = "FIRST10"
+    ) -> Optional[Alert]:
+        """Trigger app download prompt when a service is logged for a user without the app"""
+        try:
+            
+            
+            # Check if user already has the app using AppDetectionService
+            from services.app_detection_service import AppDetectionService
+            detection_service = AppDetectionService(self.db)
+            
+            # Use comprehensive evaluation to determine if user has app
+            should_send_prompt = await detection_service.should_send_app_prompt(user_id)
+            
+            if not should_send_prompt:
+                return None
+            
+            # Create the app download prompt alert
+            alert_data = AlertCreate(
+                user_id=user_id,
+                type=AlertType.APP_DOWNLOAD_PROMPT,
+                title=f"📱 Download Our App - Get 10% Off!",
+                message=f"🎉 Great news! {service_provider_name} has logged a {service_type} service for your vehicle {vehicle_info}. Download our app to track your service history, get maintenance reminders, and access exclusive offers. Use code '{discount_code}' for 10% off your next service!",
+                priority=2,
+                channels=[AlertChannel.SMS, AlertChannel.EMAIL, AlertChannel.WHATSAPP],
+                action_url="https://play.google.com/store/apps/details?id=com.yourcompany.carapp",
+                action_text="Download App",
+                alert_metadata={
+                    "service_provider": service_provider_name,
+                    "service_type": service_type,
+                    "vehicle_info": vehicle_info,
+                    "discount_code": discount_code,
+                    "app_store_links": {
+                        "android": "https://play.google.com/store/apps/details?id=com.yourcompany.carapp",
+                        "ios": "https://apps.apple.com/app/your-car-app/id123456789"
+                    }
+                }
+            )
+            
+            alert = await self.create_alert(alert_data)
+            return alert
+            
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to trigger app download prompt: {e}", exc_info=True)
+            return None

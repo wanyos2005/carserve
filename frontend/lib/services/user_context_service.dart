@@ -53,7 +53,7 @@ class UserContext {
       userType = UserType.carOwner;
     }
     
-    print('DEBUG Frontend: Final userType: $userType');
+    
 
     return UserContext(
       id: userData['id']?.toString(),

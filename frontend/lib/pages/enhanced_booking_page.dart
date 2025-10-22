@@ -16,6 +16,11 @@ import 'package:car_platform/BookingPageHelpers/purchase_ordering_ui.dart';
 // Components
 import 'package:car_platform/components/preferences_popover.dart';
 
+// Models and Utils
+import 'package:car_platform/models/booking_config.dart';
+import 'package:car_platform/utils/location_display_helper.dart';
+import 'package:car_platform/pages/BookingSteps/booking_step_builders.dart';
+
 //pages
 // import 'package:car_platform/pages/service_log_page.dart'; // Removed - handled by main navigation
 
@@ -30,6 +35,12 @@ class EnhancedBookingPage extends StatefulWidget {
 }
 
 class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
+  // Step-based booking configuration
+  late BookingConfig _config;
+  late BookingData _data;
+  int _currentStep = 0;
+  bool _isLoading = false;
+
   // User & vehicles
   List<dynamic> _vehicles = [];
   String? _selectedVehicleId;
@@ -75,6 +86,10 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   @override
   void initState() {
     super.initState();
+    _config = _isPurchaseMode 
+        ? BookingConfigs.getPurchaseConfig() 
+        : BookingConfigs.getServiceBookingConfig();
+    _data = BookingData();
     _loadInitialData();
   }
 
@@ -352,7 +367,15 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isPurchaseMode ? "Purchase Parts" : "Book Service"),
+        title: Text(_config.title),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: _currentStep > 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _goBack,
+              )
+            : null,
         actions: [
           // Tab-like button for switching modes
           Container(
@@ -361,10 +384,15 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
               onPressed: () {
                 setState(() {
                   _isPurchaseMode = !_isPurchaseMode;
+                  _config = _isPurchaseMode 
+                      ? BookingConfigs.getPurchaseConfig() 
+                      : BookingConfigs.getServiceBookingConfig();
+                  _currentStep = 0;
                   // Reset selections when switching modes
                   _selectedServices = [];
                   _selectedProvider = null;
                   _matchedProviders = [];
+                  _data = BookingData();
                 });
               },
               icon: Icon(_isPurchaseMode ? Icons.build_circle : Icons.shopping_cart),
@@ -385,35 +413,297 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12, // Use theme margin from main.dart
-          vertical: 16,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              // Progress indicator
+              _buildProgressIndicator(),
+              const SizedBox(height: 30),
+              
+              // Step content
+              Expanded(
+                child: _buildCurrentStep(),
+              ),
+              
+              // Navigation buttons
+              _buildNavigationButtons(),
+            ],
+          ),
         ),
-        child: _isPurchaseMode 
-            ? PurchaseOrderingUI(
+      ),
+    );
+  }
+
+  Widget _buildProgressIndicator() {
+    return Row(
+      children: List.generate(_config.steps.length, (index) {
+        final isActive = _currentStep >= index;
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(right: index < _config.steps.length - 1 ? 8 : 0),
+            height: 4,
+            decoration: BoxDecoration(
+              color: isActive ? _config.primaryColor : Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildCurrentStep() {
+    if (_currentStep >= _config.steps.length) {
+      return _buildCompletionStep();
+    }
+
+    final step = _config.steps[_currentStep];
+    
+    // Update data with current state
+    _syncDataWithState();
+    
+    // Use the appropriate step builder with actual data
+    switch (step.type) {
+      case BookingStepType.vehicleAndService:
+        return BookingStepBuilders.buildVehicleAndServiceStep(
+          context, 
+          _data, 
+          _updateData,
                 vehicles: _vehicles,
                 selectedVehicleId: _selectedVehicleId,
-                me: _me,
                 onVehicleChanged: (val) => setState(() => _selectedVehicleId = val),
-                onPurchase: _book,
-              )
-            : _buildServiceBookingUI(),
-      ),
-      floatingActionButton: _selectedProvider != null && !_isPurchaseMode
-          ? FloatingActionButton.extended(
-              onPressed: () => _showQuickContactOptions(),
-              icon: const Icon(Icons.contact_phone),
-              label: const Text("Contact"),
-              backgroundColor: Colors.green,
+          allServices: _allServices,
+          selectedServices: _selectedServices,
+          onServicesChanged: (services) {
+            setState(() {
+              _selectedServices = services;
+              // Reset provider-related state when services change
+              _selectedProvider = null;
+              _matchedProviders = [];
+            });
+            // Immediately fetch providers for the newly selected services
+            _fetchMatchedProviders();
+          },
+          isSparePartsMode: _isSparePartsMode,
+          isPurchaseMode: _isPurchaseMode,
+        );
+      case BookingStepType.providerSelection:
+        return BookingStepBuilders.buildProviderSelectionStep(
+          context, 
+          _data, 
+          _updateData,
+          matchedProviders: _matchedProviders,
+          selectedProvider: _selectedProvider,
+          onProviderSelected: (provider) => setState(() => _selectedProvider = provider),
+          selectedServices: _selectedServices,
+          recommendedOnly: _recommendedOnly,
+          providersLoading: _providersLoading,
+          serviceLocation: _serviceLocation,
+          onCallProvider: _callProvider,
+          onWhatsAppProvider: _openWhatsApp,
+          onSmsProvider: _sendSMS,
+          onEmailProvider: _sendEmail,
+        );
+      case BookingStepType.schedulingAndLocation:
+        return BookingStepBuilders.buildSchedulingAndLocationStep(
+          context, 
+          _data, 
+          _updateData,
+          selectedDate: _selectedDate,
+          selectedTime: _selectedTime,
+          onDateChanged: (date) => setState(() => _selectedDate = date),
+          onTimeChanged: (time) => setState(() => _selectedTime = time),
+          serviceLocation: _serviceLocation,
+          onLocationChanged: (location) => setState(() => _serviceLocation = location),
+        );
+      case BookingStepType.pricingAndConfirmation:
+        return BookingStepBuilders.buildPricingAndConfirmationStep(
+          context, 
+          _data, 
+          _updateData,
+          selectedServices: _selectedServices,
+          selectedProvider: _selectedProvider,
+          servicePrices: _servicePrices,
+          negotiatedPrices: _negotiatedPrices,
+          servicePricingInfo: _servicePricingInfo,
+          hasNegotiated: _hasNegotiated,
+          onBook: _book,
+          onOpenNegotiationDialog: _showPriceNegotiationDialog,
+          isLoading: _loading,
+        );
+    }
+  }
+
+  void _syncDataWithState() {
+    _data.set('selectedVehicleId', _selectedVehicleId);
+    _data.set('selectedServices', _selectedServices);
+    _data.set('selectedProvider', _selectedProvider);
+    _data.set('selectedDate', _selectedDate);
+    _data.set('selectedTime', _selectedTime);
+    _data.set('serviceLocation', _serviceLocation);
+    _data.set('isSparePartsMode', _isSparePartsMode);
+    _data.set('isPurchaseMode', _isPurchaseMode);
+  }
+
+  Widget _buildCompletionStep() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.check_circle,
+          size: 80,
+          color: _config.primaryColor,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Booking Complete! 🎉',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: _config.primaryColor,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Your ${_isPurchaseMode ? 'purchase order' : 'service booking'} has been confirmed successfully.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavigationButtons() {
+    final isLastStep = _currentStep >= _config.steps.length;
+    final bool canProceed = !isLastStep && _config.steps[_currentStep].validator(_data);
+
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: _isLoading
+                ? null
+                : (
+                    isLastStep
+                        ? _finishBooking
+                        : (canProceed ? _proceedToNext : null)
+                  ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _config.primaryColor,
               foregroundColor: Colors.white,
-            )
-          : null,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    isLastStep ? 'Finish' : (canProceed ? 'Continue' : 'Complete required fields'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ),
+        ),
+        if (_currentStep > 0 && !isLastStep) ...[
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: _goBack,
+            child: Text(
+              'Back',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _updateData(BookingData newData) {
+    setState(() {
+      _data = newData;
+    });
+  }
+
+  void _proceedToNext() {
+    if (_currentStep < _config.steps.length - 1) {
+      setState(() {
+        _currentStep++;
+      });
+    } else {
+      _completeBooking();
+    }
+  }
+
+  void _goBack() {
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep--;
+      });
+    }
+  }
+
+  void _finishBooking() {
+    Navigator.of(context).pop();
+  }
+
+  void _completeBooking() async {
+    if (_isLoading) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _book();
+      setState(() {
+        _currentStep = _config.steps.length; // Move to completion step
+      });
+    } catch (e) {
+      _showErrorDialog('Booking Failed', 'Error: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildServiceBookingUI() {
-    return Column(
+    return SingleChildScrollView(
+      child: Column(
       children: [
         // Vehicle Selection
         DropdownButtonFormField<String>(
@@ -568,7 +858,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  _selectedProvider!["location"]?["area"] ?? "Nairobi",
+                                  LocationDisplayHelper.formatLocationShort(_selectedProvider!["location"]),
                                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -704,43 +994,68 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
 
         const SizedBox(height: 12),
 
-        // Date and Time Selection
-        Row(
+        // Date and Time Selection - Compact horizontal layout
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
           children: [
             Expanded(
-              child: Card(
-                child: ListTile(
-                  leading: const Icon(Icons.calendar_today, color: Colors.orange, size: 20),
-                  title: const Text("Date", style: TextStyle(fontSize: 14)),
-                  subtitle: Text(
+                  child: InkWell(
+                    onTap: _pickDate,
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today, color: Colors.orange, size: 18),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text("Date", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                            Text(
                     _selectedDate == null
-                        ? "Tap to select"
+                                  ? "Select date"
                         : _selectedDate!.toLocal().toString().split(" ")[0],
-                    style: const TextStyle(fontSize: 12),
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  onTap: _pickDate,
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: Colors.grey[300],
+                ),
             Expanded(
-              child: Card(
-                child: ListTile(
-                  leading: const Icon(Icons.access_time, color: Colors.purple, size: 20),
-                  title: const Text("Time", style: TextStyle(fontSize: 14)),
-                  subtitle: Text(
+                  child: InkWell(
+                    onTap: _pickTime,
+                    child: Row(
+                      children: [
+                        Icon(Icons.access_time, color: Colors.purple, size: 18),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text("Time", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                            Text(
                     _selectedTime == null
-                        ? "Tap to select"
+                                  ? "Select time"
                         : _selectedTime!.format(context),
-                    style: const TextStyle(fontSize: 12),
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  onTap: _pickTime,
+                          ],
+                        ),
+                      ],
                 ),
               ),
             ),
           ],
+            ),
+          ),
         ),
 
         const SizedBox(height: 12),
@@ -799,7 +1114,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           ),
         ),
 
-        const Spacer(),
+        const SizedBox(height: 20),
 
         // Book Button with Pricing Summary
         Column(
@@ -872,6 +1187,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           ],
         ),
       ],
+      ),
     );
   }
 
@@ -1222,11 +1538,12 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Update Service Price"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Service: $serviceName", style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Service: $serviceName", style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             
             // Show pricing information
@@ -1264,6 +1581,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
               style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
             ),
           ],
+          ),
         ),
         actions: [
           TextButton(
@@ -1622,7 +1940,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
                   ),
                   const SizedBox(height: 4),
                   Text("Name: ${_selectedProvider!["provider_name"] ?? "N/A"}"),
-                  Text("Location: ${_selectedProvider!["location"]?["area"] ?? "N/A"}"),
+                  Text("Location: ${LocationDisplayHelper.formatLocationForDisplay(_selectedProvider!["location"])}"),
                   if (_selectedProvider!["contact_info"]?["phone"] != null)
                     Text("Phone: ${_selectedProvider!["contact_info"]?["phone"]}"),
                   if (_selectedProvider!["contact_info"]?["email"] != null)

@@ -21,6 +21,9 @@ def get_db_connection():
     """Get database connection using the exact DATABASE_URL"""
     database_url = os.getenv('DATABASE_URL')
     if database_url:
+        # Normalize SQLAlchemy-style URL to psycopg2-compatible
+        if database_url.startswith("postgresql+psycopg2://"):
+            database_url = database_url.replace("postgresql+psycopg2://", "postgresql://", 1)
         return psycopg2.connect(database_url)
     else:
         return psycopg2.connect(

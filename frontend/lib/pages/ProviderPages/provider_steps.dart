@@ -251,7 +251,6 @@ class _ProviderDetailsStepState extends State<_ProviderDetailsStep> {
 
   @override
   Widget build(BuildContext context) {
-    final group = widget.data.get<FrontendCategoryGroup>('selectedGroup');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,102 +360,6 @@ class _ProviderDetailsStepState extends State<_ProviderDetailsStep> {
     );
   }
 
-  static Widget buildCategorySelection(BuildContext context, OnboardingData data, Function(OnboardingData) onUpdate) {
-    final group = data.get<FrontendCategoryGroup>('selectedGroup');
-    if (group == null) {
-      return const Center(child: Text('Select a business type first'));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: group.color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(group.icon, color: group.color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    group.name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: group.color,
-                        ),
-                  ),
-                  Text(
-                    'Which specific service do you provide?',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: ListView.separated(
-            itemCount: group.backendCategories.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final category = group.backendCategories[index];
-              final isSelected = data.get<String>('selectedBackendCategory') == category;
-              return GestureDetector(
-                onTap: () => onUpdate(data.updateData('selectedBackendCategory', category)),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isSelected ? group.color.withOpacity(0.08) : Colors.white,
-                    border: Border.all(
-                      color: isSelected ? group.color : Colors.grey[300]!,
-                      width: isSelected ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: isSelected ? group.color : Colors.grey[400],
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          category,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                color: isSelected ? group.color : null,
-                              ),
-                        ),
-                      ),
-                      if (isSelected) Icon(Icons.check_circle, color: group.color),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  
 }
 
 class _ProviderServiceSelectionStep extends StatefulWidget {
@@ -484,6 +387,41 @@ class _ProviderServiceSelectionStepState extends State<_ProviderServiceSelection
       if (sid == id) return s as Map<String, dynamic>;
     }
     return null;
+  }
+
+  /// Convert pricing fields from string to enhanced_pricing type
+  Map<String, dynamic> _convertPricingToEnhanced(Map<String, dynamic> requirements) {
+    final converted = Map<String, dynamic>.from(requirements);
+    if (!converted.containsKey('fields')) {
+      converted['fields'] = [];
+    }
+    
+    final fields = converted['fields'] as List;
+    print('🔄 Converting pricing fields in display: $fields');
+    
+    final pricingFieldIndex = fields.indexWhere((field) => 
+      field['name'] == 'pricing' || field['name'] == 'price');
+    
+    if (pricingFieldIndex != -1) {
+      print('🔄 Converting existing pricing field at index $pricingFieldIndex');
+      fields[pricingFieldIndex] = {
+        "name": "pricing",
+        "label": "Service Pricing",
+        "type": "enhanced_pricing",
+        "required": true
+      };
+    } else {
+      print('➕ Adding new pricing field to display');
+      fields.insert(0, {
+        "name": "pricing",
+        "label": "Service Pricing",
+        "type": "enhanced_pricing",
+        "required": true
+      });
+    }
+    
+    print('✅ AFTER display conversion - Fields: $fields');
+    return converted;
   }
 
   @override
@@ -594,30 +532,6 @@ class _ProviderServiceSelectionStepState extends State<_ProviderServiceSelection
     }
   }
 
-  void _toggleService(dynamic service, bool enabled) {
-    final id = service['id'] as String;
-    setState(() {
-      if (enabled) {
-        _selectedServiceIds.add(id);
-        // Prefer requirements from the service payload (view), fallback to helper if missing
-        final reqsFromService = (service['requirements'] ?? service['service_requirements']) as Map<String, dynamic>?;
-        if (reqsFromService != null && reqsFromService.isNotEmpty) {
-          _serviceRequirements[id] = Map<String, dynamic>.from(reqsFromService);
-        } else {
-          _serviceRequirements[id] = ServiceRequirementsHelper.getServiceRequirements(
-            service['name'],
-            service['category_name'] ?? '',
-          );
-        }
-        _serviceValues[id] = {};
-      } else {
-        _selectedServiceIds.remove(id);
-        _serviceRequirements.remove(id);
-        _serviceValues.remove(id);
-      }
-    });
-    _syncBackToData();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -689,6 +603,9 @@ class _ProviderServiceSelectionStepState extends State<_ProviderServiceSelection
                     if (service == null) return const SizedBox.shrink();
                     final reqs = _serviceRequirements[serviceId];
                     if (reqs == null) return const SizedBox.shrink();
+                    
+                    // Ensure pricing field is converted to enhanced_pricing
+                    final convertedReqs = _convertPricingToEnhanced(reqs);
                     return Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -704,7 +621,7 @@ class _ProviderServiceSelectionStepState extends State<_ProviderServiceSelection
                             ),
                             const SizedBox(height: 12),
                             ServiceRequirementsHelper.buildRequirementsForm(
-                              reqs,
+                              convertedReqs,
                               _serviceValues[serviceId] ?? {},
                               (values) {
                                 setState(() {
@@ -770,13 +687,55 @@ class _ProviderServiceSelectionStepState extends State<_ProviderServiceSelection
                   final service = _findServiceById(id);
                   if (service != null) {
                     final reqsFromService = (service['requirements'] ?? service['service_requirements']) as Map<String, dynamic>?;
+                    print('🔍 Service: ${service['name']}');
+                    print('🔍 reqsFromService: $reqsFromService');
+                    print('🔍 reqsFromService != null: ${reqsFromService != null}');
+                    print('🔍 reqsFromService.isNotEmpty: ${reqsFromService?.isNotEmpty ?? false}');
+                    
                     if (reqsFromService != null && reqsFromService.isNotEmpty) {
-                      _serviceRequirements[id] = Map<String, dynamic>.from(reqsFromService);
+                      // Use API requirements but ensure pricing is included
+                      final requirements = Map<String, dynamic>.from(reqsFromService);
+                      if (!requirements.containsKey('fields')) {
+                        requirements['fields'] = [];
+                      }
+                      
+                      // Check if pricing field already exists and convert to enhanced_pricing
+                      final fields = requirements['fields'] as List;
+                      print('🔍 BEFORE conversion - Fields: $fields');
+                      
+                      final pricingFieldIndex = fields.indexWhere((field) => 
+                        field['name'] == 'pricing' || field['name'] == 'price');
+                      
+                      if (pricingFieldIndex != -1) {
+                        print('🔄 Converting existing pricing field at index $pricingFieldIndex');
+                        // Convert existing pricing field to enhanced_pricing
+                        fields[pricingFieldIndex] = {
+                          "name": "pricing",
+                          "label": "Service Pricing",
+                          "type": "enhanced_pricing",
+                          "required": true
+                        };
+                      } else {
+                        print('➕ Adding new pricing field');
+                        // Add pricing field at the beginning
+                        fields.insert(0, {
+                          "name": "pricing",
+                          "label": "Service Pricing",
+                          "type": "enhanced_pricing",
+                          "required": true
+                        });
+                      }
+                      
+                      print('✅ AFTER conversion - Fields: $fields');
+                      
+                      _serviceRequirements[id] = requirements;
                     } else {
+                      print('🔄 Using ServiceRequirementsHelper for service: ${service['name']}');
                       _serviceRequirements[id] = ServiceRequirementsHelper.getServiceRequirements(
                         service['name'],
                         (service['category_name'] ?? ''),
                       );
+                      print('🔄 Generated requirements: ${_serviceRequirements[id]}');
                     }
                     _serviceValues[id] = {};
                   }

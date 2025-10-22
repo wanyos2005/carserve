@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:car_platform/components/enhanced_pricing_form.dart';
 
 /// Helper class for handling service requirements during provider onboarding
 class ServiceRequirementsHelper {
   
   /// Get service requirements based on service name and category
   static Map<String, dynamic> getServiceRequirements(String serviceName, String categoryName) {
-    // Default requirements with Price field
+    // Default requirements with enhanced pricing
     Map<String, dynamic> requirements = {
       "fields": [
         {
-          "name": "price",
-          "label": "Price",
-          "type": "string", // since it will be a range
+          "name": "pricing",
+          "label": "Service Pricing",
+          "type": "enhanced_pricing",
           "required": true
         }
       ]
@@ -119,6 +120,13 @@ class ServiceRequirementsHelper {
     final label = field["label"];
 
     switch (fieldType) {
+      case "enhanced_pricing":
+        return EnhancedPricingForm(
+          currentValues: currentValues,
+          onChanged: onChanged,
+          required: isRequired,
+        );
+        
       case "select":
         final options = List<String>.from(field["options"] ?? []);
         return DropdownButtonFormField<String>(

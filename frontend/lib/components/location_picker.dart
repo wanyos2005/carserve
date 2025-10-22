@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:car_platform/services/location_service.dart';
+import 'package:car_platform/services/coordinate_collector.dart';
 
 class LocationPicker extends StatefulWidget {
   final String? initialAddress;
@@ -172,6 +173,8 @@ class _LocationPickerState extends State<LocationPicker> {
                               fontWeight: FontWeight.bold,
                               color: Colors.green[700],
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -180,6 +183,8 @@ class _LocationPickerState extends State<LocationPicker> {
                               fontSize: 10,
                               color: Colors.green[600],
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ],
                       ),
@@ -211,6 +216,18 @@ class _LocationPickerState extends State<LocationPicker> {
                 side: const BorderSide(color: Colors.blue),
               ),
             ),
+          ),
+        ],
+
+        // Coordinate collection widget (only show if location is detected)
+        if (_selectedLatitude != null && _selectedLongitude != null) ...[
+          const SizedBox(height: 12),
+          CoordinateCollectionWidget(
+            suggestedAreaName: LocationService.getReadableLocationName(_selectedLatitude!, _selectedLongitude!),
+            onCoordinateCollected: (coordinate) {
+              debugPrint('Coordinate collected: ${coordinate['area_name']}');
+              // Optionally update the location display with the collected name
+            },
           ),
         ],
       ],

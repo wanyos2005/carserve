@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+
+//import this to help us configure the onboarding flow for different types of businesses
 import 'package:car_platform/models/onboarding_config.dart';
 import 'package:car_platform/services/insurance_service.dart';
 import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/components/location_picker.dart';
-import 'package:car_platform/services/location_service.dart';
 
 class DynamicOnboardingFlow extends StatefulWidget {
   final OnboardingType type;
@@ -279,7 +279,7 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
         'name': 'Nairobi',
         'lat': -1.2921,
         'lng': 36.8219,
-        'address': location ?? 'Nairobi, Kenya',
+        'address': location,
         'latitude': -1.2921,
         'longitude': 36.8219,
         'area': 'Nairobi',
@@ -379,23 +379,26 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
 
   /// Parse pricing information from onboarding values
   Map<String, dynamic> _parsePricingFromValues(Map<String, dynamic> values, dynamic service) {
-    // Check if we have structured pricing data from onboarding
-    if (values.containsKey('min_price') || values.containsKey('max_price')) {
+    // Check if we have structured pricing data from enhanced pricing form
+    if (values.containsKey('price_type')) {
       final minPrice = values['min_price']?.toDouble();
       final maxPrice = values['max_price']?.toDouble();
       final priceType = values['price_type'] ?? 'range';
       final unit = values['unit'];
       final negotiable = values['negotiable'] ?? true;
+      final currency = values['currency'] ?? 'KES';
       
       // Generate display price based on structured data
       String displayPrice;
       if (priceType == 'fixed' && minPrice != null) {
-        displayPrice = 'KES ${minPrice.toStringAsFixed(0)}';
+        displayPrice = '$currency ${minPrice.toStringAsFixed(0)}';
       } else if (priceType == 'range' && minPrice != null && maxPrice != null) {
-        displayPrice = 'KES ${minPrice.toStringAsFixed(0)} - ${maxPrice.toStringAsFixed(0)}';
+        displayPrice = '$currency ${minPrice.toStringAsFixed(0)} - ${maxPrice.toStringAsFixed(0)}';
       } else if (priceType == 'per_unit' && minPrice != null && unit != null) {
-        final unitText = unit == 'per_liter' ? '/liter' : unit == 'per_hour' ? '/hour' : '/unit';
-        displayPrice = 'KES ${minPrice.toStringAsFixed(0)}$unitText';
+        final unitText = unit == 'per_liter' ? '/liter' : 
+                        unit == 'per_hour' ? '/hour' : 
+                        unit == 'per_km' ? '/km' : '/unit';
+        displayPrice = '$currency ${minPrice.toStringAsFixed(0)}$unitText';
       } else if (priceType == 'free') {
         displayPrice = 'Free';
       } else if (priceType == 'variable') {
@@ -409,7 +412,7 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
         'min_price': minPrice,
         'max_price': maxPrice,
         'price_type': priceType,
-        'currency': 'KES',
+        'currency': currency,
         'unit': unit,
         'negotiable': negotiable,
       };

@@ -1,4 +1,4 @@
-#backend/vehicle_service/core/config.py
+#backend/service_provider_service/app/core/config.py
 import os
 from dotenv import load_dotenv
 
@@ -9,8 +9,8 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     # Fallback for local development
-    DB_USER = os.getenv("DB_USER", "user")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+    DB_USER = os.getenv("DB_USER", "AdminDb")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "Ngojakwanza")
     DB_NAME = os.getenv("DB_NAME", "car_platform")
     DB_HOST = os.getenv("DB_HOST", "postgres")
     DB_PORT = os.getenv("DB_PORT", "5432")

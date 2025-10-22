@@ -31,6 +31,17 @@ class VehicleService {
     return null;
   }
 
+  // --- GET SINGLE VEHICLE (PUBLIC) ---
+  static Future<Map<String, dynamic>?> getByVehicleIdPublic(String id) async {
+    print('DEBUG VehicleService: Fetching public vehicle with ID: $id');
+    final res = await ApiService.get("/vehicles/public/$id");
+    print('DEBUG VehicleService: Vehicle response: $res');
+    if (res is Map) {
+      return Map<String, dynamic>.from(res);
+    }
+    return null;
+  }
+
   // --- UPDATE VEHICLE ---
   static Future<Map<String, dynamic>?> updateVehicle(String id, Map<String, dynamic> data) async {
     final res = await ApiService.put("/vehicles/$id", data);
