@@ -17,8 +17,6 @@ class NotificationService:
 
     async def send_alert(self, alert: Alert) -> bool:
         """Send alert through all configured channels"""
-        success = True
-
         # Normalize channels to AlertChannel enums if they were stored as strings
         try:
             channels: list[AlertChannel] = [
@@ -28,6 +26,11 @@ class NotificationService:
         except Exception:
             channels = []
         
+        if not channels:
+            logger.warning(f"No channels configured for alert {alert.id}")
+            return False
+        
+        # Try all channels and collect results
         for channel in channels:
             try:
                 if channel == AlertChannel.IN_APP:
@@ -42,10 +45,26 @@ class NotificationService:
                     await self._send_whatsapp_notification(alert)
                     
             except Exception as e:
-                logger.error(f"Failed to send {channel} notification for alert {alert.id}: {str(e)}")
-                success = False
-                
-        return success
+                logger.warning(f"Failed to send {channel} notification for alert {alert.id}: {str(e)}")
+                # Continue to next channel instead of stopping
+                continue
+        
+        # Check notification logs to determine actual success
+        # Count successful deliveries by checking the logs
+        from models.alert import NotificationLog
+        successful_deliveries = self.db.query(NotificationLog).filter(
+            NotificationLog.alert_id == alert.id,
+            NotificationLog.status == AlertStatus.SENT
+        ).count()
+        
+        overall_success = successful_deliveries > 0
+        
+        if overall_success:
+            logger.info(f"Alert {alert.id} delivered successfully via {successful_deliveries}/{len(channels)} channels")
+        else:
+            logger.error(f"Alert {alert.id} failed to deliver via all {len(channels)} channels")
+            
+        return overall_success
     
     async def _log_notification(
         self, 
@@ -108,6 +127,13 @@ class NotificationService:
             user_token = await self._get_user_fcm_token(alert.user_id)
             if not user_token:
                 logger.warning(f"No FCM token found for user {alert.user_id}")
+                # Log as skipped due to missing data
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.PUSH,
+                    status=AlertStatus.FAILED,
+                    error_message="No FCM token found for user"
+                )
                 return
                 
             # Prepare FCM payload
@@ -168,6 +194,13 @@ class NotificationService:
             user_phone = await self._get_user_phone(alert.user_id)
             if not user_phone:
                 logger.warning(f"No phone number found for user {alert.user_id}")
+                # Log as skipped due to missing data
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.SMS,
+                    status=AlertStatus.FAILED,
+                    error_message="No phone number found for user"
+                )
                 return
                 
             # Prepare SMS message
@@ -227,6 +260,13 @@ class NotificationService:
             user_email = await self._get_user_email(alert.user_id)
             if not user_email:
                 logger.warning(f"No email found for user {alert.user_id}")
+                # Log as skipped due to missing data
+                await self._log_notification(
+                    alert=alert,
+                    channel=AlertChannel.EMAIL,
+                    status=AlertStatus.FAILED,
+                    error_message="No email found for user"
+                )
                 return
                 
             # Prepare email content

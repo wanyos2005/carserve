@@ -134,8 +134,65 @@ def create_default_alert_rules():
             version="1.0"
         )
         
+        # 7. Claim Update Notifications
+        claim_update_rule = AlertRule(
+            id="claim-update-rule",
+            name="Claim Update Notification",
+            description="Notifies users about updates to their insurance claims",
+            alert_type=AlertType.CLAIM_UPDATE,
+            trigger_conditions={
+                "claim_statuses": ["submitted", "under_review", "approved", "rejected", "paid"],
+                "check_frequency": "real_time"
+            },
+            message_template="Your insurance claim #{claim_number} status has been updated to: {status}. {additional_info}",
+            title_template="Claim Update: {claim_number}",
+            channels=["in_app", "email", "sms"],
+            priority=2,
+            is_active=True,
+            created_by="system",
+            version="1.0"
+        )
+        
+        # 8. Vehicle Registration Expiry
+        registration_expiry_rule = AlertRule(
+            id="registration-expiry-rule",
+            name="Vehicle Registration Expiry",
+            description="Reminds users when their vehicle registration is about to expire",
+            alert_type=AlertType.MAINTENANCE_REMINDER,
+            trigger_conditions={
+                "days_before_expiry": [60, 30, 14, 7],
+                "check_frequency": "daily"
+            },
+            message_template="Your vehicle registration expires in {days} day(s). Renew at NTSA to avoid penalties.",
+            title_template="Registration Expires in {days} day(s)",
+            channels=["in_app", "email", "sms"],
+            priority=3,
+            is_active=True,
+            created_by="system",
+            version="1.0"
+        )
+        
+        # 9. Driver License Expiry
+        license_expiry_rule = AlertRule(
+            id="license-expiry-rule",
+            name="Driver License Expiry",
+            description="Reminds users when their driver license is about to expire",
+            alert_type=AlertType.MAINTENANCE_REMINDER,
+            trigger_conditions={
+                "days_before_expiry": [90, 60, 30, 14],
+                "check_frequency": "daily"
+            },
+            message_template="Your driver license expires in {days} day(s). Renew at NTSA to stay legal on the road.",
+            title_template="License Expires in {days} day(s)",
+            channels=["in_app", "email", "sms"],
+            priority=3,
+            is_active=True,
+            created_by="system",
+            version="1.0"
+        )
+        
         # Add all rules to database
-        rules = [insurance_rule, service_rule, maintenance_rule, promotional_rule, payment_rule, app_download_rule]
+        rules = [insurance_rule, service_rule, maintenance_rule, promotional_rule, payment_rule, app_download_rule, claim_update_rule, registration_expiry_rule, license_expiry_rule]
         
         for rule in rules:
             # Check if rule already exists
@@ -172,6 +229,9 @@ if __name__ == "__main__":
         print("4. Promotional Alerts (partner offers)")
         print("5. Payment Reminders (insurance, services)")
         print("6. App Download Prompts (when service is logged)")
+        print("7. Claim Update Notifications (real-time)")
+        print("8. Vehicle Registration Expiry (60, 30, 14, 7 days)")
+        print("9. Driver License Expiry (90, 60, 30, 14 days)")
         print("\n🚀 Ready for MVP testing!")
     else:
         print("\n❌ Failed to create alert rules. Check database connection.")

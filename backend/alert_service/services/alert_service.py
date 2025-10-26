@@ -201,23 +201,35 @@ class AlertService:
             # Use comprehensive evaluation to determine if user has app
             should_send_prompt = await detection_service.should_send_app_prompt(user_id)
             
+            # For testing enhanced vehicle/provider names - bypass detection temporarily
+            # TODO: Remove this in production
+            #should_send_prompt = True
+            
             if not should_send_prompt:
                 return None
+            
+            # Enhance vehicle and provider information by querying other services
+            enhanced_vehicle_info = await self._get_enhanced_vehicle_info(vehicle_info)
+            enhanced_provider_name = await self._get_enhanced_provider_name(service_provider_name)
+            
+            # Debug logging
+            logging.getLogger(__name__).info(f"Enhanced vehicle info: {enhanced_vehicle_info}")
+            logging.getLogger(__name__).info(f"Enhanced provider name: {enhanced_provider_name}")
             
             # Create the app download prompt alert
             alert_data = AlertCreate(
                 user_id=user_id,
                 type=AlertType.APP_DOWNLOAD_PROMPT,
                 title=f"📱 Download Our App - Get 10% Off!",
-                message=f"🎉 Great news! {service_provider_name} has logged a {service_type} service for your vehicle {vehicle_info}. Download our app to track your service history, get maintenance reminders, and access exclusive offers. Use code '{discount_code}' for 10% off your next service!",
+                message=f"🎉 Great news! {enhanced_provider_name} has logged a {service_type} service for your vehicle {enhanced_vehicle_info}. Download our app to track your service history, get maintenance reminders, and access exclusive offers. Use code '{discount_code}' for 10% off your next service!",
                 priority=2,
                 channels=[AlertChannel.SMS, AlertChannel.EMAIL, AlertChannel.WHATSAPP],
                 action_url="https://play.google.com/store/apps/details?id=com.yourcompany.carapp",
                 action_text="Download App",
                 alert_metadata={
-                    "service_provider": service_provider_name,
+                    "service_provider": enhanced_provider_name,
                     "service_type": service_type,
-                    "vehicle_info": vehicle_info,
+                    "vehicle_info": enhanced_vehicle_info,
                     "discount_code": discount_code,
                     "app_store_links": {
                         "android": "https://play.google.com/store/apps/details?id=com.yourcompany.carapp",
@@ -232,3 +244,68 @@ class AlertService:
         except Exception as e:
             logging.getLogger(__name__).error(f"Failed to trigger app download prompt: {e}", exc_info=True)
             return None
+
+    async def _get_enhanced_vehicle_info(self, vehicle_id: str) -> str:
+        """Query vehicle service to get proper vehicle name (plate, model, make, yom)"""
+        try:
+            import httpx
+            vehicle_service_url = "http://vehicle-service:8002"
+            
+            # Use the public endpoint that doesn't require authentication
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{vehicle_service_url}/vehicles/public/{vehicle_id}")
+                if response.status_code == 200:
+                    vehicle_data = response.json()
+                    # Extract vehicle details
+                    plate = vehicle_data.get('plate', 'Unknown Plate')
+                    model = vehicle_data.get('model', 'Unknown Model')
+                    make = vehicle_data.get('make', 'Unknown Make')
+                    yom = vehicle_data.get('yom', 'Unknown Year')
+                    
+                    return f"{plate} ({make} {model} {yom})"
+                else:
+                    logging.getLogger(__name__).warning(f"Vehicle service returned {response.status_code} for vehicle {vehicle_id}")
+                    return f"Vehicle {vehicle_id}"
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to get vehicle info for {vehicle_id}: {e}")
+            return f"Vehicle {vehicle_id}"
+
+    async def _get_enhanced_provider_name(self, provider_name: str) -> str:
+        """Query service provider service to get proper provider name"""
+        try:
+            import httpx
+            service_provider_url = "http://service-provider:8003"
+            
+            logging.getLogger(__name__).info(f"Getting enhanced provider name for: {provider_name}")
+            
+            # If provider_name is already a proper name (not an ID), return it
+            # Check if it's a UUID (36 characters with dashes) or starts with "provider_"
+            is_uuid = provider_name and len(provider_name) == 36 and provider_name.count('-') == 4
+            is_provider_id = provider_name and provider_name.startswith("provider_")
+            
+            if provider_name and provider_name != "Service Provider" and provider_name != "Unknown Provider" and not is_uuid and not is_provider_id:
+                logging.getLogger(__name__).info(f"Provider name is already proper: {provider_name}")
+                return provider_name
+            
+            # If it's a provider ID, query the service provider service
+            if provider_name and (provider_name.startswith("provider_") or len(provider_name) == 36):  # UUID format
+                logging.getLogger(__name__).info(f"Provider name is UUID format, querying service: {provider_name}")
+                provider_id = provider_name
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    response = await client.get(f"{service_provider_url}/{provider_id}")
+                    logging.getLogger(__name__).info(f"Provider service response: {response.status_code}")
+                    if response.status_code == 200:
+                        provider_data = response.json()
+                        enhanced_name = provider_data.get('name', 'Service Provider')
+                        logging.getLogger(__name__).info(f"Enhanced provider name: {enhanced_name}")
+                        return enhanced_name
+                    else:
+                        logging.getLogger(__name__).warning(f"Service provider service returned {response.status_code} for provider {provider_id}")
+                        return "Service Provider"
+            
+            # Fallback
+            logging.getLogger(__name__).info(f"Using fallback provider name: {provider_name}")
+            return provider_name or "Service Provider"
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to get provider info for {provider_name}: {e}")
+            return provider_name or "Service Provider"

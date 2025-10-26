@@ -37,12 +37,12 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - DB_HOST=postgres
-      - DB_NAME=car_platform
-      - DB_USER=AdminDb
-      - DB_PASSWORD=Ngojakwanza
-      - REDIS_HOST=redis
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,12 +64,12 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - DB_HOST=postgres
-      - DB_NAME=car_platform
-      - DB_USER=AdminDb
-      - DB_PASSWORD=Ngojakwanza
-      - REDIS_HOST=redis
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,11 +90,11 @@ services:
     ports:
       - "8003:8003"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - DB_HOST=postgres
-      - DB_NAME=car_platform
-      - DB_USER=AdminDb
-      - DB_PASSWORD=Ngojakwanza
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,11 +113,11 @@ services:
     ports:
       - "8004:8004"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - DB_HOST=postgres
-      - DB_NAME=car_platform
-      - DB_USER=AdminDb
-      - DB_PASSWORD=Ngojakwanza
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -136,12 +136,12 @@ services:
     ports:
       - "8005:8005"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - DB_HOST=postgres
-      - DB_NAME=car_platform
-      - DB_USER=AdminDb
-      - DB_PASSWORD=Ngojakwanza
-      - REDIS_HOST=redis
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
     depends_on:
       postgres:
         condition: service_healthy
@@ -160,30 +160,30 @@ services:
     ports:
       - "8006:8006"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
       - USER_SERVICE_URL=http://user-service:8001
       - BOOKING_SERVICE_URL=http://booking-service:8004
       - INSURANCE_SERVICE_URL=http://insurance-service:8005
       # Email settings (same as user service)
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_USERNAME=tastytasty101@gmail.com
-      - SMTP_PASSWORD=degp zfga fqfp sifz
-      - SMTP_FROM_EMAIL=tastytasty101@gmail.com
-      - SMTP_FROM_NAME=DRIVEon.fit
-      - SMTP_TLS=True
-      - SMTP_SSL=False
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_TLS=${SMTP_TLS}
+      - SMTP_SSL=${SMTP_SSL}
       # Notification services (add when ready)
-      - FCM_SERVER_KEY=${FCM_SERVER_KEY:-}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
-      - ALLOWED_ORIGINS=http://localhost:3000,http://192.168.0.107:8081,http://192.168.2.116:8000*
-      - SMS_PROVIDER=${SMS_PROVIDER:-africastalking}
-      - AT_USERNAME=${AT_USERNAME:-sandbox}
-      - AT_API_KEY=${AT_API_KEY:-atsk_f3f2b279ac069c0320e24f5ec82bdeafbb31c8212f9a5b7e9b7bd6b94bff46c10869c579}
-      - AT_SENDER_ID=${AT_SENDER_ID:-}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - SMS_PROVIDER=${SMS_PROVIDER}
+      - AT_USERNAME=${AT_USERNAME}
+      - AT_API_KEY=${AT_API_KEY}
+      - AT_SENDER_ID=${AT_SENDER_ID}
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,29 +208,29 @@ services:
     volumes:
       - ./backend/alert_service:/app
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - USER_SERVICE_URL=http://user-service:8001
       - BOOKING_SERVICE_URL=http://booking-service:8004
       - INSURANCE_SERVICE_URL=http://insurance-service:8005
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_USERNAME=tastytasty101@gmail.com
-      - SMTP_PASSWORD=degp zfga fqfp sifz
-      - SMTP_FROM_EMAIL=tastytasty101@gmail.com
-      - SMTP_FROM_NAME=DRIVEon.fit
-      - SMTP_TLS=True
-      - SMTP_SSL=False
-      - SMS_PROVIDER=${SMS_PROVIDER:-africastalking}
-      - AT_USERNAME=${AT_USERNAME:-sandbox}
-      - AT_API_KEY=${AT_API_KEY:-atsk_f3f2b279ac069c0320e24f5ec82bdeafbb31c8212f9a5b7e9b7bd6b94bff46c10869c579}
-      - AT_SENDER_ID=${AT_SENDER_ID:-}
-      - FCM_SERVER_KEY=${FCM_SERVER_KEY:-}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_TLS=${SMTP_TLS}
+      - SMTP_SSL=${SMTP_SSL}
+      - SMS_PROVIDER=${SMS_PROVIDER}
+      - AT_USERNAME=${AT_USERNAME}
+      - AT_API_KEY=${AT_API_KEY}
+      - AT_SENDER_ID=${AT_SENDER_ID}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
     depends_on:
       - postgres
       - redis
@@ -242,10 +242,10 @@ services:
     volumes:
       - ./backend/alert_service:/app
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - USER_SERVICE_URL=http://user-service:8001
       - BOOKING_SERVICE_URL=http://booking-service:8004
       - INSURANCE_SERVICE_URL=http://insurance-service:8005
@@ -264,11 +264,11 @@ services:
     ports:
       - "8007:8007"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - DB_HOST=postgres
-      - DB_NAME=car_platform
-      - DB_USER=AdminDb
-      - DB_PASSWORD=Ngojakwanza
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -289,17 +289,17 @@ services:
     ports:
       - "8008:8008"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-      - DB_HOST=postgres
-      - DB_NAME=car_platform
-      - DB_USER=AdminDb
-      - DB_PASSWORD=Ngojakwanza
-      - REDIS_HOST=redis
-      - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-      - SECRET_KEY=supersecret
-      - ALLOWED_ORIGINS=*
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SECRET_KEY=${JWT_SECRET_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - ENABLE_CONTENT_MODERATION=true
       - ENABLE_ANALYTICS=true
       - ENABLE_NOTIFICATIONS=true
@@ -312,12 +312,12 @@ services:
       - ANALYTICS_RETENTION_DAYS=90
       - RATE_LIMIT_REQUESTS_PER_MINUTE=60
       - PUSH_NOTIFICATION_ENABLED=true
-      - CLOUDFLARE_ACCOUNT_ID=4739f91ba1dc08d51ef1d0e905c95da7
-      - CLOUDFLARE_ACCESS_KEY_ID=1c2c27b577ed7c83ab8c17baf76fc50c
-      - CLOUDFLARE_SECRET_ACCESS_KEY=4351417510a2f068ffa87ea703e5afb68f05ae10efdd8155d1071097143363b1
-      - CLOUDFLARE_BUCKET=driveon-social-media
-      - CLOUDFLARE_PUBLIC_URL=https://pub-4739f91ba1dc08d51ef1d0e905c95da7.r2.dev
-      - MODERATION_API_KEY=your-moderation-api-key
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - CLOUDFLARE_ACCESS_KEY_ID=${CLOUDFLARE_ACCESS_KEY_ID}
+      - CLOUDFLARE_SECRET_ACCESS_KEY=${CLOUDFLARE_SECRET_ACCESS_KEY}
+      - CLOUDFLARE_BUCKET=${CLOUDFLARE_BUCKET}
+      - CLOUDFLARE_PUBLIC_URL=${CLOUDFLARE_PUBLIC_URL}
+      - MODERATION_API_KEY=${MODERATION_API_KEY}
     depends_on:
       postgres:
         condition: service_healthy

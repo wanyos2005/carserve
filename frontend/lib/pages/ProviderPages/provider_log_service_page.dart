@@ -29,6 +29,9 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   final TextEditingController _mechanicNameController = TextEditingController();
   final TextEditingController _mechanicContactController = TextEditingController();
   final TextEditingController _nextServiceKmController = TextEditingController();
+  
+  // Cost tracking for each service
+  Map<int, TextEditingController> _serviceCostControllers = {};
 
   DateTime? _performedAt;
   DateTime? _nextServiceDate;
@@ -58,6 +61,13 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
     _mechanicNameController.dispose();
     _mechanicContactController.dispose();
     _nextServiceKmController.dispose();
+    
+    // Dispose cost controllers
+    for (var controller in _serviceCostControllers.values) {
+      controller.dispose();
+    }
+    _serviceCostControllers.clear();
+    
     _debounce?.cancel();
     super.dispose();
   }
@@ -101,6 +111,13 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
         };
       }).toList();
 
+      // Initialize cost controllers for each service
+      for (int i = 0; i < resolvedItems.length; i++) {
+        if (!_serviceCostControllers.containsKey(i)) {
+          _serviceCostControllers[i] = TextEditingController();
+        }
+      }
+      
       setState(() => _services = resolvedItems);
     } catch (e) {
       debugPrint("Error loading template services: $e");
@@ -176,6 +193,10 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
     setState(() => _services[index]['notes'] = value);
   }
 
+  void _updateServiceCost(int index, String value) {
+    setState(() => _services[index]['cost'] = value);
+  }
+
   // 🔹 Submit log
   Future<void> _submitLog() async {
     if (!_formKey.currentState!.validate()) return;
@@ -239,6 +260,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
         "served_by_contact": _mechanicContactController.text.trim(),
         "logged_by": "provider",
         "notes": s["notes"],
+        "cost": int.tryParse(s["cost"]?.toString() ?? "0") ?? 0,
       }).toList();
 
       final response = await BookingService.createBulkServiceLogs(logsPayload);
@@ -259,416 +281,592 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Log Provider Services")),
+      appBar: AppBar(
+        title: const Text("Log Provider Services"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Form(
               key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(14),
-                children: [
-                  _sectionTitle("Service Template"),
-                  _templateSelector(),
-                  const Divider(height: 30),
-                  
-                  // Only show form if template is selected
-                  if (_selectedTemplate == null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue[200]!),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.info, color: Colors.blue[700], size: 48),
-                          const SizedBox(height: 16),
-                          Text(
-                            "Please Select a Template First",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Choose a service template above to continue with logging services.",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.blue[600],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    _sectionTitle("Guest & Vehicle Info"),
-                    _inputField(_guestContactController, "Guest Contact (phone/email)", required: true),
-                    _inputField(_vehiclePlateController, "Vehicle Plate (type to autofill)", required: true),
-                    _rowFields([
-                      _inputField(_vehicleMakeController, "Make"),
-                      _inputField(_vehicleModelController, "Model"),
-                    ]),
-                    _rowFields([
-                      _inputField(_yomController, "Year of Manufacture", type: TextInputType.number),
-                      _inputField(_fuelTypeController, "Fuel Type"),
-                    ]),
-                    const Divider(height: 30),
-                    _sectionTitle("Service Details"),
-                    _inputField(_mileageController, "Mileage (km)", type: TextInputType.number),
-                    _dateTile("Date Performed", _performedAt, () => _selectDate(context, false)),
-                    const SizedBox(height: 8),
-
-                    if (_services.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info, color: Colors.blue[700]),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                "No services in selected template",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue[700],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.green[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.checklist, color: Colors.green[700]),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                "Services in ${_selectedTemplate?['name'] ?? 'Selected Template'} (${_services.length} items)",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green[700],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    ..._services.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final service = entry.value;
-                      final isCompleted = service['done'] == true;
-                      
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        elevation: isCompleted ? 4 : 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: isCompleted ? Colors.green[300]! : Colors.grey[300]!,
-                            width: isCompleted ? 2 : 1,
-                          ),
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: isCompleted ? Colors.green[50] : Colors.white,
-                          ),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: isCompleted ? Colors.green[600] : Colors.grey[400],
-                              child: Icon(
-                                isCompleted ? Icons.check : Icons.radio_button_unchecked,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              service['display_name'],
-                              style: TextStyle(
-                                fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
-                                color: isCompleted ? Colors.green[800] : Colors.black87,
-                              ),
-                            ),
-                            trailing: Checkbox(
-                              value: isCompleted,
-                              onChanged: (v) => _toggleDone(index, v),
-                              activeColor: Colors.green[600],
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 8),
-                                TextField(
-                                  decoration: InputDecoration(
-                                    labelText: "Service Notes (optional)",
-                                    hintText: "Add any notes about this service...",
-                                    isDense: true,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    prefixIcon: const Icon(Icons.note_add, size: 20),
-                                  ),
-                                  maxLines: 2,
-                                  onChanged: (v) => _updateNotes(index, v),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    // Compact Template Selection
+                    _buildCompactTemplateSelector(),
+                    const SizedBox(height: 16),
                     
-                    // Service completion summary
-                    if (_services.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.analytics, color: Colors.blue[700]),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Service Completion Status",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue[700],
-                                    ),
+                    // Only show form if template is selected
+                    if (_selectedTemplate == null) ...[
+                      _buildTemplateSelectionPrompt(),
+                    ] else ...[
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              // Compact Guest & Vehicle Info
+                              _buildCompactGuestVehicleSection(),
+                              const SizedBox(height: 16),
+                              
+                              // Compact Service Details
+                              _buildCompactServiceSection(),
+                              const SizedBox(height: 16),
+                              
+                              // Compact Mechanic & Next Service
+                              _buildCompactMechanicSection(),
+                              const SizedBox(height: 20),
+                              
+                              // Submit Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _loading ? null : _submitLog,
+                                  icon: const Icon(Icons.save),
+                                  label: const Text("Submit Log"),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    textStyle: const TextStyle(fontSize: 16),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "${_services.where((s) => s['done'] == true).length} of ${_services.length} services completed",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.blue[600],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
-                            if (_services.where((s) => s['done'] == true).length == _services.length)
-                              Icon(Icons.check_circle, color: Colors.green[700], size: 24),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
-                    
-                    const Divider(height: 30),
-                    _sectionTitle("Mechanic Details"),
-                    _inputField(_mechanicNameController, "Mechanic Name"),
-                    _inputField(_mechanicContactController, "Mechanic Contact"),
-                    const Divider(height: 30),
-                    _sectionTitle("Next Service"),
-                    _inputField(_nextServiceKmController, "Next Service (km)", type: TextInputType.number),
-                    _dateTile("Next Service Date", _nextServiceDate, () => _selectDate(context, true)),
-                    const SizedBox(height: 20),
-
-                    ElevatedButton.icon(
-                      onPressed: _loading ? null : _submitLog,
-                      icon: const Icon(Icons.save),
-                      label: const Text("Submit Log"),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        textStyle: const TextStyle(fontSize: 16),
-                      ),
-                    ),
                   ],
-                ],
+                ),
               ),
             ),
     );
   }
 
   // --- Helper UI Builders ---
-  Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      );
 
-  Widget _templateSelector() {
-    if (_templates.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.orange[50],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange[200]!),
-        ),
-        child: Row(
+  // Compact Template Selector
+  Widget _buildCompactTemplateSelector() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.warning, color: Colors.orange[700]),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "No Service Templates Found",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
-                    ),
+            Row(
+              children: [
+                Icon(Icons.dynamic_form, color: Colors.blue[700], size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  "Service Template",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[700],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Please create service templates first to log services.",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange[600],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            if (_templates.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.orange[700], size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "No templates available",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              DropdownButtonFormField<Map<String, dynamic>>(
+                value: _selectedTemplate,
+                decoration: const InputDecoration(
+                  labelText: "Select Template",
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                items: _templates.map((template) {
+                  final templateName = template['name'] ?? 'Unnamed Template';
+                  final itemCount = (template['items'] as List?)?.length ?? 0;
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: template,
+                    child: Text("$templateName ($itemCount services)"),
+                  );
+                }).toList(),
+                onChanged: _onTemplateChanged,
+              ),
           ],
         ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Select a Service Template:",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 12),
-        ..._templates.map((template) {
-          final templateName = template['name'] ?? 'Unnamed Template';
-          final itemCount = (template['items'] as List?)?.length ?? 0;
-          final isSelected = template == _selectedTemplate;
-          
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: Card(
-              elevation: isSelected ? 4 : 1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: isSelected ? Colors.blue[300]! : Colors.grey[300]!,
-                  width: isSelected ? 2 : 1,
-                ),
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _onTemplateChanged(template),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: isSelected ? Colors.blue[50] : Colors.white,
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: isSelected ? Colors.blue[600] : Colors.grey[400],
-                        child: Icon(
-                          Icons.dynamic_form,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              templateName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: isSelected ? Colors.blue[800] : Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "$itemCount service${itemCount != 1 ? 's' : ''}",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isSelected ? Colors.blue[600] : Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: Colors.green[700],
-                          size: 24,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _inputField(TextEditingController controller, String label,
-      {bool required = false, TextInputType type = TextInputType.text}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: type,
-        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-        validator: required ? (v) => (v == null || v.isEmpty) ? "Required" : null : null,
       ),
     );
   }
 
-  Widget _rowFields(List<Widget> fields) {
-    return Row(
-      children: [
-        Expanded(child: fields[0]),
-        const SizedBox(width: 8),
-        Expanded(child: fields[1]),
-      ],
+  // Template Selection Prompt
+  Widget _buildTemplateSelectionPrompt() {
+    return Expanded(
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue[200]!),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.info, color: Colors.blue[700], size: 48),
+              const SizedBox(height: 16),
+              Text(
+                "Please Select a Template First",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Choose a service template above to continue with logging services.",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.blue[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _dateTile(String label, DateTime? date, VoidCallback onTap) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(date == null ? label : "$label: ${DateFormat.yMMMd().format(date)}"),
-      trailing: const Icon(Icons.calendar_today),
-      onTap: onTap,
+  // Compact Guest & Vehicle Section
+  Widget _buildCompactGuestVehicleSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person, color: Colors.green[700], size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  "Guest & Vehicle Info",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _compactInputField(_guestContactController, "Guest Contact (phone/email)", required: true),
+            const SizedBox(height: 8),
+            _compactInputField(_vehiclePlateController, "Vehicle Plate (type to autofill)", required: true),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _compactInputField(_vehicleMakeController, "Make")),
+                const SizedBox(width: 8),
+                Expanded(child: _compactInputField(_vehicleModelController, "Model")),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _compactInputField(_yomController, "Year", type: TextInputType.number)),
+                const SizedBox(width: 8),
+                Expanded(child: _compactInputField(_fuelTypeController, "Fuel Type")),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _compactInputField(_mileageController, "Mileage (km)", type: TextInputType.number),
+          ],
+        ),
+      ),
     );
   }
+
+  // Compact Service Section
+  Widget _buildCompactServiceSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.build_circle, color: Colors.orange[700], size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  "Service Details",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[700],
+                  ),
+                ),
+                const Spacer(),
+                if (_services.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "${_services.where((s) => s['done'] == true).length}/${_services.length}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _compactDateTile("Date Performed", _performedAt, () => _selectDate(context, false)),
+            const SizedBox(height: 8),
+            
+            if (_services.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue[700], size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "No services in selected template",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              ..._services.asMap().entries.map((entry) {
+                final index = entry.key;
+                final service = entry.value;
+                final isCompleted = service['done'] == true;
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  child: _buildCompactServiceItem(index, service, isCompleted),
+                );
+              }),
+              
+              // Cost Summary
+              if (_services.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildCostSummary(),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Compact Service Item
+  Widget _buildCompactServiceItem(int index, Map<String, dynamic> service, bool isCompleted) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isCompleted ? Colors.green[50] : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isCompleted ? Colors.green[300]! : Colors.grey[300]!,
+          width: isCompleted ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            leading: CircleAvatar(
+              radius: 12,
+              backgroundColor: isCompleted ? Colors.green[600] : Colors.grey[400],
+              child: Icon(
+                isCompleted ? Icons.check : Icons.radio_button_unchecked,
+                color: Colors.white,
+                size: 14,
+              ),
+            ),
+            title: Text(
+              service['display_name'],
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+                color: isCompleted ? Colors.green[800] : Colors.black87,
+              ),
+            ),
+            trailing: Checkbox(
+              value: isCompleted,
+              onChanged: (v) => _toggleDone(index, v),
+              activeColor: Colors.green[600],
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: _serviceCostControllers[index],
+                        decoration: InputDecoration(
+                          labelText: "Cost (KES)",
+                          hintText: "0",
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          prefixIcon: const Icon(Icons.attach_money, size: 16),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => _updateServiceCost(index, v),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        decoration: InputDecoration(
+                          labelText: "Notes (optional)",
+                          hintText: "Add notes...",
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          prefixIcon: const Icon(Icons.note_add, size: 16),
+                        ),
+                        maxLines: 1,
+                        onChanged: (v) => _updateNotes(index, v),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Compact Mechanic Section
+  Widget _buildCompactMechanicSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person_pin, color: Colors.purple[700], size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  "Mechanic & Next Service",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _compactInputField(_mechanicNameController, "Mechanic Name")),
+                const SizedBox(width: 8),
+                Expanded(child: _compactInputField(_mechanicContactController, "Mechanic Contact")),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _compactInputField(_nextServiceKmController, "Next Service (km)", type: TextInputType.number),
+            const SizedBox(height: 8),
+            _compactDateTile("Next Service Date", _nextServiceDate, () => _selectDate(context, true)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Compact Input Field
+  Widget _compactInputField(TextEditingController controller, String label,
+      {bool required = false, TextInputType type = TextInputType.text}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: type,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      validator: required ? (v) => (v == null || v.isEmpty) ? "Required" : null : null,
+    );
+  }
+
+  // Compact Date Tile
+  Widget _compactDateTile(String label, DateTime? date, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                date == null ? label : "$label: ${DateFormat.yMMMd().format(date)}",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: date == null ? Colors.grey[600] : Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Cost Summary Widget
+  Widget _buildCostSummary() {
+    final totalCost = _calculateTotalCost();
+    final completedServices = _services.where((s) => s['done'] == true).toList();
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.attach_money, color: Colors.green[700], size: 16),
+              const SizedBox(width: 8),
+              Text(
+                "Cost Summary",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Completed Services: ${completedServices.length}",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.green[600],
+                ),
+              ),
+              Text(
+                "Total: KES ${totalCost.toStringAsFixed(0)}",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green[700],
+                ),
+              ),
+            ],
+          ),
+          if (completedServices.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...completedServices.map((service) {
+              final cost = int.tryParse(service['cost']?.toString() ?? "0") ?? 0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      service['display_name'] ?? 'Service',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.green[600],
+                      ),
+                    ),
+                    Text(
+                      "KES ${cost.toStringAsFixed(0)}",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Calculate total cost
+  double _calculateTotalCost() {
+    double total = 0.0;
+    for (var service in _services) {
+      if (service['done'] == true) {
+        final cost = int.tryParse(service['cost']?.toString() ?? "0") ?? 0;
+        total += cost.toDouble();
+      }
+    }
+    return total;
+  }
+
+
 }

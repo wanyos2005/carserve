@@ -236,11 +236,56 @@ INSERT INTO alerts.alert_rules (
     version = EXCLUDED.version,
     updated_at = CURRENT_TIMESTAMP;
 
+-- 6. App Download Prompt
+INSERT INTO alerts.alert_rules (
+    id,
+    name,
+    description,
+    alert_type,
+    trigger_conditions,
+    message_template,
+    title_template,
+    channels,
+    priority,
+    is_active,
+    created_by,
+    version,
+    created_at,
+    updated_at
+) VALUES (
+    'app-download-prompt-rule',
+    'App Download Prompt',
+    'Prompts car owners to download the app when a service is logged for them',
+    'app_download_prompt',
+    '{"service_logged": true, "user_has_app": false, "check_frequency": "immediate"}',
+    '🎉 Great news! A service has been logged for your vehicle {vehicle_info}. Download our app to track your service history, get maintenance reminders, and access exclusive offers. Get 10% off your next service when you download!',
+    '📱 Download Our App - Get 10% Off!',
+    '["sms", "email", "whatsapp"]',
+    2,
+    true,
+    'system',
+    '1.0',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    alert_type = EXCLUDED.alert_type,
+    trigger_conditions = EXCLUDED.trigger_conditions,
+    message_template = EXCLUDED.message_template,
+    title_template = EXCLUDED.title_template,
+    channels = EXCLUDED.channels,
+    priority = EXCLUDED.priority,
+    is_active = EXCLUDED.is_active,
+    created_by = EXCLUDED.created_by,
+    version = EXCLUDED.version,
+    updated_at = CURRENT_TIMESTAMP;
+
 -- ==============================================
 -- ADDITIONAL ENHANCED ALERT RULES
 -- ==============================================
 
--- 6. Claim Update Notifications
+-- 7. Claim Update Notifications
 INSERT INTO alerts.alert_rules (
     id,
     name,
@@ -285,7 +330,7 @@ INSERT INTO alerts.alert_rules (
     version = EXCLUDED.version,
     updated_at = CURRENT_TIMESTAMP;
 
--- 7. Vehicle Registration Expiry
+-- 8. Vehicle Registration Expiry
 INSERT INTO alerts.alert_rules (
     id,
     name,
@@ -330,7 +375,7 @@ INSERT INTO alerts.alert_rules (
     version = EXCLUDED.version,
     updated_at = CURRENT_TIMESTAMP;
 
--- 8. Driver License Expiry
+-- 9. Driver License Expiry
 INSERT INTO alerts.alert_rules (
     id,
     name,
@@ -409,8 +454,9 @@ BEGIN
     RAISE NOTICE '3. Maintenance Reminders (oil, filters, tyres)';
     RAISE NOTICE '4. Promotional Alerts (partner offers)';
     RAISE NOTICE '5. Payment Reminders (insurance, services)';
-    RAISE NOTICE '6. Claim Update Notifications (real-time)';
-    RAISE NOTICE '7. Vehicle Registration Expiry (60, 30, 14, 7 days)';
-    RAISE NOTICE '8. Driver License Expiry (90, 60, 30, 14 days)';
+    RAISE NOTICE '6. App Download Prompts (when service is logged)';
+    RAISE NOTICE '7. Claim Update Notifications (real-time)';
+    RAISE NOTICE '8. Vehicle Registration Expiry (60, 30, 14, 7 days)';
+    RAISE NOTICE '9. Driver License Expiry (90, 60, 30, 14 days)';
     RAISE NOTICE '🚀 Ready for MVP testing!';
 END $$;

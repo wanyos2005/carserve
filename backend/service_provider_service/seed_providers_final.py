@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
-Comprehensive provider seeding script for Nairobi-based service providers.
-This script creates realistic providers with their services and pricing.
+Comprehensive seeding script for Nairobi-based service providers and Kenyan insurance partners.
+This script creates realistic providers with their services, pricing, and insurance partners.
+
+Features:
+- Seeds 12+ Nairobi-based service providers across multiple categories
+- Seeds 12 major Kenyan insurance companies with full details
+- Handles service attachment to providers
+- Includes conflict resolution for existing data
 
 Usage:
     python seed_providers_final.py
@@ -73,6 +79,448 @@ def get_services_by_category(conn):
     
     cursor.close()
     return services_by_category
+
+def get_insurance_partners_data():
+    """Define comprehensive Kenyan insurance partners data"""
+    
+    insurance_partners = [
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440001",
+            "name": "Jubilee Insurance Company Limited",
+            "code": "JUBILEE",
+            "api_endpoint": "https://api.jubileeinsurance.com/v1",
+            "api_key": "jubilee_api_key_2024",
+            "webhook_url": "https://api.jubileeinsurance.com/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 12,
+            "contact_info": {
+                "phone": "+254 20 328 8000",
+                "email": "info@jubileeinsurance.com",
+                "address": "Jubilee Insurance House, Wabera Street, Nairobi",
+                "contact_person": "Customer Service"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover"],
+            "customer_rating": 47,
+            "total_reviews": 2847,
+            "claims_processing_time": "24-48 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["24/7 claims hotline", "mobile app", "online portal", "cashless repairs", "roadside assistance"],
+            "logo_url": "https://jubileeinsurance.com/assets/images/logo.png",
+            "website_url": "https://jubileeinsurance.com",
+            "established_year": 1937,
+            "market_share": "18%",
+            "awards": ["Best Insurance Company Kenya 2023", "Excellence in Customer Service 2022", "Innovation in Digital Insurance 2021"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440002",
+            "name": "CIC Insurance Group Limited",
+            "code": "CIC",
+            "api_endpoint": "https://api.cic.co.ke/v1",
+            "api_key": "cic_api_key_2024",
+            "webhook_url": "https://api.cic.co.ke/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 10,
+            "contact_info": {
+                "phone": "+254 20 222 1000",
+                "email": "info@cic.co.ke",
+                "address": "CIC Plaza, Mara Road, Upper Hill, Nairobi",
+                "contact_person": "Business Development"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover", "marine_insurance"],
+            "customer_rating": 45,
+            "total_reviews": 1923,
+            "claims_processing_time": "48-72 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["online claims", "mobile app", "SMS notifications", "direct settlement"],
+            "logo_url": "https://cic.co.ke/assets/images/logo.png",
+            "website_url": "https://cic.co.ke",
+            "established_year": 1978,
+            "market_share": "12%",
+            "awards": ["Insurance Company of the Year 2022", "Best Customer Experience 2021"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440003",
+            "name": "APA Insurance Limited",
+            "code": "APA",
+            "api_endpoint": "https://api.apainsurance.org/v1",
+            "api_key": "apa_api_key_2024",
+            "webhook_url": "https://api.apainsurance.org/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 11,
+            "contact_info": {
+                "phone": "+254 20 271 2000",
+                "email": "info@apainsurance.org",
+                "address": "APA House, Waiyaki Way, Westlands, Nairobi",
+                "contact_person": "Claims Department"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover", "travel_insurance"],
+            "customer_rating": 46,
+            "total_reviews": 1654,
+            "claims_processing_time": "24-48 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["24/7 helpline", "online portal", "mobile app", "express claims"],
+            "logo_url": "https://apainsurance.org/assets/images/logo.png",
+            "website_url": "https://apainsurance.org",
+            "established_year": 1994,
+            "market_share": "8%",
+            "awards": ["Excellence in Claims Processing 2023", "Customer Service Award 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440004",
+            "name": "Britam Insurance Company Limited",
+            "code": "BRITAM",
+            "api_endpoint": "https://api.britam.com/v1",
+            "api_key": "britam_api_key_2024",
+            "webhook_url": "https://api.britam.com/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 13,
+            "contact_info": {
+                "phone": "+254 20 222 1000",
+                "email": "info@britam.com",
+                "address": "Britam Tower, Hospital Road, Upper Hill, Nairobi",
+                "contact_person": "Motor Insurance Division"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover", "life_insurance"],
+            "customer_rating": 48,
+            "total_reviews": 3245,
+            "claims_processing_time": "24-48 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["digital platform", "mobile app", "online claims", "cashless repairs", "roadside assistance"],
+            "logo_url": "https://britam.com/assets/images/logo.png",
+            "website_url": "https://britam.com",
+            "established_year": 1995,
+            "market_share": "15%",
+            "awards": ["Best Digital Insurance Platform 2023", "Innovation Award 2022", "Customer Excellence 2021"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440005",
+            "name": "UAP Old Mutual Group",
+            "code": "UAP_OM",
+            "api_endpoint": "https://api.uapoldmutual.com/v1",
+            "api_key": "uap_om_api_key_2024",
+            "webhook_url": "https://api.uapoldmutual.com/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 9,
+            "contact_info": {
+                "phone": "+254 20 289 9000",
+                "email": "info@uapoldmutual.com",
+                "address": "UAP Old Mutual Tower, Upper Hill, Nairobi",
+                "contact_person": "Motor Insurance Team"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover", "life_insurance", "pension"],
+            "customer_rating": 44,
+            "total_reviews": 2134,
+            "claims_processing_time": "48-72 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["online platform", "mobile app", "SMS alerts", "direct settlement"],
+            "logo_url": "https://uapoldmutual.com/assets/images/logo.png",
+            "website_url": "https://uapoldmutual.com",
+            "established_year": 2010,
+            "market_share": "10%",
+            "awards": ["Financial Services Excellence 2023", "Best Customer Service 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440006",
+            "name": "Sanlam Kenya Insurance Company Limited",
+            "code": "SANLAM",
+            "api_endpoint": "https://api.sanlam.co.ke/v1",
+            "api_key": "sanlam_api_key_2024",
+            "webhook_url": "https://api.sanlam.co.ke/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 11,
+            "contact_info": {
+                "phone": "+254 20 222 1000",
+                "email": "info@sanlam.co.ke",
+                "address": "Sanlam House, Waiyaki Way, Westlands, Nairobi",
+                "contact_person": "Motor Insurance Department"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover", "life_insurance"],
+            "customer_rating": 43,
+            "total_reviews": 1876,
+            "claims_processing_time": "24-48 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["digital platform", "mobile app", "online claims", "24/7 support"],
+            "logo_url": "https://sanlam.co.ke/assets/images/logo.png",
+            "website_url": "https://sanlam.co.ke",
+            "established_year": 2003,
+            "market_share": "7%",
+            "awards": ["Insurance Innovation Award 2023", "Customer Satisfaction Award 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440007",
+            "name": "ICEA Lion General Insurance Company Limited",
+            "code": "ICEA_LION",
+            "api_endpoint": "https://api.icealion.com/v1",
+            "api_key": "icea_lion_api_key_2024",
+            "webhook_url": "https://api.icealion.com/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 10,
+            "contact_info": {
+                "phone": "+254 20 222 1000",
+                "email": "info@icealion.com",
+                "address": "ICEA Building, Kenyatta Avenue, Nairobi",
+                "contact_person": "General Insurance Division"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover", "marine_insurance"],
+            "customer_rating": 45,
+            "total_reviews": 1654,
+            "claims_processing_time": "48-72 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["online portal", "mobile app", "SMS notifications", "express processing"],
+            "logo_url": "https://icealion.com/assets/images/logo.png",
+            "website_url": "https://icealion.com",
+            "established_year": 1979,
+            "market_share": "6%",
+            "awards": ["General Insurance Excellence 2023", "Innovation in Service Delivery 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440008",
+            "name": "Heritage Insurance Company Limited",
+            "code": "HERITAGE",
+            "api_endpoint": "https://api.heritage.co.ke/v1",
+            "api_key": "heritage_api_key_2024",
+            "webhook_url": "https://api.heritage.co.ke/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 12,
+            "contact_info": {
+                "phone": "+254 20 271 2000",
+                "email": "info@heritage.co.ke",
+                "address": "Heritage Place, Muthithi Road, Westlands, Nairobi",
+                "contact_person": "Motor Insurance Team"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover"],
+            "customer_rating": 42,
+            "total_reviews": 1432,
+            "claims_processing_time": "24-48 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["24/7 claims hotline", "online platform", "mobile app", "cashless repairs"],
+            "logo_url": "https://heritage.co.ke/assets/images/logo.png",
+            "website_url": "https://heritage.co.ke",
+            "established_year": 2004,
+            "market_share": "5%",
+            "awards": ["Customer Service Excellence 2023", "Claims Processing Award 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440009",
+            "name": "First Assurance Company Limited",
+            "code": "FIRST_ASSURANCE",
+            "api_endpoint": "https://api.firstassurance.co.ke/v1",
+            "api_key": "first_assurance_api_key_2024",
+            "webhook_url": "https://api.firstassurance.co.ke/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 9,
+            "contact_info": {
+                "phone": "+254 20 222 1000",
+                "email": "info@firstassurance.co.ke",
+                "address": "First Assurance House, Mombasa Road, Nairobi",
+                "contact_person": "Motor Insurance Department"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover"],
+            "customer_rating": 41,
+            "total_reviews": 1234,
+            "claims_processing_time": "48-72 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["online portal", "mobile app", "SMS alerts", "direct settlement"],
+            "logo_url": "https://firstassurance.co.ke/assets/images/logo.png",
+            "website_url": "https://firstassurance.co.ke",
+            "established_year": 2000,
+            "market_share": "4%",
+            "awards": ["Insurance Innovation Award 2023", "Customer Satisfaction 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440010",
+            "name": "Directline Assurance Company Limited",
+            "code": "DIRECTLINE",
+            "api_endpoint": "https://api.directline.co.ke/v1",
+            "api_key": "directline_api_key_2024",
+            "webhook_url": "https://api.directline.co.ke/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 11,
+            "contact_info": {
+                "phone": "+254 20 271 2000",
+                "email": "info@directline.co.ke",
+                "address": "Directline House, Waiyaki Way, Westlands, Nairobi",
+                "contact_person": "Claims Department"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover"],
+            "customer_rating": 40,
+            "total_reviews": 987,
+            "claims_processing_time": "24-48 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["24/7 helpline", "online platform", "mobile app", "express claims"],
+            "logo_url": "https://directline.co.ke/assets/images/logo.png",
+            "website_url": "https://directline.co.ke",
+            "established_year": 2005,
+            "market_share": "3%",
+            "awards": ["Claims Excellence Award 2023", "Customer Service Award 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440011",
+            "name": "Resolution Insurance Company Limited",
+            "code": "RESOLUTION",
+            "api_endpoint": "https://api.resolution.co.ke/v1",
+            "api_key": "resolution_api_key_2024",
+            "webhook_url": "https://api.resolution.co.ke/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 10,
+            "contact_info": {
+                "phone": "+254 20 222 1000",
+                "email": "info@resolution.co.ke",
+                "address": "Resolution Plaza, Mombasa Road, Nairobi",
+                "contact_person": "Motor Insurance Team"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover"],
+            "customer_rating": 39,
+            "total_reviews": 876,
+            "claims_processing_time": "48-72 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["digital platform", "mobile app", "online claims", "24/7 support"],
+            "logo_url": "https://resolution.co.ke/assets/images/logo.png",
+            "website_url": "https://resolution.co.ke",
+            "established_year": 2002,
+            "market_share": "2%",
+            "awards": ["Insurance Innovation 2023", "Customer Excellence 2022"]
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440012",
+            "name": "Kenindia Assurance Company Limited",
+            "code": "KENINDIA",
+            "api_endpoint": "https://api.kenindia.com/v1",
+            "api_key": "kenindia_api_key_2024",
+            "webhook_url": "https://api.kenindia.com/webhooks",
+            "supports_quotes": True,
+            "supports_claims": True,
+            "supports_data_feeds": True,
+            "is_active": True,
+            "commission_rate": 8,
+            "contact_info": {
+                "phone": "+254 20 271 2000",
+                "email": "info@kenindia.com",
+                "address": "Kenindia House, Kenyatta Avenue, Nairobi",
+                "contact_person": "General Insurance Division"
+            },
+            "supported_coverage_types": ["comprehensive", "third_party", "fire_theft", "personal_accident", "medical_cover", "marine_insurance"],
+            "customer_rating": 38,
+            "total_reviews": 765,
+            "claims_processing_time": "24-48 hours",
+            "policy_validity_period": "12 months",
+            "special_features": ["online portal", "mobile app", "SMS notifications", "express processing"],
+            "logo_url": "https://kenindia.com/assets/images/logo.png",
+            "website_url": "https://kenindia.com",
+            "established_year": 1978,
+            "market_share": "2%",
+            "awards": ["General Insurance Excellence 2023", "Service Innovation 2022"]
+        }
+    ]
+    
+    return insurance_partners
+
+def create_insurance_partner(conn, partner_data):
+    """Create a single insurance partner"""
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            INSERT INTO insurance.insurance_partners 
+            (id, name, code, api_endpoint, api_key, webhook_url, supports_quotes, supports_claims, 
+             supports_data_feeds, is_active, commission_rate, contact_info, supported_coverage_types, 
+             customer_rating, total_reviews, claims_processing_time, policy_validity_period, 
+             special_features, logo_url, website_url, established_year, market_share, awards)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                code = EXCLUDED.code,
+                api_endpoint = EXCLUDED.api_endpoint,
+                api_key = EXCLUDED.api_key,
+                webhook_url = EXCLUDED.webhook_url,
+                supports_quotes = EXCLUDED.supports_quotes,
+                supports_claims = EXCLUDED.supports_claims,
+                supports_data_feeds = EXCLUDED.supports_data_feeds,
+                is_active = EXCLUDED.is_active,
+                commission_rate = EXCLUDED.commission_rate,
+                contact_info = EXCLUDED.contact_info,
+                supported_coverage_types = EXCLUDED.supported_coverage_types,
+                customer_rating = EXCLUDED.customer_rating,
+                total_reviews = EXCLUDED.total_reviews,
+                claims_processing_time = EXCLUDED.claims_processing_time,
+                policy_validity_period = EXCLUDED.policy_validity_period,
+                special_features = EXCLUDED.special_features,
+                logo_url = EXCLUDED.logo_url,
+                website_url = EXCLUDED.website_url,
+                established_year = EXCLUDED.established_year,
+                market_share = EXCLUDED.market_share,
+                awards = EXCLUDED.awards
+            RETURNING id
+        """, (
+            partner_data['id'],
+            partner_data['name'],
+            partner_data['code'],
+            partner_data['api_endpoint'],
+            partner_data['api_key'],
+            partner_data['webhook_url'],
+            partner_data['supports_quotes'],
+            partner_data['supports_claims'],
+            partner_data['supports_data_feeds'],
+            partner_data['is_active'],
+            partner_data['commission_rate'],
+            json.dumps(partner_data['contact_info']),
+            json.dumps(partner_data['supported_coverage_types']),
+            partner_data['customer_rating'],
+            partner_data['total_reviews'],
+            partner_data['claims_processing_time'],
+            partner_data['policy_validity_period'],
+            json.dumps(partner_data['special_features']),
+            partner_data['logo_url'],
+            partner_data['website_url'],
+            partner_data['established_year'],
+            partner_data['market_share'],
+            json.dumps(partner_data['awards'])
+        ))
+        
+        partner_id = cursor.fetchone()[0]
+        conn.commit()
+        print(f"Created/Updated insurance partner: {partner_data['name']}")
+        return partner_id
+        
+    except Exception as e:
+        print(f"Error creating insurance partner {partner_data['name']}: {str(e)}")
+        conn.rollback()
+        return None
+    finally:
+        cursor.close()
 
 def create_provider(conn, provider_data, provider_categories):
     """Create a single provider"""
@@ -427,8 +875,8 @@ def get_nairobi_providers_data():
     return providers_data
 
 def main():
-    """Main function to run the provider seeding script"""
-    print("Starting provider seeding...")
+    """Main function to run the provider and insurance partner seeding script"""
+    print("Starting provider and insurance partner seeding...")
     print("=" * 60)
     
     try:
@@ -446,16 +894,43 @@ def main():
         services_by_category = get_services_by_category(conn)
         print(f"   Found services in {len(services_by_category)} categories")
         
+        # ==============================================
+        # SEED INSURANCE PARTNERS
+        # ==============================================
+        print("\n" + "=" * 60)
+        print("SEEDING INSURANCE PARTNERS")
+        print("=" * 60)
+        
+        insurance_partners_data = get_insurance_partners_data()
+        print(f"Creating {len(insurance_partners_data)} insurance partners...")
+        
+        created_insurance_partners = 0
+        for partner_data in insurance_partners_data:
+            print(f"\n--- Creating Insurance Partner: {partner_data['name']} ---")
+            partner_id = create_insurance_partner(conn, partner_data)
+            if partner_id:
+                created_insurance_partners += 1
+        
+        print(f"\n✅ Insurance Partners Summary:")
+        print(f"   - Insurance Partners Created/Updated: {created_insurance_partners}")
+        
+        # ==============================================
+        # SEED SERVICE PROVIDERS
+        # ==============================================
+        print("\n" + "=" * 60)
+        print("SEEDING SERVICE PROVIDERS")
+        print("=" * 60)
+        
         # Get provider data
         providers_data = get_nairobi_providers_data()
         
         # Create providers and attach services
-        print(f"\nCreating {len(providers_data)} providers...")
+        print(f"Creating {len(providers_data)} service providers...")
         created_providers = 0
         total_services_attached = 0
         
         for provider_data in providers_data:
-            print(f"\n--- Creating: {provider_data['name']} ---")
+            print(f"\n--- Creating Service Provider: {provider_data['name']} ---")
             
             # Create provider
             provider_id = create_provider(conn, provider_data, provider_categories)
@@ -495,12 +970,18 @@ def main():
                 attach_services_to_provider(conn, provider_id, services_to_attach)
                 total_services_attached += len(services_to_attach)
         
+        # ==============================================
+        # FINAL SUMMARY
+        # ==============================================
         print("\n" + "=" * 60)
-        print("Provider seeding completed successfully!")
-        print(f"Summary:")
-        print(f"   - Providers Created: {created_providers}")
-        print(f"   - Services Attached: {total_services_attached}")
-        print(f"   - Average Services per Provider: {total_services_attached/created_providers:.1f}")
+        print("SEEDING COMPLETED SUCCESSFULLY!")
+        print("=" * 60)
+        print("📊 SUMMARY:")
+        print(f"   🏢 Insurance Partners: {created_insurance_partners}")
+        print(f"   🔧 Service Providers: {created_providers}")
+        print(f"   ⚙️  Services Attached: {total_services_attached}")
+        print(f"   📈 Average Services per Provider: {total_services_attached/created_providers:.1f}")
+        print("\n🎉 All data seeded successfully!")
         
     except Exception as e:
         print(f"Error during seeding: {str(e)}")

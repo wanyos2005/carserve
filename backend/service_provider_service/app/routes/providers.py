@@ -270,7 +270,7 @@ def _get_car_wash_stats(provider_id: str, today) -> dict:
                 stats["todays_revenue"] = total_revenue
                 
                 # Get queue length from active bookings
-                bookings_response = client.get(f"{booking_service_url}/provider/{provider_id}")
+                bookings_response = client.get(f"{booking_service_url}/bookings/provider/{provider_id}")
                 if bookings_response.status_code == 200:
                     bookings = bookings_response.json()
                     queue_bookings = [b for b in bookings if b.get('status') in ['pending', 'confirmed']]
@@ -325,7 +325,7 @@ def _get_spare_parts_stats(provider_id: str, today) -> dict:
                 stats["revenue_today"] = total_sales
                 
                 # Get active orders from bookings
-                bookings_response = client.get(f"{booking_service_url}/provider/{provider_id}")
+                bookings_response = client.get(f"{booking_service_url}/bookings/provider/{provider_id}")
                 if bookings_response.status_code == 200:
                     bookings = bookings_response.json()
                     active_orders = [b for b in bookings if b.get('status') in ['pending', 'confirmed', 'in_progress']]
@@ -359,7 +359,7 @@ def _get_garage_stats(provider_id: str, today) -> dict:
         
         with httpx.Client(timeout=5.0) as client:
             # Get provider's bookings
-            bookings_response = client.get(f"{booking_service_url}/provider/{provider_id}")
+            bookings_response = client.get(f"{booking_service_url}/bookings/provider/{provider_id}")
             if bookings_response.status_code == 200:
                 bookings = bookings_response.json()
                 active_bookings = [b for b in bookings if b.get('status') in ['pending', 'confirmed', 'in_progress']]

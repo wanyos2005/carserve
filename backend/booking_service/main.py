@@ -24,7 +24,6 @@ app.include_router(bookings.router, prefix="/bookings")
 app.include_router(service_logs.router, prefix="/service-logs")
 
 
-
 # --- Health check ---
 @app.get("/")
 def root():

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from core.db import get_db
 from schemas.booking import ServiceLogCreate, ServiceLog
@@ -92,8 +92,8 @@ def get_service_logs_due(
         ServiceLog.next_service_date.isnot(None)
     ).all()
     
-    # Filter by date
-    date_threshold = datetime.utcnow() + timedelta(days=days_ahead)
+    # Filter by date - use timezone-aware datetime for comparison
+    date_threshold = datetime.now(timezone.utc) + timedelta(days=days_ahead)
     due_services = []
     
     for log in service_logs:
@@ -130,8 +130,8 @@ def _trigger_app_download_prompts_for_logs(logs: List[ServiceLog], db: Session):
             # Get the first log for user info (all logs for same user will have same provider/vehicle info)
             first_log = user_service_logs[0]
             
-            # Prepare vehicle info
-            vehicle_info = f"{first_log.vehicle_id}"  # Could be enhanced with actual vehicle details
+            # Prepare vehicle info - pass vehicle_id for alert service to query
+            vehicle_info = first_log.vehicle_id  # Pass the ID, alert service will query for details
             
             # Prepare service info
             service_names = [log.service_name for log in user_service_logs if log.service_name]
@@ -139,12 +139,12 @@ def _trigger_app_download_prompts_for_logs(logs: List[ServiceLog], db: Session):
             if len(service_names) > 1:
                 service_type = f"{service_type} and {len(service_names)-1} other services"
             
-            # 🔥 AlertService will now handle app detection internally
-            # Just call the alert service - it will check if user has app
+            # 🔥 AlertService will now handle app detection internally and query for proper names
+            # Pass provider_id so alert service can query for proper provider name
             _call_alert_service_for_app_prompt(
                 user_id=user_id,
                 vehicle_info=vehicle_info,
-                service_provider_name=first_log.provider_name or "Service Provider",
+                service_provider_name=first_log.provider_id or first_log.provider_name or "Service Provider",
                 service_type=service_type
             )
             

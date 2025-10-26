@@ -73,7 +73,6 @@ def get_vehicle_route(
 def get_vehicle_public_route(
     vehicle_id: str,
     db: Session = Depends(get_db),
-    current_user_id: str = Depends(get_current_user_id),
 ):
     """Public vehicle lookup for providers to get vehicle details for bookings/service logs"""
     return get_vehicle_public(db, vehicle_id)

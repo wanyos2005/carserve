@@ -9,7 +9,7 @@ class ApiConfig {
   //  - Production public IP:         http://152.70.28.112
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://192.168.0.104:8000',
+    defaultValue: 'http://192.168.0.103:8000',
   );
 }
 
