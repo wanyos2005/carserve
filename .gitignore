@@ -14,7 +14,7 @@ ENV/
 env.bak/
 venv.bak/
 env.dev
-env.prod
+# env.prod - Keep this file for CI/CD deployment
 
 
 # Python cache

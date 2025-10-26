@@ -127,6 +127,16 @@ jobs:
             # Run production environment setup
             echo "🔧 Setting up production environment..."
             chmod +x setup-prod-env.sh
+            
+            # Check if env.prod exists
+            if [ ! -f "env.prod" ]; then
+              echo "❌ env.prod file not found!"
+              echo "Available files:"
+              ls -la *.env* || echo "No env files found"
+              exit 1
+            fi
+            
+            echo "✅ env.prod file found, running setup script..."
             ./setup-prod-env.sh
             echo "✅ Production environment setup completed"
             
