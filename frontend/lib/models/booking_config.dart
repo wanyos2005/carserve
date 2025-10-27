@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/BookingSteps/booking_step_builders.dart';
+import 'package:driveon_car_platform/pages/BookingSteps/booking_step_builders.dart';
 
 enum BookingStepType {
   vehicleAndService,

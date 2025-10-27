@@ -281,8 +281,9 @@ class CoordinateResearch {
     int score = 0;
     
     // Source reliability
-    if (coordinate['source'] == 'Google Maps') score += 30;
-    else if (coordinate['source'] == 'OpenStreetMap') score += 25;
+    if (coordinate['source'] == 'Google Maps') {
+      score += 30;
+    } else if (coordinate['source'] == 'OpenStreetMap') score += 25;
     else if (coordinate['source'] == 'user_collection') score += 20;
     
     // Verification status
@@ -295,7 +296,9 @@ class CoordinateResearch {
     if (verifyNairobiCoordinates(
       coordinate['lat'] as double, 
       coordinate['lng'] as double
-    )) score += 10;
+    )) {
+      score += 10;
+    }
     
     return score;
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/models/onboarding_config.dart';
+import 'package:driveon_car_platform/models/onboarding_config.dart';
 
 class InsurancePartnerSteps {
   static Widget buildCompanyInfoForm(BuildContext context, OnboardingData data, Function(OnboardingData) onUpdate) {

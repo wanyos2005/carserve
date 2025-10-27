@@ -3,8 +3,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:car_platform/services/user_context_service.dart';
-import 'package:car_platform/services/config.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/config.dart';
 
 class ApiService {
   static const String baseGatewayUrl = ApiConfig.baseUrl;

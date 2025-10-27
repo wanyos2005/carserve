@@ -1,5 +1,5 @@
 // lib/services/global_service_api.dart
-import 'package:car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/api_service.dart';
 
 class GlobalServiceApi {
   // 🔹 Service Categories

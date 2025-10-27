@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/insurance_service.dart';
-import 'package:car_platform/models/insurance_models.dart';
-import 'package:car_platform/services/user_context_service.dart';
-import 'package:car_platform/pages/Insurance/c_insurance_policy_page.dart';
+import 'package:driveon_car_platform/services/insurance_service.dart';
+import 'package:driveon_car_platform/models/insurance_models.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/pages/Insurance/c_insurance_policy_page.dart';
 
 class InsuranceDashboard extends StatefulWidget {
   const InsuranceDashboard({super.key});

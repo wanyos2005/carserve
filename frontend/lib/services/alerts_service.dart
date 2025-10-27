@@ -1,5 +1,5 @@
-import 'package:car_platform/services/api_service.dart';
-import 'package:car_platform/services/fcm_service.dart';
+import 'package:driveon_car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/fcm_service.dart';
 
 class AlertsService {
   static Future<List<dynamic>> getPreferences(int userId) async {

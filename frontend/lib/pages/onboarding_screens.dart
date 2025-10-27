@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/login_page.dart';
-import 'package:car_platform/pages/ProviderPages/dynamic_onboarding_flow.dart';
-import 'package:car_platform/models/onboarding_config.dart';
+import 'package:driveon_car_platform/pages/login_page.dart';
+import 'package:driveon_car_platform/pages/ProviderPages/dynamic_onboarding_flow.dart';
+import 'package:driveon_car_platform/models/onboarding_config.dart';
 
 //we first declare the class OnboardingScreens which extends StatefulWidget
 class OnboardingScreens extends StatefulWidget {

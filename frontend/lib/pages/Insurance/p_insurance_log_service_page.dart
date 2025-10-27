@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:car_platform/services/vehicle_service.dart';
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/insurance_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/insurance_service.dart';
 
 class PInsuranceLogServicePage extends StatefulWidget {
   final String providerId;
@@ -146,9 +146,7 @@ class _PInsuranceLogServicePageState extends State<PInsuranceLogServicePage> {
         };
         vehicle = await VehicleService.createGuestVehicle(payload);
       }
-
-      if (vehicle == null) throw Exception("Vehicle creation failed");
-      final vehicleId = vehicle["id"];
+      final vehicleId = vehicle?["id"];
 
       // 3️⃣ Submit insurance policy
       await InsuranceService.createPolicy(

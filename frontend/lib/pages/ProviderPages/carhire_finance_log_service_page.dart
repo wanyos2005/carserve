@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/vehicle_service.dart';
-import 'package:car_platform/services/finance_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/finance_service.dart';
 
 class CarHireFinanceLogServicePage extends StatefulWidget {
   final String providerId;
@@ -131,9 +131,7 @@ class _CarHireFinanceLogServicePageState
         };
         vehicle = await VehicleService.createGuestVehicle(payload);
       }
-
-      if (vehicle == null) throw Exception("Vehicle creation failed");
-      final vehicleId = vehicle["id"];
+      final vehicleId = vehicle?["id"];
 
       // 3️⃣ Submit loan application
       final financePayload = {

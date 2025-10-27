@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
 
 class AdminManagementPage extends StatefulWidget {
   const AdminManagementPage({super.key});

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 //import this to help us configure the onboarding flow for different types of businesses
-import 'package:car_platform/models/onboarding_config.dart';
-import 'package:car_platform/services/insurance_service.dart';
-import 'package:car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/models/onboarding_config.dart';
+import 'package:driveon_car_platform/services/insurance_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
 
 class DynamicOnboardingFlow extends StatefulWidget {
   final OnboardingType type;

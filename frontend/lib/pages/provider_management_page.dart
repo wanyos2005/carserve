@@ -1,9 +1,9 @@
 // lib/pages/provider_management_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/components/location_picker.dart';
-import 'package:car_platform/pages/AdminPages/edit_our_services_page.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/components/location_picker.dart';
+import 'package:driveon_car_platform/pages/AdminPages/edit_our_services_page.dart';
 
 class ProviderManagementPage extends StatefulWidget {
   const ProviderManagementPage({super.key});

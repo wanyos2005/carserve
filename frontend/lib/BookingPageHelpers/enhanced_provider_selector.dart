@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/components/modal_bottom_sheet.dart';
-import 'package:car_platform/services/location_service.dart';
+import 'package:driveon_car_platform/components/modal_bottom_sheet.dart';
+
 
 class EnhancedProviderSelector extends StatefulWidget {
   final List<Map<String, dynamic>> filteredProviders;
@@ -111,7 +111,7 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _sortBy,
+                            initialValue: _sortBy,
                             decoration: const InputDecoration(
                               labelText: 'Sort by',
                               border: OutlineInputBorder(),
@@ -130,7 +130,7 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _filterBy,
+                            initialValue: _filterBy,
                             decoration: const InputDecoration(
                               labelText: 'Filter',
                               border: OutlineInputBorder(),
@@ -154,7 +154,7 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
                         Expanded(
                           flex: 2,
                           child: DropdownButtonFormField<String>(
-                            value: _selectedArea,
+                            initialValue: _selectedArea,
                             decoration: const InputDecoration(
                               labelText: 'Area',
                               border: OutlineInputBorder(),

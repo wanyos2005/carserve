@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 // Services
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/vehicle_service.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/services/insurance_service.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
-import 'package:car_platform/services/alerts_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/insurance_service.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
+import 'package:driveon_car_platform/services/alerts_service.dart';
 
 class CInsurancePolicyPage extends StatefulWidget {
   const CInsurancePolicyPage({super.key});

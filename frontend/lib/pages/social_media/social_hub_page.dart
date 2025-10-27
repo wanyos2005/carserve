@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/models/social_content_models.dart';
-import 'package:car_platform/services/social_service.dart';
-import 'package:car_platform/services/realtime_service.dart';
-import 'package:car_platform/pages/social_media/create_post_page.dart';
-import 'package:car_platform/widgets/comments_section.dart';
+import 'package:driveon_car_platform/models/social_content_models.dart';
+import 'package:driveon_car_platform/services/social_service.dart';
+import 'package:driveon_car_platform/services/realtime_service.dart';
+import 'package:driveon_car_platform/pages/social_media/create_post_page.dart';
+import 'package:driveon_car_platform/widgets/comments_section.dart';
 import 'dart:async';
 
 class SocialHubPage extends StatefulWidget {

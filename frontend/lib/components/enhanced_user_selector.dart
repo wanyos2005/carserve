@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/components/modal_bottom_sheet.dart';
-import 'package:car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/components/modal_bottom_sheet.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
 
 class EnhancedUserSelector extends StatefulWidget {
   final Map<String, dynamic>? selectedUser;
@@ -147,7 +147,7 @@ class _EnhancedUserSelectorState extends State<EnhancedUserSelector> {
                 
                 // Sort dropdown
                 DropdownButtonFormField<String>(
-                  value: _sortBy,
+                  initialValue: _sortBy,
                   decoration: const InputDecoration(
                     labelText: 'Sort by',
                     border: OutlineInputBorder(),

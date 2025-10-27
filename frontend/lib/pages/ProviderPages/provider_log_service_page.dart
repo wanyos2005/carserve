@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/services/booking_service.dart';
-import 'package:car_platform/services/vehicle_service.dart';
-import 'package:car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/booking_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
 
 class ProviderLogServicePage extends StatefulWidget {
   final String providerId;
@@ -31,7 +31,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   final TextEditingController _nextServiceKmController = TextEditingController();
   
   // Cost tracking for each service
-  Map<int, TextEditingController> _serviceCostControllers = {};
+  final Map<int, TextEditingController> _serviceCostControllers = {};
 
   DateTime? _performedAt;
   DateTime? _nextServiceDate;
@@ -178,8 +178,11 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
     );
     if (picked != null) {
       setState(() {
-        if (isNext) _nextServiceDate = picked;
-        else _performedAt = picked;
+        if (isNext) {
+          _nextServiceDate = picked;
+        } else {
+          _performedAt = picked;
+        }
       });
     }
   }
@@ -235,8 +238,6 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
         };
         vehicle = await VehicleService.createGuestVehicle(payload);
       }
-
-      if (vehicle == null) throw Exception("Failed to find or create vehicle");
 
       final provider = await ProviderService.getProviderDetails(widget.providerId);
       final providerName = provider?["provider_name"] ?? "Unknown Provider";
@@ -394,7 +395,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
               )
             else
               DropdownButtonFormField<Map<String, dynamic>>(
-                value: _selectedTemplate,
+                initialValue: _selectedTemplate,
                 decoration: const InputDecoration(
                   labelText: "Select Template",
                   border: OutlineInputBorder(),
@@ -849,7 +850,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ],
       ),

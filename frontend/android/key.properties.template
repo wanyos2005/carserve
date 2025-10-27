@@ -1,0 +1,15 @@
+# Android Keystore Configuration Template
+# Copy this file to key.properties and fill in your actual values
+# NEVER commit key.properties to version control!
+
+# Keystore password (the password you created when generating the keystore)
+storePassword=your_keystore_password_here
+
+# Key password (usually the same as storePassword)
+keyPassword=your_keystore_password_here
+
+# Key alias (the alias you used when generating the keystore)
+keyAlias=driveon-key-alias
+
+# Path to the keystore file (relative to this file)
+storeFile=driveon-release-key.keystore

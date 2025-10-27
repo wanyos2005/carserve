@@ -1,8 +1,8 @@
 //file used to configure the onboarding flow for different types of businesses
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/Insurance/insurance_partner_steps.dart';
-import 'package:car_platform/pages/ProviderPages/provider_steps.dart';
-import 'package:car_platform/components/location_picker.dart';
+import 'package:driveon_car_platform/pages/Insurance/insurance_partner_steps.dart';
+import 'package:driveon_car_platform/pages/ProviderPages/provider_steps.dart';
+import 'package:driveon_car_platform/components/location_picker.dart';
 
 enum OnboardingType {
   serviceProvider,

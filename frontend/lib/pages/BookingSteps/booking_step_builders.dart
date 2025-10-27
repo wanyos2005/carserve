@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/models/booking_config.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_service_selector.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
-import 'package:car_platform/components/location_picker.dart';
-import 'package:car_platform/utils/location_display_helper.dart';
+import 'package:driveon_car_platform/models/booking_config.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_service_selector.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
+import 'package:driveon_car_platform/components/location_picker.dart';
+import 'package:driveon_car_platform/utils/location_display_helper.dart';
 
 class BookingStepBuilders {
   static Widget buildVehicleAndServiceStep(
@@ -65,7 +65,7 @@ class BookingStepBuilders {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     isExpanded: true,
-                    value: selectedVehicleId,
+                    initialValue: selectedVehicleId,
                     items: vehicles
                         .map((v) => DropdownMenuItem<String>(
                               value: v["id"].toString(),
@@ -296,7 +296,7 @@ class BookingStepBuilders {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                selectedProvider!["provider_name"] ?? "Selected Provider",
+                                selectedProvider["provider_name"] ?? "Selected Provider",
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 2),
@@ -306,12 +306,12 @@ class BookingStepBuilders {
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                      LocationDisplayHelper.formatLocationShort(selectedProvider!["location"]),
+                                      LocationDisplayHelper.formatLocationShort(selectedProvider["location"]),
                                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  if (selectedProvider!["is_registered"])
+                                  if (selectedProvider["is_registered"])
                                     Container(
                                       margin: const EdgeInsets.only(left: 8),
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -331,7 +331,7 @@ class BookingStepBuilders {
                     trailing: selectedProvider == null
                         ? const Icon(Icons.arrow_forward_ios)
                         : Chip(
-                            label: Text(selectedProvider!["rating"]?.toString() ?? "0.0"),
+                            label: Text(selectedProvider["rating"]?.toString() ?? "0.0"),
                             backgroundColor: Colors.green[100],
                             avatar: const Icon(Icons.star, size: 16),
                           ),
@@ -356,7 +356,7 @@ class BookingStepBuilders {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => onCallProvider(selectedProvider!),
+                              onPressed: () => onCallProvider(selectedProvider),
                               icon: const Icon(Icons.phone),
                               label: const Text("Call"),
                             ),
@@ -364,7 +364,7 @@ class BookingStepBuilders {
                           const SizedBox(width: 8),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => onWhatsAppProvider(selectedProvider!),
+                              onPressed: () => onWhatsAppProvider(selectedProvider),
                               icon: const Icon(Icons.chat),
                               label: const Text("WhatsApp"),
                             ),
@@ -379,7 +379,7 @@ class BookingStepBuilders {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => onSmsProvider(selectedProvider!),
+                              onPressed: () => onSmsProvider(selectedProvider),
                               icon: const Icon(Icons.sms),
                               label: const Text("SMS"),
                             ),
@@ -387,7 +387,7 @@ class BookingStepBuilders {
                           const SizedBox(width: 8),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => onEmailProvider(selectedProvider!),
+                              onPressed: () => onEmailProvider(selectedProvider),
                               icon: const Icon(Icons.email),
                               label: const Text("Email"),
                             ),
@@ -457,7 +457,7 @@ class BookingStepBuilders {
                               Text(
                                 selectedDate == null
                                     ? "Select date"
-                                    : selectedDate!.toLocal().toString().split(" ")[0],
+                                    : selectedDate.toLocal().toString().split(" ")[0],
                                 style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                               ),
                             ],
@@ -486,7 +486,7 @@ class BookingStepBuilders {
                               Text(
                                 selectedTime == null
                                     ? "Select time"
-                                    : selectedTime!.format(context),
+                                    : selectedTime.format(context),
                                 style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                               ),
                             ],
@@ -615,7 +615,7 @@ class BookingStepBuilders {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            selectedProvider!["provider_name"] ?? "Provider",
+                            selectedProvider["provider_name"] ?? "Provider",
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                         ),
@@ -628,7 +628,7 @@ class BookingStepBuilders {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            LocationDisplayHelper.formatLocationForDisplay(selectedProvider!["location"]),
+                            LocationDisplayHelper.formatLocationForDisplay(selectedProvider["location"]),
                             style: TextStyle(color: Colors.grey[600], fontSize: 12),
                           ),
                         ),
@@ -657,7 +657,7 @@ class BookingStepBuilders {
                         ),
                       ],
                     ),
-                  )).toList(),
+                  )),
                 ],
               ),
             ),

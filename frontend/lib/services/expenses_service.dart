@@ -1,4 +1,4 @@
-import 'package:car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/api_service.dart';
 
 class ExpensesService {
   static Future<List<dynamic>> listExpenses({int? ownerId, String? vehicleId}) async {

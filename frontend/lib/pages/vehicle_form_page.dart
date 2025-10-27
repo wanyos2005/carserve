@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:car_platform/services/vehicle_service.dart';
-import 'package:car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
 
 class VehicleFormPage extends StatefulWidget {
   const VehicleFormPage({super.key});

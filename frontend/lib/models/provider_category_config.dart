@@ -70,7 +70,7 @@ class StatCard {
 
 class ProviderCategoryConfigs {
   // Cache for real-time stats
-  static Map<String, Map<String, dynamic>> _statsCache = {};
+  static final Map<String, Map<String, dynamic>> _statsCache = {};
   
   static final Map<String, ProviderCategoryConfig> _configs = {
     'garage / mechanic': ProviderCategoryConfig(

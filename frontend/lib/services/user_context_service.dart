@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
 
 enum UserType {
   carOwner,

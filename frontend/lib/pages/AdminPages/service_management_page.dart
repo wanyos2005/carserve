@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/global_service_api.dart';
+import 'package:driveon_car_platform/services/global_service_api.dart';
 
 class ServiceManagementPage extends StatefulWidget {
   const ServiceManagementPage({super.key});

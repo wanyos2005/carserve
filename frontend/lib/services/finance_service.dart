@@ -1,4 +1,4 @@
-import 'package:car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/api_service.dart';
 
 class FinanceService {
   static Future<dynamic> createLoanApplication(Map<String, dynamic> data) async {

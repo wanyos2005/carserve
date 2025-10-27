@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/vehicle_service.dart';
-import 'package:car_platform/services/booking_service.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/services/global_service_api.dart';
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_service_selector.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/booking_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/global_service_api.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_service_selector.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
 
 class ServiceLogPage extends StatefulWidget {
   const ServiceLogPage({super.key});
@@ -195,7 +195,7 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              value: _selectedVehicleId,
+              initialValue: _selectedVehicleId,
               items: _vehicles
                   .map((v) => DropdownMenuItem<String>(
                         value: v["id"].toString(),

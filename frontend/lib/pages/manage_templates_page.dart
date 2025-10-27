@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
 
 class ManageTemplatesPage extends StatefulWidget {
   final String providerId;

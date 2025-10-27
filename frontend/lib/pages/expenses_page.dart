@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:car_platform/services/expenses_service.dart';
-import 'package:car_platform/services/user_context_service.dart';
-import 'package:car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/expenses_service.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
 
 class ExpensesPage extends StatefulWidget {
   const ExpensesPage({super.key});
@@ -86,7 +86,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
             const SizedBox(height: 16),
             if (_loading) const Center(child: CircularProgressIndicator()),
             if (!_loading)
-              ..._expenses.map((e) => _ExpenseTile(expense: e)).toList(),
+              ..._expenses.map((e) => _ExpenseTile(expense: e)),
           ],
         ),
       ),

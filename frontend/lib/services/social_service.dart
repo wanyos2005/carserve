@@ -4,8 +4,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:car_platform/services/config.dart';
-import 'package:car_platform/models/social_content_models.dart';
+import 'package:driveon_car_platform/services/config.dart';
+import 'package:driveon_car_platform/models/social_content_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SocialService {

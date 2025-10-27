@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/components/enhanced_pricing_form.dart';
+import 'package:driveon_car_platform/components/enhanced_pricing_form.dart';
 
 /// Helper class for handling service requirements during provider onboarding
 class ServiceRequirementsHelper {
@@ -134,7 +134,7 @@ class ServiceRequirementsHelper {
             labelText: label + (isRequired ? " *" : ""),
             border: const OutlineInputBorder(),
           ),
-          value: currentValues[fieldName],
+          initialValue: currentValues[fieldName],
           items: options.map((option) {
             return DropdownMenuItem(
               value: option,

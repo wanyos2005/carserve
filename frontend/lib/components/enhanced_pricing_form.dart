@@ -346,7 +346,7 @@ class _EnhancedPricingFormState extends State<EnhancedPricingForm> {
                   labelText: 'Unit',
                   border: OutlineInputBorder(),
                 ),
-                value: _unitController.text.isNotEmpty ? _unitController.text : null,
+                initialValue: _unitController.text.isNotEmpty ? _unitController.text : null,
                 items: const [
                   DropdownMenuItem(value: 'per_liter', child: Text('Per Liter')),
                   DropdownMenuItem(value: 'per_hour', child: Text('Per Hour')),
@@ -459,7 +459,7 @@ class _EnhancedPricingFormState extends State<EnhancedPricingForm> {
             });
             _updateValues();
           },
-          activeColor: Colors.blue,
+          activeThumbColor: Colors.blue,
         ),
         const SizedBox(width: 12),
         Expanded(

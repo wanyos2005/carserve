@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
 import 'passcode_page.dart';
 
 class LoginPage extends StatefulWidget {

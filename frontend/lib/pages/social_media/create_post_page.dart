@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:car_platform/services/social_service.dart';
-import 'package:car_platform/models/social_content_models.dart';
+import 'package:driveon_car_platform/services/social_service.dart';
+import 'package:driveon_car_platform/models/social_content_models.dart';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({super.key});
@@ -16,8 +16,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final List<String> _hashtags = [];
   final TextEditingController _hashtagController = TextEditingController();
   
-  List<String> _mediaUrls = [];
-  List<File> _selectedFiles = [];
+  final List<String> _mediaUrls = [];
+  final List<File> _selectedFiles = [];
   bool _isUploading = false;
   bool _isCreating = false;
   

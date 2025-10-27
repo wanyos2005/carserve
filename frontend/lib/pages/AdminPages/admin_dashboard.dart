@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/admin/provider_user_link_page.dart';
-import 'package:car_platform/pages/provider_management_page.dart';
-import 'package:car_platform/pages/AdminPages/service_management_page.dart';
-import 'package:car_platform/pages/AdminPages/admin_management_page.dart';
-import 'package:car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/pages/admin/provider_user_link_page.dart';
+import 'package:driveon_car_platform/pages/provider_management_page.dart';
+import 'package:driveon_car_platform/pages/AdminPages/service_management_page.dart';
+import 'package:driveon_car_platform/pages/AdminPages/admin_management_page.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});

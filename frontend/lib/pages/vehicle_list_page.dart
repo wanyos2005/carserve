@@ -1,6 +1,6 @@
 // lib/pages/vehicle_list_page.dart
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
 import 'vehicle_form_page.dart';
 
 class VehicleListPage extends StatefulWidget {

@@ -1,6 +1,6 @@
 // lib/pages/services_providers_page.dart
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
 import 'provider_details_page.dart';
 
 class ServicesProvidersPage extends StatefulWidget {

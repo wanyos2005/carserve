@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:car_platform/services/alerts_service.dart';
-import 'package:car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/alerts_service.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
 
 class AlertsInboxPage extends StatefulWidget {
   const AlertsInboxPage({super.key});

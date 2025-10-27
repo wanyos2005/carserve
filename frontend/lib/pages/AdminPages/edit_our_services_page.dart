@@ -1,9 +1,9 @@
 // frontend/lib/pages/edit_our_services_page.dart
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/services/global_service_api.dart';
-import 'package:car_platform/pages/manage_templates_page.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_service_selector.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/global_service_api.dart';
+import 'package:driveon_car_platform/pages/manage_templates_page.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_service_selector.dart';
 
 class EditOurServicesPage extends StatefulWidget {
   final String providerId;

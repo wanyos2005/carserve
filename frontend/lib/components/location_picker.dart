@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/location_service.dart';
-import 'package:car_platform/services/coordinate_collector.dart';
+import 'package:driveon_car_platform/services/location_service.dart';
+import 'package:driveon_car_platform/components/coordinate_collection_widget.dart';
 
 class LocationPicker extends StatefulWidget {
   final String? initialAddress;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/enhanced_booking_page.dart';
-import 'package:car_platform/pages/service_log_page.dart';
+import 'package:driveon_car_platform/pages/enhanced_booking_page.dart';
+import 'package:driveon_car_platform/pages/service_log_page.dart';
 
 class MainServiceNav extends StatefulWidget {
   const MainServiceNav({super.key});

@@ -1,4 +1,4 @@
-import 'package:car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/api_service.dart';
 
 class InsuranceService {
   static const String _basePath = '/insurance';

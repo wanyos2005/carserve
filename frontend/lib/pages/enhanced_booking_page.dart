@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/booking_service.dart';
-import 'package:car_platform/services/vehicle_service.dart';
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/services/global_service_api.dart';
-import 'package:car_platform/services/location_service.dart';
-import 'package:car_platform/components/location_picker.dart';
+import 'package:driveon_car_platform/services/booking_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/global_service_api.dart';
+import 'package:driveon_car_platform/services/location_service.dart';
+import 'package:driveon_car_platform/components/location_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Enhanced Helpers
-import 'package:car_platform/BookingPageHelpers/enhanced_service_selector.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
-import 'package:car_platform/BookingPageHelpers/purchase_ordering_ui.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_service_selector.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
+
 
 // Components
-import 'package:car_platform/components/preferences_popover.dart';
+import 'package:driveon_car_platform/components/preferences_popover.dart';
 
 // Models and Utils
-import 'package:car_platform/models/booking_config.dart';
-import 'package:car_platform/utils/location_display_helper.dart';
-import 'package:car_platform/pages/BookingSteps/booking_step_builders.dart';
+import 'package:driveon_car_platform/models/booking_config.dart';
+import 'package:driveon_car_platform/utils/location_display_helper.dart';
+import 'package:driveon_car_platform/pages/BookingSteps/booking_step_builders.dart';
 
 //pages
 // import 'package:car_platform/pages/service_log_page.dart'; // Removed - handled by main navigation
@@ -56,7 +56,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   bool _recommendedOnly = true;
   
   // Mode toggle: Services vs Spare Parts
-  bool _isSparePartsMode = false;
+  final bool _isSparePartsMode = false;
   
   // Main mode toggle: Service Booking vs Purchase/Ordering
   bool _isPurchaseMode = false;
@@ -66,9 +66,9 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   TimeOfDay? _selectedTime;
 
   // Pricing
-  Map<String, double> _servicePrices = {}; // serviceId -> base price
-  Map<String, double> _negotiatedPrices = {}; // serviceId -> negotiated price
-  Map<String, Map<String, dynamic>> _servicePricingInfo = {}; // serviceId -> full pricing info
+  final Map<String, double> _servicePrices = {}; // serviceId -> base price
+  final Map<String, double> _negotiatedPrices = {}; // serviceId -> negotiated price
+  final Map<String, Map<String, dynamic>> _servicePricingInfo = {}; // serviceId -> full pricing info
   bool _hasNegotiated = false;
 
   // Loading flags
@@ -77,7 +77,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   bool _providersLoading = false;
   
   // Communication tracking
-  List<Map<String, dynamic>> _contactHistory = [];
+  final List<Map<String, dynamic>> _contactHistory = [];
   
   // Location tracking
   Map<String, dynamic>? _customerLocation;
@@ -707,7 +707,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
       children: [
         // Vehicle Selection
         DropdownButtonFormField<String>(
-          value: _selectedVehicleId,
+          initialValue: _selectedVehicleId,
           items: _vehicles
               .map((v) => DropdownMenuItem<String>(
                     value: v["id"].toString(),
@@ -1461,7 +1461,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "${currency} ${negotiatedPrice.toStringAsFixed(0)}",
+                    "$currency ${negotiatedPrice.toStringAsFixed(0)}",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: negotiatedPrice != basePrice ? Colors.green[700] : Colors.blue[700],
@@ -1905,7 +1905,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
                           ),
                         ],
                       ),
-                    )).toList(),
+                    )),
                     if (_contactHistory.length > 3)
                       Text(
                         "+${_contactHistory.length - 3} more contacts",

@@ -1,5 +1,5 @@
 //lib/services/booking_services.dart
-import 'package:car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/api_service.dart';
 
 class BookingService {
   static Future<Map<String, dynamic>?> createBooking(Map<String, dynamic> bookingData) async {

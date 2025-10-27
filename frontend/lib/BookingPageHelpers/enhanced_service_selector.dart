@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/components/modal_bottom_sheet.dart';
-import 'package:car_platform/components/enhanced_pricing_form.dart';
-import 'package:car_platform/services/global_service_api.dart';
+import 'package:driveon_car_platform/components/modal_bottom_sheet.dart';
+import 'package:driveon_car_platform/components/enhanced_pricing_form.dart';
+import 'package:driveon_car_platform/services/global_service_api.dart';
 
 class EnhancedServiceSelector extends StatefulWidget {
   final List<Map<String, dynamic>> allServices;
@@ -161,10 +161,14 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
   @override
   void dispose() {
     // Dispose controllers
-    _displayNameControllers.values.forEach((controller) => controller.dispose());
-    _serviceFieldControllers.values.forEach((controllers) {
-      controllers.values.forEach((controller) => controller.dispose());
-    });
+    for (var controller in _displayNameControllers.values) {
+      controller.dispose();
+    }
+    for (var controllers in _serviceFieldControllers.values) {
+      for (var controller in controllers.values) {
+        controller.dispose();
+      }
+    }
     super.dispose();
   }
 
@@ -683,7 +687,7 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
         final options = List<String>.from(fieldDef["options"] ?? []);
         String current = controller.text.isNotEmpty ? controller.text : (options.isNotEmpty ? options[0] : "");
         return DropdownButtonFormField<String>(
-          value: current.isNotEmpty ? current : null,
+          initialValue: current.isNotEmpty ? current : null,
           items: options.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
           onChanged: (v) {
             controller.text = v ?? "";
@@ -698,7 +702,7 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
 
   Widget _buildRecommendedServices() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

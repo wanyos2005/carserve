@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/onboarding_screens.dart';
+import 'package:driveon_car_platform/pages/onboarding_screens.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});

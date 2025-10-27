@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:car_platform/services/config.dart';
+import 'package:driveon_car_platform/services/config.dart';
 import 'package:http/http.dart' as http;
 
 //

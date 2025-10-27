@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/services/global_service_api.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/global_service_api.dart';
 
 class PurchaseOrderingUI extends StatefulWidget {
   final List<dynamic> vehicles;
@@ -117,7 +117,7 @@ class _PurchaseOrderingUIState extends State<PurchaseOrderingUI> {
         children: [
           // Vehicle Selection
           DropdownButtonFormField<String>(
-            value: widget.selectedVehicleId,
+            initialValue: widget.selectedVehicleId,
             items: widget.vehicles
                 .map((v) => DropdownMenuItem<String>(
                       value: v["id"].toString(),
@@ -341,7 +341,7 @@ class _PurchaseOrderingUIState extends State<PurchaseOrderingUI> {
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: _urgency,
+                            initialValue: _urgency,
                             items: const [
                               DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
                               DropdownMenuItem(value: 'normal', child: Text('Normal')),
@@ -370,7 +370,7 @@ class _PurchaseOrderingUIState extends State<PurchaseOrderingUI> {
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: _deliveryPreference,
+                            initialValue: _deliveryPreference,
                             items: const [
                               DropdownMenuItem(value: 'pickup', child: Text('Pickup')),
                               DropdownMenuItem(value: 'delivery', child: Text('Delivery')),
@@ -403,7 +403,7 @@ class _PurchaseOrderingUIState extends State<PurchaseOrderingUI> {
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              value: _urgency,
+                              initialValue: _urgency,
                               items: const [
                                 DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
                                 DropdownMenuItem(value: 'normal', child: Text('Normal')),
@@ -434,7 +434,7 @@ class _PurchaseOrderingUIState extends State<PurchaseOrderingUI> {
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<String>(
-                              value: _deliveryPreference,
+                              initialValue: _deliveryPreference,
                               items: const [
                                 DropdownMenuItem(value: 'pickup', child: Text('Pickup')),
                                 DropdownMenuItem(value: 'delivery', child: Text('Delivery')),

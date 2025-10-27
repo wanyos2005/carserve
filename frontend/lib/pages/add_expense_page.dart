@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/expenses_service.dart';
-import 'package:car_platform/services/user_context_service.dart';
-import 'package:car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/expenses_service.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
 
 class AddExpensePage extends StatefulWidget {
   const AddExpensePage({super.key});
@@ -72,7 +72,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: const [
                   DropdownMenuItem(value: 'service', child: Text('Service')),

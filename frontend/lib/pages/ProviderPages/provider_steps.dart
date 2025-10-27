@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 
-import 'package:car_platform/models/onboarding_config.dart'; //from this import we get the OnboardingData class
-import 'package:car_platform/models/frontend_category_grouping.dart'; //from this import we get the FrontendCategoryGroup class
-import 'package:car_platform/models/service_requirements_helper.dart'; //from this import we get the ServiceRequirementsHelper class
-import 'package:car_platform/BookingPageHelpers/enhanced_service_selector.dart';
-import 'package:car_platform/services/global_service_api.dart';
+import 'package:driveon_car_platform/models/onboarding_config.dart'; //from this import we get the OnboardingData class
+import 'package:driveon_car_platform/models/frontend_category_grouping.dart'; //from this import we get the FrontendCategoryGroup class
+import 'package:driveon_car_platform/models/service_requirements_helper.dart'; //from this import we get the ServiceRequirementsHelper class
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_service_selector.dart';
+import 'package:driveon_car_platform/services/global_service_api.dart';
 
 class ProviderSteps {
   static Widget buildBusinessTypeSelection(BuildContext context, OnboardingData data, Function(OnboardingData) onUpdate) {
@@ -378,8 +378,8 @@ class _ProviderServiceSelectionStepState extends State<_ProviderServiceSelection
   List<dynamic> _allServices = [];
   List<dynamic> _categoryServices = [];
   Set<String> _selectedServiceIds = {};
-  Map<String, Map<String, dynamic>> _serviceRequirements = {};
-  Map<String, Map<String, dynamic>> _serviceValues = {};
+  final Map<String, Map<String, dynamic>> _serviceRequirements = {};
+  final Map<String, Map<String, dynamic>> _serviceValues = {};
 
   Map<String, dynamic>? _findServiceById(String id) {
     for (final s in _categoryServices) {
@@ -468,7 +468,7 @@ class _ProviderServiceSelectionStepState extends State<_ProviderServiceSelection
         // Reference to avoid linter complaining about unused field in release builds
         // and still keep for potential future use.
         // ignore: avoid_print
-        print('Loaded services: total=' + _allServices.length.toString());
+        print('Loaded services: total=${_allServices.length}');
         return true;
       }());
 

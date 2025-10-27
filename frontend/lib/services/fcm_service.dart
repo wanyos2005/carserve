@@ -1,10 +1,10 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:car_platform/services/api_service.dart';
-import 'package:car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:flutter/foundation.dart';
 
 class FCMService {
-  static FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static String? _fcmToken;
 
   /// Initialize Firebase Cloud Messaging

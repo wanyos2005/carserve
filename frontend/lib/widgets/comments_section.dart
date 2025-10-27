@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/models/social_content_models.dart';
-import 'package:car_platform/services/social_service.dart';
+import 'package:driveon_car_platform/models/social_content_models.dart';
+import 'package:driveon_car_platform/services/social_service.dart';
 
 class CommentsSection extends StatefulWidget {
   final String postId;

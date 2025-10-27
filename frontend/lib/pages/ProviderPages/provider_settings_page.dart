@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/AdminPages/edit_our_services_page.dart';
-import 'package:car_platform/pages/manage_templates_page.dart';
-import 'package:car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/pages/AdminPages/edit_our_services_page.dart';
+import 'package:driveon_car_platform/pages/manage_templates_page.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
 
 class ProviderSettingsPage extends StatelessWidget {
   final String providerId;

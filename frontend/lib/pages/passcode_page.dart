@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'home_page.dart';
 import 'ProviderPages/provider_homepage.dart';
 import 'AdminPages/admin_dashboard.dart';

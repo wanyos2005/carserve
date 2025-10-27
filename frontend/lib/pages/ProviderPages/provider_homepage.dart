@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/pages/social_media/social_hub_page.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/services/provider_stats_service.dart';
-import 'package:car_platform/models/provider_category_config.dart';
-import 'package:car_platform/models/frontend_category_grouping.dart';
+import 'package:driveon_car_platform/pages/social_media/social_hub_page.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/services/provider_stats_service.dart';
+import 'package:driveon_car_platform/models/provider_category_config.dart';
+import 'package:driveon_car_platform/models/frontend_category_grouping.dart';
 
 class ProviderHomePage extends StatefulWidget {
   final String providerId;

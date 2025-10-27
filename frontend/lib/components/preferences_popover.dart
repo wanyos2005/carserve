@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/user_context_service.dart';
-import 'package:car_platform/services/alerts_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/alerts_service.dart';
 
 class PreferencesPopover extends StatefulWidget {
   final bool recommendedOnly;

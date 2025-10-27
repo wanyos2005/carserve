@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/auth_service.dart';
-import 'package:car_platform/services/provider_service.dart';
-import 'package:car_platform/components/enhanced_user_selector.dart';
-import 'package:car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
+import 'package:driveon_car_platform/components/enhanced_user_selector.dart';
+import 'package:driveon_car_platform/BookingPageHelpers/enhanced_provider_selector.dart';
 
 class ProviderUserLinkPage extends StatefulWidget {
   const ProviderUserLinkPage({super.key});

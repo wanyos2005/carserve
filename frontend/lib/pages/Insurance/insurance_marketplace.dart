@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:car_platform/services/insurance_service.dart';
-import 'package:car_platform/models/insurance_models.dart';
-import 'package:car_platform/services/user_context_service.dart';
-import 'package:car_platform/services/vehicle_service.dart';
+import 'package:driveon_car_platform/services/insurance_service.dart';
+import 'package:driveon_car_platform/models/insurance_models.dart';
+import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/vehicle_service.dart';
 
 class InsuranceMarketplace extends StatefulWidget {
   const InsuranceMarketplace({super.key});
@@ -177,7 +177,7 @@ class _InsuranceMarketplaceState extends State<InsuranceMarketplace> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedVehicleId,
+                initialValue: _selectedVehicleId,
                 isExpanded: true,
                 selectedItemBuilder: (context) {
                   return _vehicles.map<Widget>((v) {
@@ -216,7 +216,7 @@ class _InsuranceMarketplaceState extends State<InsuranceMarketplace> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedCoverageType,
+                initialValue: _selectedCoverageType,
                 decoration: const InputDecoration(
                   labelText: 'Coverage Type',
                   border: OutlineInputBorder(),
