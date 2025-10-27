@@ -87,6 +87,15 @@ jobs:
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --push backend/expenses_service
+      - name: Build and push social-service
+        run: |
+          docker buildx build \
+            -f backend/social_service/Dockerfile.prod \
+            -t $IMAGE_NS/social-service:latest \
+            --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push backend/social_service
       - name: Build and push alert-worker
         run: |
           docker buildx build \
@@ -176,6 +185,7 @@ jobs:
             pull_image "ghcr.io/wanyos2005/expenses-service:latest" "expenses-service"
             pull_image "ghcr.io/wanyos2005/service-provider:latest" "service-provider"
             pull_image "ghcr.io/wanyos2005/alert-service:latest" "alert-service"
+            pull_image "ghcr.io/wanyos2005/social-service:latest" "social-service"
             
            
             
