@@ -89,13 +89,6 @@ class ProviderCategoryConfigs {
       ],
       quickActions: [
         QuickAction(
-          title: 'Bookings',
-          subtitle: 'View and manage current bookings',
-          icon: Icons.calendar_month,
-          color: Colors.blue,
-          isComingSoon: true,
-        ),
-        QuickAction(
           title: 'Log Service',
           subtitle: 'Log completed services and maintenance',
           icon: Icons.check_circle_outline,

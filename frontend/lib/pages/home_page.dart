@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'vehicle_list_page.dart';
 import 'services_providers_page.dart';
 import 'history_page.dart';
-import 'social_media/social_hub_page.dart';
-import '../components/preferences_popover.dart';
+import '../social_media/pages/social_hub_page.dart';
+import '../components/notifications_settings_sheet.dart';
+import '../services/alerts_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,6 +15,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isPrivilegesExpanded = false;
+  int _unreadAlertCount = 0;
+  List<Alert> _recentAlerts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
 
   void _togglePrivileges() {
     setState(() {
@@ -21,27 +30,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
-  void _showPreferencesPopover() {
-    showPreferencesPopover(
+  Future<void> _loadNotifications() async {
+    try {
+      final unreadCount = await AlertsService.getUnreadCount();
+      final recentAlerts = await AlertsService.getAlerts(limit: 10);
+      
+      setState(() {
+        _unreadAlertCount = unreadCount;
+        _recentAlerts = recentAlerts;
+      });
+    } catch (e) {
+      print('Error loading notifications: $e');
+    }
+  }
+
+  void _showSettings() {
+    showNotificationsSettingsSheet(
       context: context,
-      recommendedOnly: false, // Default value
-      isPurchaseMode: false, // This is a service booking mode
-      onRecommendedOnlyChanged: (value) {
-        // Handle preference changes if needed
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Preference updated: $value")),
-        );
-      },
-      onApply: () {
-        // Handle apply action
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Preferences applied successfully!")),
-        );
-      },
-      onLogout: () {
-        // Handle logout - this will be called by the preferences popover
-        Navigator.pushReplacementNamed(context, '/login');
-      },
+      unreadAlertCount: _unreadAlertCount,
+      recentAlerts: _recentAlerts,
+      onRefreshNotifications: _loadNotifications,
     );
   }
 
@@ -194,7 +202,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             "Profile & Settings",
                             Icons.settings,
                             Colors.teal,
-                            () => _showPreferencesPopover(),
+                            () => _showSettings(),
                           ),
                         ],
                       ),

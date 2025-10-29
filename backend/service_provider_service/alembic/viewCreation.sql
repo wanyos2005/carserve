@@ -55,3 +55,13 @@ SELECT
 FROM service_providers.services s
 JOIN service_providers.service_categories sc ON s.category_id = sc.id;
 SQL
+
+to view:
+docker compose exec postgres psql -U AdminDb -d car_platform -c "SELECT id, email, name, phone, verified, is_guest FROM users.tbl_auth WHERE email = 'staffkelly3@gmail.com';"
+
+to delete:
+docker compose exec postgres psql -U AdminDb -d car_platform -c "SELECT 'User Roles' as table_name, COUNT(*) as count FROM users.tbl_auth_roles WHERE user_id = 5 UNION ALL SELECT 'Provider Links', COUNT(*) FROM users.provider_user_links WHERE user_id = 5;"
+
+docker compose exec postgres psql -U AdminDb -d car_platform -c "DELETE FROM users.tbl_auth WHERE email = 'staffkelly3@gmail.com';"
+docker compose exec postgres psql -U AdminDb -d car_platform -c "DELETE FROM alerts.notification_logs; DELETE FROM alerts.alerts;"
+ docker compose exec postgres psql -U AdminDb -d car_platform -c "SELECT COUNT(*) as alert_count FROM alerts.alerts; SELECT COUNT(*) as log_count FROM alerts.notification_logs;"

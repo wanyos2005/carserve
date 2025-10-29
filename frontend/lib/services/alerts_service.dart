@@ -1,93 +1,314 @@
+// frontend/lib/services/alerts_service.dart
 import 'package:driveon_car_platform/services/api_service.dart';
-import 'package:driveon_car_platform/services/fcm_service.dart';
 
-class AlertsService {
-  static Future<List<dynamic>> getPreferences(int userId) async {
-    final res = await ApiService.get('/notifications/preferences/$userId');
-    return (res is List) ? res : <dynamic>[];
+class Alert {
+  final String id;
+  final int userId;
+  final String type;
+  final String title;
+  final String message;
+  final int priority;
+  final String? vehicleId;
+  final String? policyId;
+  final String? bookingId;
+  final String? providerId;
+  final List<String> channels;
+  final String? scheduledAt;
+  final String? actionUrl;
+  final String? actionText;
+  final Map<String, dynamic>? alertMetadata;
+  final String status;
+  final String? sentAt;
+  final String? deliveredAt;
+  final String? errorMessage;
+  final int retryCount;
+  final String createdAt;
+  final String updatedAt;
+
+  Alert({
+    required this.id,
+    required this.userId,
+    required this.type,
+    required this.title,
+    required this.message,
+    required this.priority,
+    this.vehicleId,
+    this.policyId,
+    this.bookingId,
+    this.providerId,
+    required this.channels,
+    this.scheduledAt,
+    this.actionUrl,
+    this.actionText,
+    this.alertMetadata,
+    required this.status,
+    this.sentAt,
+    this.deliveredAt,
+    this.errorMessage,
+    required this.retryCount,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory Alert.fromJson(Map<String, dynamic> json) {
+    return Alert(
+      id: json['id'] ?? '',
+      userId: json['user_id'] ?? 0,
+      type: json['type'] ?? '',
+      title: json['title'] ?? '',
+      message: json['message'] ?? '',
+      priority: json['priority'] ?? 0,
+      vehicleId: json['vehicle_id'],
+      policyId: json['policy_id'],
+      bookingId: json['booking_id'],
+      providerId: json['provider_id'],
+      channels: List<String>.from(json['channels'] ?? []),
+      scheduledAt: json['scheduled_at'],
+      actionUrl: json['action_url'],
+      actionText: json['action_text'],
+      alertMetadata: json['alert_metadata'],
+      status: json['status'] ?? '',
+      sentAt: json['sent_at'],
+      deliveredAt: json['delivered_at'],
+      errorMessage: json['error_message'],
+      retryCount: json['retry_count'] ?? 0,
+      createdAt: json['created_at'] ?? '',
+      updatedAt: json['updated_at'] ?? '',
+    );
   }
 
-  static Future<dynamic> upsertPreference({
-    required int userId,
-    required String alertType, // e.g., 'insurance_expiry', 'service_due'
-    required bool isEnabled,
-    List<String> channels = const ['in_app'], // 'email','sms','in_app','push','whatsapp'
-    String frequency = 'immediate',
-    String? quietHoursStart,
-    String? quietHoursEnd,
-    String timezone = 'Africa/Nairobi',
-    int minPriority = 1,
-    bool batchAlerts = false,
-  }) async {
-    final body = {
-      'user_id': userId,
-      'alert_type': alertType,
-      'is_enabled': isEnabled,
-      'channels': channels,
-      'frequency': frequency,
-      'quiet_hours_start': quietHoursStart,
-      'quiet_hours_end': quietHoursEnd,
-      'timezone': timezone,
-      'min_priority': minPriority,
-      'batch_alerts': batchAlerts,
-    };
-    return ApiService.post('/notifications/preferences', body);
-  }
-
-  // Alerts inbox APIs
-  static Future<List<dynamic>> getAlerts({
-    required int userId,
-    String? type, // e.g., 'insurance_expiry'
-    String? status, // e.g., 'delivered'
-    int limit = 50,
-    int offset = 0,
-  }) async {
-    final query = <String, String>{
-      'user_id': userId.toString(),
-      'limit': limit.toString(),
-      'offset': offset.toString(),
-      if (type != null) 'alert_type': type,
-      if (status != null) 'status': status,
-    };
-    final res = await ApiService.get('/alerts/', query: query);
-    return (res is List) ? res : <dynamic>[];
-  }
-
-  static Future<bool> markRead(String alertId) async {
-    final res = await ApiService.put('/alerts/$alertId', {
-      // Fallback: some backends use PATCH /mark-read, support both below
-    });
-    // If PUT didn't work, try dedicated endpoint
-    if (res == null) {
-      final ok = await ApiService.post('/alerts/$alertId/mark-read', {});
-      return ok != null;
+  bool get isRead => status == 'delivered';
+  bool get isUnread => status == 'pending' || status == 'sent';
+  bool get isFailed => status == 'failed';
+  
+  String get priorityText {
+    switch (priority) {
+      case 1: return 'Low';
+      case 2: return 'Medium';
+      case 3: return 'High';
+      case 4: return 'Urgent';
+      default: return 'Normal';
     }
-    return true;
   }
 
-  static Future<int> getUnreadCount(int userId) async {
-    final res = await ApiService.get('/alerts/user/$userId/unread-count');
-    return (res != null && res['unread_count'] is int) ? res['unread_count'] as int : 0;
-  }
-
-  // FCM token management
-  static Future<bool> registerFCMToken(int userId, String fcmToken) async {
-    try {
-      final response = await ApiService.post('/users/$userId/fcm-token', {'fcm_token': fcmToken});
-      return response != null;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  static Future<bool> removeFCMToken(int userId) async {
-    try {
-      await ApiService.delete('/users/$userId/fcm-token');
-      return true;
-    } catch (e) {
-      return false;
+  String get typeDisplayName {
+    switch (type) {
+      case 'insurance_expiry': return 'Insurance Expiry';
+      case 'service_due': return 'Service Due';
+      case 'app_download_prompt': return 'App Download';
+      case 'maintenance_reminder': return 'Maintenance';
+      case 'booking_confirmation': return 'Booking';
+      case 'payment_reminder': return 'Payment';
+      default: return type.replaceAll('_', ' ').toUpperCase();
     }
   }
 }
 
+class AlertPreference {
+  final String alertType;
+  final bool isEnabled;
+  final List<String> channels;
 
+  AlertPreference({
+    required this.alertType,
+    required this.isEnabled,
+    required this.channels,
+  });
+
+  factory AlertPreference.fromJson(Map<String, dynamic> json) {
+    return AlertPreference(
+      alertType: json['alert_type'] ?? '',
+      isEnabled: json['is_enabled'] ?? true,
+      channels: List<String>.from(json['channels'] ?? ['in_app']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'alert_type': alertType,
+      'is_enabled': isEnabled,
+      'channels': channels,
+    };
+  }
+}
+
+class AlertsService {
+  static const String _baseUrl = '/alerts';
+
+  /// Get alerts for current user
+  static Future<List<Alert>> getAlerts({
+    String? alertType,
+    String? status,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+      
+      if (alertType != null) queryParams['alert_type'] = alertType;
+      if (status != null) queryParams['status'] = status;
+
+      final queryString = queryParams.entries
+          .map((e) => '${e.key}=${e.value}')
+          .join('&');
+      final url = queryString.isNotEmpty ? '$_baseUrl?$queryString' : _baseUrl;
+      final response = await ApiService.get(url);
+      
+      if (response != null) {
+        return (response as List)
+            .map((json) => Alert.fromJson(json))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching alerts: $e');
+      return [];
+    }
+  }
+
+  /// Get unread alert count for current user
+  static Future<int> getUnreadCount() async {
+    try {
+      final response = await ApiService.get('$_baseUrl/user/me/unread-count');
+      if (response != null) {
+        return response['unread_count'] ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      print('Error fetching unread count: $e');
+      return 0;
+    }
+  }
+
+  /// Mark alert as read
+  static Future<bool> markAsRead(String alertId) async {
+    try {
+      final response = await ApiService.post('$_baseUrl/$alertId/mark-read', {});
+      return response != null;
+    } catch (e) {
+      print('Error marking alert as read: $e');
+      return false;
+    }
+  }
+
+  /// Mark all alerts as read
+  static Future<bool> markAllAsRead() async {
+    try {
+      final alerts = await getAlerts(status: 'pending');
+      bool allSuccess = true;
+      
+      for (final alert in alerts) {
+        final success = await markAsRead(alert.id);
+        if (!success) allSuccess = false;
+      }
+      
+      return allSuccess;
+    } catch (e) {
+      print('Error marking all alerts as read: $e');
+      return false;
+    }
+  }
+
+  /// Get alert preferences for current user
+  static Future<List<AlertPreference>> getPreferences(int userId) async {
+    try {
+      final response = await ApiService.get('$_baseUrl/user/$userId/preferences');
+      if (response != null) {
+        return (response as List)
+            .map((json) => AlertPreference.fromJson(json))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching alert preferences: $e');
+      return [];
+    }
+  }
+
+  /// Update alert preference
+  static Future<bool> upsertPreference({
+    required int userId,
+    required String alertType,
+    required bool isEnabled,
+    required List<String> channels,
+  }) async {
+    try {
+      final data = {
+        'user_id': userId,
+        'alert_type': alertType,
+        'is_enabled': isEnabled,
+        'channels': channels,
+      };
+      
+      final response = await ApiService.post('$_baseUrl/user/$userId/preferences', data);
+      return response != null;
+    } catch (e) {
+      print('Error updating alert preference: $e');
+      return false;
+    }
+  }
+
+  /// Delete alert
+  static Future<bool> deleteAlert(String alertId) async {
+    try {
+      await ApiService.delete('$_baseUrl/$alertId');
+      return true;
+    } catch (e) {
+      print('Error deleting alert: $e');
+      return false;
+    }
+  }
+
+  /// Get alert by ID
+  static Future<Alert?> getAlert(String alertId) async {
+    try {
+      final response = await ApiService.get('$_baseUrl/$alertId');
+      if (response != null) {
+        return Alert.fromJson(response);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching alert: $e');
+      return null;
+    }
+  }
+
+  /// Filter alerts by type
+  static List<Alert> filterByType(List<Alert> alerts, String type) {
+    return alerts.where((alert) => alert.type == type).toList();
+  }
+
+  /// Filter alerts by status
+  static List<Alert> filterByStatus(List<Alert> alerts, String status) {
+    return alerts.where((alert) => alert.status == status).toList();
+  }
+
+  /// Sort alerts by priority and date
+  static List<Alert> sortAlerts(List<Alert> alerts) {
+    final sorted = List<Alert>.from(alerts);
+    sorted.sort((a, b) {
+      // First by priority (higher first)
+      if (a.priority != b.priority) {
+        return b.priority.compareTo(a.priority);
+      }
+      // Then by creation date (newer first)
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    return sorted;
+  }
+
+  /// Get alerts grouped by type
+  static Map<String, List<Alert>> groupByType(List<Alert> alerts) {
+    final Map<String, List<Alert>> grouped = {};
+    for (final alert in alerts) {
+      if (!grouped.containsKey(alert.type)) {
+        grouped[alert.type] = [];
+      }
+      grouped[alert.type]!.add(alert);
+    }
+    return grouped;
+  }
+}

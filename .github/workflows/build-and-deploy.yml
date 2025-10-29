@@ -133,21 +133,177 @@ jobs:
             git fetch --all #this is to fetch the latest changes from the remote repository
             git reset --hard origin/main #this is to reset the local repository to the latest changes from the remote repository
             
-            # Run production environment setup
-            echo "🔧 Setting up production environment..."
-            chmod +x setup-prod-env.sh
+            # Generate production .env file from GitHub Secrets
+            echo "🔧 Generating production .env file from secrets..."
             
-            # Check if env.prod exists
-            if [ ! -f "env.prod" ]; then
-              echo "❌ env.prod file not found!"
-              echo "Available files:"
-              ls -la *.env* || echo "No env files found"
-              exit 1
-            fi
+            # Create .env with restricted permissions
+            touch .env
+            chmod 600 .env
+            chown root:root .env
             
-            echo "✅ env.prod file found, running setup script..."
-            ./setup-prod-env.sh
-            echo "✅ Production environment setup completed"
+            cat > .env << EOF
+# Production Environment Configuration
+# Generated from GitHub Secrets during CI/CD deployment
+
+# External Database URLs
+NEON_DATABASE_URL=${{ secrets.NEON_DATABASE_URL }}
+UPSTASH_REDIS_URL=${{ secrets.UPSTASH_REDIS_URL }}
+UPSTASH_REDIS_REST_URL=${{ secrets.UPSTASH_REDIS_REST_URL }}
+UPSTASH_REDIS_REST_TOKEN=${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+# Internal Database URLs (for reference - not used in prod)
+DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
+DB_HOST=postgres
+DB_NAME=car_platform
+DB_USER=AdminDb
+DB_PASSWORD=Ngojakwanza
+REDIS_HOST=redis
+
+# JWT Configuration
+JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# CORS Configuration
+ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+
+# Email settings
+SMTP_HOST=${{ secrets.SMTP_HOST }}
+SMTP_PORT=${{ secrets.SMTP_PORT }}
+SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
+SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+SMTP_FROM_EMAIL=${{ secrets.SMTP_FROM_EMAIL }}
+SMTP_FROM_NAME=${{ secrets.SMTP_FROM_NAME }}
+SMTP_TLS=${{ secrets.SMTP_TLS }}
+SMTP_SSL=${{ secrets.SMTP_SSL }}
+
+# Mail settings (for user service mailconfig.py)
+MAIL_SERVER=${{ secrets.MAIL_SERVER }}
+MAIL_PORT=${{ secrets.MAIL_PORT }}
+MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+MAIL_FROM=${{ secrets.MAIL_FROM }}
+MAIL_FROM_NAME=${{ secrets.MAIL_FROM_NAME }}
+MAIL_TLS=${{ secrets.MAIL_TLS }}
+MAIL_SSL=${{ secrets.MAIL_SSL }}
+
+# SMS Configuration
+SMS_PROVIDER=${{ secrets.SMS_PROVIDER }}
+AT_USERNAME=${{ secrets.AT_USERNAME }}
+AT_API_KEY=${{ secrets.AT_API_KEY }}
+AT_SENDER_ID=${{ secrets.AT_SENDER_ID }}
+
+# Twilio Configuration (for SMS alternative)
+TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
+TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}
+
+# Push Notifications
+FCM_SERVER_KEY=${{ secrets.FCM_SERVER_KEY }}
+
+# Environment
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+
+# Service URLs (internal)
+USER_SERVICE_URL=http://user-service:8001
+BOOKING_SERVICE_URL=http://booking-service:8004
+INSURANCE_SERVICE_URL=http://insurance-service:8005
+SOCIAL_SERVICE_URL=http://social-service:8008
+
+# Celery Configuration
+CELERY_BROKER_URL=${{ secrets.UPSTASH_REDIS_URL }}/0
+CELERY_RESULT_BACKEND=${{ secrets.UPSTASH_REDIS_URL }}/1
+
+# Social Service Configuration
+SOCIAL_SERVICE_PORT=8008
+ENABLE_CONTENT_MODERATION=true
+ENABLE_ANALYTICS=true
+ENABLE_NOTIFICATIONS=true
+RATE_LIMIT_ENABLED=true
+MEDIA_STORAGE_TYPE=cloudflare
+MEDIA_UPLOAD_PATH=/app/uploads
+MAX_FILE_SIZE=104857600
+ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/gif,image/webp
+ALLOWED_VIDEO_TYPES=video/mp4,video/webm,video/quicktime
+ANALYTICS_RETENTION_DAYS=90
+RATE_LIMIT_REQUESTS_PER_MINUTE=60
+PUSH_NOTIFICATION_ENABLED=true
+
+# Cloudflare R2 Configuration
+CLOUDFLARE_ACCOUNT_ID=${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+CLOUDFLARE_ACCESS_KEY_ID=${{ secrets.CLOUDFLARE_ACCESS_KEY_ID }}
+CLOUDFLARE_SECRET_ACCESS_KEY=${{ secrets.CLOUDFLARE_SECRET_ACCESS_KEY }}
+CLOUDFLARE_BUCKET=${{ secrets.CLOUDFLARE_BUCKET }}
+CLOUDFLARE_PUBLIC_URL=${{ secrets.CLOUDFLARE_PUBLIC_URL }}
+
+# Content Moderation
+MODERATION_API_KEY=${{ secrets.MODERATION_API_KEY }}
+
+# Monitoring
+GRAFANA_PASSWORD=${{ secrets.GRAFANA_PASSWORD }}
+EOF
+            
+            # Additional security measures
+            chmod 600 .env
+            chown root:root .env
+
+            sudo chmod 640 .env
+            sudo chown root:docker .env
+            
+            # Remove .env from git tracking (if it exists)
+            git rm --cached .env 2>/dev/null || true
+            echo ".env" >> .gitignore
+            
+            # Set up log rotation to prevent sensitive data in logs
+            echo "*.log {
+                daily
+                missingok
+                rotate 7
+                compress
+                notifempty
+                create 644 root root
+            }" | sudo tee /etc/logrotate.d/car-platform
+            
+            # Install security monitoring tools
+            echo "🔒 Setting up security monitoring..."
+            sudo apt update
+            sudo apt install -y fail2ban aide ufw
+            
+            # Configure fail2ban for SSH protection
+            sudo tee /etc/fail2ban/jail.local << EOF
+[DEFAULT]
+bantime = 3600
+findtime = 600
+maxretry = 3
+
+[sshd]
+enabled = true
+port = ssh
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 3600
+EOF
+            
+            # Configure AIDE for file integrity monitoring
+            sudo aideinit
+            sudo mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+            
+            # Set up UFW firewall, ufw is short form of Uncomplicated Firewall,used to block unwanted traffic to the server.
+            sudo ufw --force enable
+            sudo ufw default deny incoming 
+            sudo ufw default allow outgoing
+            sudo ufw allow ssh
+            sudo ufw allow 80/tcp #
+            sudo ufw allow 443/tcp
+            
+            # Start security services
+            sudo systemctl enable fail2ban
+            sudo systemctl start fail2ban
+            sudo systemctl enable aide
+            sudo systemctl start aide
+            
+            echo "✅ Security monitoring and hardening configured"
             
             # Configure Docker for better network handling
             sudo mkdir -p /etc/docker

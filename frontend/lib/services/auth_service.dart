@@ -1,271 +1,133 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:driveon_car_platform/services/config.dart';
-import 'package:http/http.dart' as http;
+import 'package:driveon_car_platform/services/api_service.dart';
+import 'package:driveon_car_platform/services/storage_service.dart';
 
-//
-
+/// Refactored AuthService with DRY principles applied
 class AuthService {
-  static const String baseUrl = ApiConfig.baseUrl;
-
-  // Send OTP
   // Send OTP
   static Future<bool> sendCode(String email) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/users/send-code"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"email": email}),
-    );
-
-    if (response.statusCode == 200) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString("email", email); // ✅ FIX: use same key as verifyCode()
+    final result = await ApiService.post("/users/send-code", {"email": email});
+    
+    if (result != null) {
+      await StorageService.setEmail(email);
       return true;
     }
     return false;
   }
 
-
   // Verify OTP
   static Future<bool> verifyCode(String code) async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('email'); // saved earlier during /send-code
-    if (email == null) return false;
+    final email = await StorageService.getEmail();
+    
+    if (email == null) {
+      return false;
+    }
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/verify-code'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'code': code}),
-    );
+    final result = await ApiService.post("/users/verify-code", {
+      'email': email, 
+      'code': code
+    });
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final token = data['access_token'];
+    if (result != null) {
+      final token = result['access_token'];
+      await StorageService.setToken(token);
 
-      await prefs.setString('token', token);
-
-      // Fetch user profile (/users/me)
-      final meResponse = await http.get(
-        Uri.parse('$baseUrl/users/me'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (meResponse.statusCode == 200) {
-        final user = jsonDecode(meResponse.body);
-        await prefs.setString('user', jsonEncode(user));
+      // Fetch user profile
+      final user = await ApiService.get("/users/me");
+      if (user != null) {
+        await StorageService.setUser(user);
         return true;
       }
     }
-
     return false;
   }
 
+  // Get current user from storage
   static Future<Map<String, dynamic>?> getCurrentUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString('user');
-    if (userData == null) return null;
-    return jsonDecode(userData);
+    return await StorageService.getUser();
   }
 
-
-  // Get logged-in user info
+  // Get logged-in user info from API
   static Future<Map<String, dynamic>?> getMe() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) {
-      print('DEBUG AuthService: No token found');
-      return null;
+    return await ApiService.get("/users/me");
+  }
+
+  // Check if user has valid authentication
+  static Future<bool> isAuthenticated() async {
+    final token = await StorageService.getToken();
+    if (token == null) return false;
+    
+    try {
+      final userData = await getMe();
+      return userData != null;
+    } catch (e) {
+      print('DEBUG AuthService: Authentication check failed: $e');
+      return false;
     }
-
-    print('DEBUG AuthService: Making request to /me endpoint');
-    final response = await http.get(
-      Uri.parse("$baseUrl/users/me"),
-      headers: {"Authorization": "Bearer $token"},
-    );
-
-    print('DEBUG AuthService: Response status: ${response.statusCode}');
-    print('DEBUG AuthService: Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      print('DEBUG AuthService: Parsed data: $data');
-      return data;
-    }
-    return null;
   }
 
   // Logout
   static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("token");
-    await prefs.remove("user");
-    await prefs.remove("email");
-    
-    // Note: UserContextService.clearContext() should be called from the UI layer
-    // to avoid circular dependencies
-  }
-  // Fetch all users (for admin)
-  static Future<List<dynamic>> getAllUsers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) return [];
-
-    final response = await http.get(
-      Uri.parse("$baseUrl/users/all"),
-      headers: {"Authorization": "Bearer $token"},
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    return [];
-  }
-
-  // Search users (for admin)
-  static Future<List<dynamic>> searchUsers(String query) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) return [];
-
-    final response = await http.get(
-      Uri.parse("$baseUrl/users/search?q=$query"),
-      headers: {"Authorization": "Bearer $token"},
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    return [];
-  }
-
-  // Link user to provider
-  static Future<bool> linkUserToProvider(int userId, String providerId) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/users/link-user-provider"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"user_id": userId, "provider_id": providerId}),
-    );
-
-    return response.statusCode == 200;
-  }
-  // Create guest user 
-  static Future<Map<String, dynamic>?> createGuestUser({ String? email, String? phone, String? name, String? providerId, }) async {
-     final response = await http.post( 
-      Uri.parse("$baseUrl/users/guest"), 
-      headers: {"Content-Type": "application/json"}, 
-      body: jsonEncode({ if (email != null) "email": email, if (phone != null) "phone": phone, if (name != null) "name": name, if (providerId != null) "provider_id": providerId, }), );
-      if (response.statusCode == 200) { return jsonDecode(response.body); } 
-      return null; 
+    await StorageService.clearAllAuth();
   }
 
   // Admin Management Functions
   static Future<bool> createAdminUser(String email, {String? name}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) return false;
-
-    final response = await http.post(
-      Uri.parse("$baseUrl/users/admin/create?email=$email${name != null ? '&name=$name' : ''}"),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    return response.statusCode == 200;
+    final query = "email=$email${name != null ? '&name=$name' : ''}";
+    final result = await ApiService.post("/users/admin/create?$query", {});
+    return result != null;
   }
 
   static Future<bool> removeAdminUser(String email) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) return false;
-
-    final response = await http.delete(
-      Uri.parse("$baseUrl/users/admin/remove?email=$email"),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    return response.statusCode == 200;
+    return await ApiService.delete("/users/admin/remove?email=$email");
   }
 
   static Future<List<dynamic>> getAdminUsers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) return [];
-
-    final response = await http.get(
-      Uri.parse("$baseUrl/users/admin/list"),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['admins'] ?? [];
-    }
-    return [];
+    final result = await ApiService.get("/users/admin/list");
+    return result?['admins'] ?? [];
   }
 
-  // Look up multiple users by their IDs
+  // User Management Functions
+  static Future<List<dynamic>> getAllUsers() async {
+    final result = await ApiService.get("/users/all");
+    return result is List ? result : [];
+  }
+
+  static Future<List<dynamic>> searchUsers(String query) async {
+    final result = await ApiService.get("/users/search", query: {"q": query});
+    return result is List ? result : [];
+  }
+
   static Future<List<dynamic>> lookupUsersByIds(List<int> userIds) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) {
-      print('DEBUG AuthService: No token found for user lookup');
-      return [];
-    }
-
-    print('DEBUG AuthService: Looking up users with IDs: $userIds');
-    print('DEBUG AuthService: Making request to: $baseUrl/users/lookup');
-    
-    final response = await http.post(
-      Uri.parse("$baseUrl/users/lookup"),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode(userIds),
-    );
-
-    print('DEBUG AuthService: User lookup response status: ${response.statusCode}');
-    print('DEBUG AuthService: User lookup response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final result = jsonDecode(response.body);
-      print('DEBUG AuthService: Parsed user lookup result: $result');
-      return result;
-    }
-    
-    print('DEBUG AuthService: User lookup failed with status: ${response.statusCode}');
-    return [];
+    final result = await ApiService.post("/users/lookup", userIds);
+    return result is List ? result : [];
   }
 
-  // Test method to check if user exists (no auth required)
   static Future<Map<String, dynamic>?> testLookupUser(int userId) async {
-    print('DEBUG AuthService: Testing lookup for user ID: $userId');
-    print('DEBUG AuthService: Making request to: $baseUrl/users/test-lookup/$userId');
-    
-    final response = await http.get(
-      Uri.parse("$baseUrl/users/test-lookup/$userId"),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    );
-
-    print('DEBUG AuthService: Test lookup response status: ${response.statusCode}');
-    print('DEBUG AuthService: Test lookup response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final result = jsonDecode(response.body);
-      print('DEBUG AuthService: Test lookup result: $result');
-      return result;
-    }
-    
-    print('DEBUG AuthService: Test lookup failed with status: ${response.statusCode}');
-    return null;
+    return await ApiService.get("/users/test-lookup/$userId");
   }
 
+  // Link user to provider
+  static Future<bool> linkUserToProvider(int userId, String providerId) async {
+    final result = await ApiService.post("/users/link-user-provider", {
+      "user_id": userId, 
+      "provider_id": providerId
+    });
+    return result != null;
+  }
+
+  // Create guest user
+  static Future<Map<String, dynamic>?> createGuestUser({
+    String? email, 
+    String? phone, 
+    String? name, 
+    String? providerId,
+  }) async {
+    final body = <String, dynamic>{};
+    if (email != null) body["email"] = email;
+    if (phone != null) body["phone"] = phone;
+    if (name != null) body["name"] = name;
+    if (providerId != null) body["provider_id"] = providerId;
+    
+    return await ApiService.post("/users/guest", body);
+  }
 }

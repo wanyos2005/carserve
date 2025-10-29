@@ -3,14 +3,14 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
-from core.config import SECRET_KEY, ALGORITHM
+from core.config import JWT_SECRET_KEY, ALGORITHM
 
 # Adjust tokenUrl if your gateway exposes it under a different path
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
 def decode_access_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except Exception:
         raise HTTPException(

@@ -23,16 +23,86 @@ import 'package:driveon_car_platform/pages/Insurance/insurance_marketplace.dart'
 
 // Services
 import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/storage_service.dart';
 
 
 const abyssBlue = Color(0xFF0A192F); // dark navy blue
 
-void main() {
+void main() async {
+  // Initialize Flutter binding first
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize storage service
+  await StorageService.initialize();
   runApp(const CarPlatformApp());
 }
 
-class CarPlatformApp extends StatelessWidget {
+class CarPlatformApp extends StatefulWidget {
   const CarPlatformApp({super.key});
+
+  @override
+  State<CarPlatformApp> createState() => _CarPlatformAppState();
+}
+
+class _CarPlatformAppState extends State<CarPlatformApp> with WidgetsBindingObserver {
+  UserContext? _userContext;
+  bool _isInitializing = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.resumed) {
+      // App resumed from background - refresh authentication state
+      _refreshAuthenticationState();
+    }
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      final userContext = await UserContextService.initializeContext();
+      if (mounted) {
+        setState(() {
+          _userContext = userContext;
+          _isInitializing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _userContext = null;
+          _isInitializing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshAuthenticationState() async {
+    try {
+      final userContext = await UserContextService.refreshContext();
+      if (mounted) {
+        setState(() {
+          _userContext = userContext;
+        });
+      }
+    } catch (e) {
+      // If refresh fails, try to reinitialize
+      await _initializeApp();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +111,6 @@ class CarPlatformApp extends StatelessWidget {
       theme: _buildLightTheme(),     // Light theme
       darkTheme: _buildDarkTheme(),  // Dark theme
       themeMode: ThemeMode.system,
-      initialRoute: "/welcome",
       routes: {
         "/welcome": (context) => const WelcomeScreen(),
         "/login": (context) => const LoginPage(),
@@ -94,46 +163,31 @@ class CarPlatformApp extends StatelessWidget {
         },
        
       },
-      home: FutureBuilder<UserContext?>(
-        future: UserContextService.initializeContext(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          
-          final userContext = snapshot.data;
-          
-          // Debug logging
-          print('DEBUG Main: UserContext: $userContext');
-          if (userContext != null) {
-            print('DEBUG Main: UserType: ${userContext.userType}');
-            print('DEBUG Main: isAdmin: ${userContext.isAdmin}');
-            print('DEBUG Main: isProvider: ${userContext.isProvider}');
-            print('DEBUG Main: providerId: ${userContext.providerId}');
-          }
-          
-          if (userContext != null && userContext.userType != UserType.unknown) {
-            // User is logged in - route based on user type
-            if (userContext.isAdmin) {
-              print('DEBUG Main: Routing to AdminDashboard');
-              return const AdminDashboard();
-            } else if (userContext.isProvider && userContext.providerId != null) {
-              print('DEBUG Main: Routing to ProviderHomePage');
-              return ProviderHomePage(providerId: userContext.providerId!);
-            } else {
-              print('DEBUG Main: Routing to HomePage');
-              return const HomePage();
-            }
-          } else {
-            // User is not logged in - show welcome screen
-            print('DEBUG Main: Routing to WelcomeScreen');
-            return const WelcomeScreen();
-          }
-        },
-      ),
+      home: _buildHomeWidget(),
     );
+  }
+
+  Widget _buildHomeWidget() {
+    if (_isInitializing) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    
+    if (_userContext != null && _userContext!.userType != UserType.unknown) {
+      // User is logged in - route based on user type
+      if (_userContext!.isAdmin) {
+        return const AdminDashboard();
+      } else if (_userContext!.isProvider && _userContext!.providerId != null) {
+        return ProviderHomePage(providerId: _userContext!.providerId!);
+      } else {
+        return const HomePage();
+      }
+    } else {
+      // User is not logged in - show welcome screen
+      return const WelcomeScreen();
+    }
   }
 
   // 🌞 Light theme - Enhanced to match service selector design

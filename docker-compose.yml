@@ -43,6 +43,19 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_HOST=${REDIS_HOST}
+
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES}
+
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - MAIL_TLS=${MAIL_TLS}
+      - MAIL_SSL=${MAIL_SSL}
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -176,9 +189,7 @@ services:
       - SMTP_SSL=${SMTP_SSL}
       # Notification services (add when ready)
       - FCM_SERVER_KEY=${FCM_SERVER_KEY}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+     
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - SMS_PROVIDER=${SMS_PROVIDER}
       - AT_USERNAME=${AT_USERNAME}
@@ -298,7 +309,7 @@ services:
       - REDIS_URL=${REDIS_URL}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
-      - SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - ENABLE_CONTENT_MODERATION=true
       - ENABLE_ANALYTICS=true
@@ -306,7 +317,7 @@ services:
       - RATE_LIMIT_ENABLED=true
       - MEDIA_STORAGE_TYPE=cloudflare
       - MEDIA_UPLOAD_PATH=/app/uploads
-      - MAX_FILE_SIZE=10485760
+      - MAX_FILE_SIZE=104857600
       - ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/gif,image/webp
       - ALLOWED_VIDEO_TYPES=video/mp4,video/webm,video/quicktime
       - ANALYTICS_RETENTION_DAYS=90

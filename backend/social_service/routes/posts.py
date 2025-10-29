@@ -12,6 +12,8 @@ from schemas.social import (
 
 router = APIRouter()
 
+# Accept both with and without trailing slash to avoid 307 redirects from clients
+@router.post("", response_model=PostRead, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=PostRead, status_code=status.HTTP_201_CREATED)
 def create_post(
     post_data: PostCreate,

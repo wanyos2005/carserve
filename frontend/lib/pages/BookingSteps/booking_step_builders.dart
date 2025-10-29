@@ -232,6 +232,8 @@ class BookingStepBuilders {
       required void Function(Map<String, dynamic>) onWhatsAppProvider,
       required void Function(Map<String, dynamic>) onSmsProvider,
       required void Function(Map<String, dynamic>) onEmailProvider,
+      // Filter callback
+      required Function(bool) onFilterChanged,
     }
   ) {
     return SingleChildScrollView(
@@ -253,6 +255,72 @@ class BookingStepBuilders {
             ),
           ),
           const SizedBox(height: 24),
+
+          // Provider Filter Section
+          Card(
+            color: Colors.blue[50],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.filter_list, color: Colors.blue[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Provider Filter',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: recommendedOnly ? Colors.blue[100] : Colors.orange[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          recommendedOnly ? "Recommended" : "All Matching",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: recommendedOnly ? Colors.blue[700] : Colors.orange[700],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    recommendedOnly 
+                        ? "Showing only providers that can handle ALL selected services"
+                        : "Showing providers that can handle ANY of the selected services",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[600],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showProviderFilterDialog(context, recommendedOnly, onFilterChanged),
+                          icon: const Icon(Icons.tune, size: 16),
+                          label: const Text("Change Filter"),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           if (providersLoading)
             const Center(child: CircularProgressIndicator())
@@ -824,5 +892,55 @@ class BookingStepBuilders {
       total += negotiatedPrice;
     }
     return total;
+  }
+
+  static Future<void> _showProviderFilterDialog(
+    BuildContext context,
+    bool currentRecommendedOnly,
+    Function(bool) onFilterChanged,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Provider Filter"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Choose how providers are matched to your selected services:",
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            RadioListTile<bool>(
+              title: const Text("Recommended Only"),
+              subtitle: const Text("Show only providers that can handle ALL selected services"),
+              value: true,
+              groupValue: currentRecommendedOnly,
+              onChanged: (value) {
+                onFilterChanged(value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<bool>(
+              title: const Text("All Matching"),
+              subtitle: const Text("Show providers that can handle ANY of the selected services"),
+              value: false,
+              groupValue: currentRecommendedOnly,
+              onChanged: (value) {
+                onFilterChanged(value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+        ],
+      ),
+    );
   }
 }

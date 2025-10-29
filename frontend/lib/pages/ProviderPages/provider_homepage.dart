@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:driveon_car_platform/pages/social_media/social_hub_page.dart';
+import 'package:driveon_car_platform/social_media/pages/social_hub_page.dart';
 import 'package:driveon_car_platform/services/provider_service.dart';
 import 'package:driveon_car_platform/services/provider_stats_service.dart';
 import 'package:driveon_car_platform/models/provider_category_config.dart';
@@ -39,8 +39,9 @@ class _ProviderHomePageState extends State<ProviderHomePage> with TickerProvider
   Future<void> _loadProviderDetails() async {
     try {
       final provider = await ProviderService.getProviderDetails(widget.providerId);
+      
       setState(() {
-        _categoryName = provider?['category']['name'];
+        _categoryName = provider?['category']?['name'];
         _providerName = provider?['name'];
         _categoryConfig = ProviderCategoryConfigs.getConfig(_categoryName ?? '');
         _frontendGroup = FrontendCategoryGroups.getGroupForBackendCategory(_categoryName ?? '');
@@ -135,7 +136,7 @@ class _ProviderHomePageState extends State<ProviderHomePage> with TickerProvider
                           ),
                         ),
                         Text(
-                          _providerName ?? "Provider",
+                          _providerName ?? "Loading...",
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w600,

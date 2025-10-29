@@ -3,7 +3,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
-from core.config import SECRET_KEY, ALGORITHM
+from core.config import JWT_SECRET_KEY, ALGORITHM
 from core.db import get_db
 
 security = HTTPBearer()
@@ -11,7 +11,7 @@ security = HTTPBearer()
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Verify JWT token and return user_id"""
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(
@@ -37,7 +37,7 @@ def get_current_user_id_optional(credentials: HTTPAuthorizationCredentials = Dep
         return None
     
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             return None

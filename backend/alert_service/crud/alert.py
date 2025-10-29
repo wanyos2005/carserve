@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, or_
 
 from models.alert import Alert, AlertType, AlertStatus
-from schemas.alert import AlertCreate, AlertUpdate
+from schemas.alert import AlertCreate, AlertUpdate, AlertResponse
 
 
 def _normalize_channels(raw_channels) -> list[str]:
@@ -22,7 +22,35 @@ def _normalize_channels(raw_channels) -> list[str]:
     return result
 
 
-def create_alert(db: Session, payload: AlertCreate) -> Alert:
+def _alert_to_response(alert: Alert) -> AlertResponse:
+    """Convert SQLAlchemy Alert model to Pydantic AlertResponse"""
+    return AlertResponse(
+        id=alert.id,
+        user_id=alert.user_id,
+        type=alert.type,
+        title=alert.title,
+        message=alert.message,
+        priority=alert.priority,
+        vehicle_id=alert.vehicle_id,
+        policy_id=alert.policy_id,
+        booking_id=alert.booking_id,
+        provider_id=alert.provider_id,
+        channels=_normalize_channels(alert.channels),
+        status=alert.status,
+        scheduled_at=alert.scheduled_at,
+        sent_at=alert.sent_at,
+        delivered_at=alert.delivered_at,
+        action_url=alert.action_url,
+        action_text=alert.action_text,
+        alert_metadata=alert.alert_metadata,
+        retry_count=alert.retry_count,
+        error_message=alert.error_message,
+        created_at=alert.created_at,
+        updated_at=alert.updated_at,
+    )
+
+
+def create_alert(db: Session, payload: AlertCreate) -> AlertResponse:
     alert = Alert(
         user_id=payload.user_id,
         type=payload.type,
@@ -43,11 +71,12 @@ def create_alert(db: Session, payload: AlertCreate) -> Alert:
     db.add(alert)
     db.commit()
     db.refresh(alert)
-    return alert
+    return _alert_to_response(alert)
 
 
-def get_alert(db: Session, alert_id: str) -> Optional[Alert]:
-    return db.query(Alert).filter(Alert.id == alert_id).first()
+def get_alert(db: Session, alert_id: str) -> Optional[AlertResponse]:
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    return _alert_to_response(alert) if alert else None
 
 
 def list_alerts(
@@ -57,7 +86,7 @@ def list_alerts(
     status: Optional[AlertStatus] = None,
     limit: int = 50,
     offset: int = 0,
-) -> List[Alert]:
+) -> List[AlertResponse]:
     query = db.query(Alert)
     if user_id is not None:
         query = query.filter(Alert.user_id == user_id)
@@ -65,11 +94,13 @@ def list_alerts(
         query = query.filter(Alert.type == alert_type)
     if status is not None:
         query = query.filter(Alert.status == status)
-    return query.order_by(desc(Alert.created_at)).offset(offset).limit(limit).all()
+    
+    alerts = query.order_by(desc(Alert.created_at)).offset(offset).limit(limit).all()
+    return [_alert_to_response(alert) for alert in alerts]
 
 
-def update_alert(db: Session, alert_id: str, updates: AlertUpdate) -> Optional[Alert]:
-    alert = get_alert(db, alert_id)
+def update_alert(db: Session, alert_id: str, updates: AlertUpdate) -> Optional[AlertResponse]:
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         return None
     data = updates.dict(exclude_unset=True)
@@ -80,11 +111,11 @@ def update_alert(db: Session, alert_id: str, updates: AlertUpdate) -> Optional[A
     alert.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(alert)
-    return alert
+    return _alert_to_response(alert)
 
 
 def delete_alert(db: Session, alert_id: str) -> bool:
-    alert = get_alert(db, alert_id)
+    alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         return False
     db.delete(alert)

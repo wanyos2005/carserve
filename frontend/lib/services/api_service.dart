@@ -1,9 +1,10 @@
 // lib/services/api_service.dart
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/storage_service.dart';
 import 'package:driveon_car_platform/services/config.dart';
 
 class ApiService {
@@ -13,8 +14,7 @@ class ApiService {
 
   // --- TOKEN HANDLER ---
   static Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("token");
+    return await StorageService.getToken();
   }
 
   // --- USER CONTEXT INTEGRATION ---
@@ -40,7 +40,6 @@ class ApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.body.isNotEmpty ? jsonDecode(response.body) : null;
     }
-    print("GET $path failed: ${response.statusCode} - ${response.body}");
     return null;
   }
 
@@ -56,10 +55,11 @@ class ApiService {
       body: jsonEncode(body),
     );
 
+    // (debug logs removed)
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.body.isNotEmpty ? jsonDecode(response.body) : null;
     }
-    print("POST $path failed: ${response.statusCode} - ${response.body}");
     return null;
   }
 
@@ -78,7 +78,6 @@ class ApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.body.isNotEmpty ? jsonDecode(response.body) : null;
     }
-    print("PUT $path failed: ${response.statusCode} - ${response.body}");
     return null;
   }
 
@@ -96,7 +95,44 @@ class ApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return true;
     }
-    print("DELETE $path failed: ${response.statusCode} - ${response.body}");
     return false;
+  }
+
+  // --- MULTIPART UPLOAD ---
+  static Future<dynamic> uploadMultipart(
+    String path, {
+    Map<String, String>? fields,
+    Map<String, File>? files,
+  }) async {
+    final token = await _getToken();
+    final uri = Uri.parse("$baseGatewayUrl$path");
+    final request = http.MultipartRequest('POST', uri);
+
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+
+    // Fields
+    fields?.forEach((k, v) => request.fields[k] = v);
+
+    // Files (default field key is the map key)
+    if (files != null) {
+      for (final entry in files.entries) {
+        final f = entry.value;
+        request.files.add(await http.MultipartFile.fromPath(entry.key, f.path));
+      }
+    }
+
+    // (debug logs removed)
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    // (debug logs removed)
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.body.isNotEmpty ? jsonDecode(response.body) : null;
+    }
+    return null;
   }
 }

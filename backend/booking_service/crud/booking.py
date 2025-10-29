@@ -33,6 +33,10 @@ def create_booking(db: Session, payload: BookingCreate) -> Booking:
         scheduled_at=payload.scheduled_at,
         location=payload.location,
         meta=payload.meta,
+        base_price=payload.base_price,
+        agreed_price=payload.agreed_price,
+        has_negotiated=payload.has_negotiated,
+        negotiation_notes=payload.negotiation_notes,
     )
     db.add(b)
     db.commit()

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     USER_SERVICE_URL: str = os.getenv("USER_SERVICE_URL", "http://user-service:8001")
     BOOKING_SERVICE_URL: str = os.getenv("BOOKING_SERVICE_URL", "http://booking-service:8004")
     INSURANCE_SERVICE_URL: str = os.getenv("INSURANCE_SERVICE_URL", "http://insurance-service:8005")
-    
+    SERVICE_PROVIDER_URL: str = os.getenv("SERVICE_PROVIDER_URL", "http://service-provider:8003")
     # Notification services
     FCM_SERVER_KEY: str = os.getenv("FCM_SERVER_KEY", "")
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")

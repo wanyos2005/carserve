@@ -19,7 +19,7 @@ if not DATABASE_URL:
 
 
 
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecret")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecret")
 ALGORITHM = "HS256"
 
 # CORS

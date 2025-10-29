@@ -15,78 +15,7 @@ else
     exit 1
 fi
 
-# Create individual .env files for each service if they don't exist
-services=("user_service" "vehicle_service" "service_provider_service" "booking_service" "insurance_service" "alert_service" "expenses_service" "social_service")
-
-for service in "${services[@]}"; do
-    service_path="backend/${service}"
-    env_file="${service_path}/.env"
-    
-    if [ ! -f "$env_file" ]; then
-        echo "📝 Creating .env file for $service..."
-        # Special configuration for social service
-        if [ "$service" = "social_service" ]; then
-            cat > "$env_file" << EOF
-# Development Environment for $service
-DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-DB_HOST=postgres
-DB_NAME=car_platform
-DB_USER=AdminDb
-DB_PASSWORD=Ngojakwanza
-REDIS_HOST=redis
-REDIS_URL=redis://redis:6379
-SECRET_KEY=dev-super-secret-jwt-key-here
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081,http://localhost:8000
-ENVIRONMENT=development
-LOG_LEVEL=DEBUG
-
-# Social Service Specific Configuration
-SOCIAL_SERVICE_PORT=8008
-ENABLE_CONTENT_MODERATION=true
-ENABLE_ANALYTICS=true
-ENABLE_NOTIFICATIONS=true
-RATE_LIMIT_ENABLED=true
-MEDIA_STORAGE_TYPE=cloudflare
-MEDIA_UPLOAD_PATH=/app/uploads
-MAX_FILE_SIZE=10485760
-ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/gif,image/webp
-ALLOWED_VIDEO_TYPES=video/mp4,video/webm,video/quicktime
-ANALYTICS_RETENTION_DAYS=90
-RATE_LIMIT_REQUESTS_PER_MINUTE=60
-PUSH_NOTIFICATION_ENABLED=true
-
-# Celery Configuration for Social Service
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_RESULT_BACKEND=redis://redis:6379/1
-
-# Cloudflare R2 Configuration
-CLOUDFLARE_ACCOUNT_ID=4739f91ba1dc08d51ef1d0e905c95da7
-CLOUDFLARE_ACCESS_KEY_ID=1c2c27b577ed7c83ab8c17baf76fc50c
-CLOUDFLARE_SECRET_ACCESS_KEY=4351417510a2f068ffa87ea703e5afb68f05ae10efdd8155d1071097143363b1
-CLOUDFLARE_BUCKET=driveon-social-media
-CLOUDFLARE_PUBLIC_URL=https://pub-4739f91ba1dc08d51ef1d0e905c95da7.r2.dev
-EOF
-        else
-            cat > "$env_file" << EOF
-# Development Environment for $service
-DATABASE_URL=postgresql+psycopg2://AdminDb:Ngojakwanza@postgres:5432/car_platform
-DB_HOST=postgres
-DB_NAME=car_platform
-DB_USER=AdminDb
-DB_PASSWORD=Ngojakwanza
-REDIS_HOST=redis
-REDIS_URL=redis://redis:6379
-SECRET_KEY=dev-super-secret-jwt-key-here
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081,http://localhost:8000
-ENVIRONMENT=development
-LOG_LEVEL=DEBUG
-EOF
-        fi
-        echo "✅ Created .env for $service"
-    else
-        echo "ℹ️  .env file already exists for $service"
-    fi
-done
+echo "ℹ️  Skipping creation of per-service .env files. Using single root .env for all services."
 
 echo ""
 echo "🎉 Development environment setup complete!"

@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/services/storage_service.dart';
 
 enum UserType {
   carOwner,
@@ -31,18 +30,10 @@ class UserContext {
   bool get isProvider => userType == UserType.provider;
   bool get isAdmin => userType == UserType.admin;
   bool get isUnknown => userType == UserType.unknown;
-  //factory constructor is a constructor that is used to create an instance of the class from a map of data,
-  //in this case we are creating an instance of the UserContext class from a map of data
-  //fromUserData is not an inbuilt method, it is a custom method that we are creating
+
   factory UserContext.fromUserData(Map<String, dynamic> userData) {
     final providerId = userData['provider_id']?.toString();
     final isAdmin = userData['is_admin'] == true || userData['role'] == 'admin';
-    
-    // Debug logging
-    print('DEBUG Frontend: User data received: $userData');
-    print('DEBUG Frontend: is_admin field: ${userData['is_admin']} (type: ${userData['is_admin'].runtimeType})');
-    print('DEBUG Frontend: role field: ${userData['role']}');
-    print('DEBUG Frontend: isAdmin calculated: $isAdmin');
     
     UserType userType;
     if (isAdmin) {
@@ -52,8 +43,6 @@ class UserContext {
     } else {
       userType = UserType.carOwner;
     }
-    
-    
 
     return UserContext(
       id: userData['id']?.toString(),
@@ -91,6 +80,7 @@ class UserContext {
   }
 }
 
+/// Refactored UserContextService with DRY principles applied
 class UserContextService {
   static const String _userContextKey = 'user_context';
   static UserContext? _currentContext;
@@ -119,8 +109,16 @@ class UserContextService {
       // First try to load from stored context
       final storedContext = await _loadStoredContext();
       if (storedContext != null) {
-        _currentContext = storedContext;
-        return storedContext;
+        // Check if we have a token
+        final token = await StorageService.getToken();
+        if (token != null) {
+          // Use stored context without validating token to avoid clearing it
+          _currentContext = storedContext;
+          return storedContext;
+        } else {
+          // No token found, clear context
+          await clearContext();
+        }
       }
 
       // If no stored context, try to fetch from API
@@ -158,25 +156,21 @@ class UserContextService {
 
   /// Clear user context (on logout)
   static Future<void> clearContext() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_userContextKey);
+    await StorageService.clearContext(_userContextKey);
     _currentContext = null;
   }
 
   /// Save context to storage
   static Future<void> _saveContext(UserContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userContextKey, jsonEncode(context.toJson()));
+    await StorageService.setContext(_userContextKey, context.toJson());
   }
 
   /// Load context from storage
   static Future<UserContext?> _loadStoredContext() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final contextData = prefs.getString(_userContextKey);
+      final contextData = await StorageService.getContext(_userContextKey);
       if (contextData != null) {
-        final json = jsonDecode(contextData);
-        return UserContext.fromJson(json);
+        return UserContext.fromJson(contextData);
       }
       return null;
     } catch (e) {

@@ -13,17 +13,30 @@ class BookingCreate(BaseModel):
     scheduled_at: Optional[datetime] = None
     location: Optional[dict] = None
     meta: Optional[dict] = None
+    # Pricing
+    base_price: Optional[int] = None
+    agreed_price: Optional[int] = None
+    has_negotiated: Optional[bool] = None
+    negotiation_notes: Optional[str] = None
 
 class BookingUpdate(BaseModel):
     status: Optional[str] = None
     scheduled_at: Optional[datetime] = None
     location: Optional[dict] = None
     meta: Optional[dict] = None
+    # Pricing updates
+    base_price: Optional[int] = None
+    agreed_price: Optional[int] = None
+    has_negotiated: Optional[bool] = None
+    negotiation_notes: Optional[str] = None
+    # Expense flag (internal use)
+    expense_recorded: Optional[bool] = None
 
 class BookingOut(BookingCreate):
     id: str
     status: str
     created_at: Optional[datetime]
+    expense_recorded: Optional[bool]
 
     class Config:
         from_attributes = True

@@ -14,7 +14,6 @@ import 'package:driveon_car_platform/BookingPageHelpers/enhanced_provider_select
 
 
 // Components
-import 'package:driveon_car_platform/components/preferences_popover.dart';
 
 // Models and Utils
 import 'package:driveon_car_platform/models/booking_config.dart';
@@ -53,7 +52,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   Map<String, dynamic>? _selectedProvider;
 
   // Recommendation toggle (matches backend "match_all")
-  bool _recommendedOnly = true;
+  bool _recommendedOnly = false;
   
   // Mode toggle: Services vs Spare Parts
   final bool _isSparePartsMode = false;
@@ -407,9 +406,9 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
             ),
           ),
            IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: "Preferences",
-            onPressed: _showPreferencesPopover,
+            icon: const Icon(Icons.filter_list),
+            tooltip: "Provider Filter",
+            onPressed: _showProviderFilterDialog,
           ),
         ],
       ),
@@ -505,6 +504,10 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
           onWhatsAppProvider: _openWhatsApp,
           onSmsProvider: _sendSMS,
           onEmailProvider: _sendEmail,
+          onFilterChanged: (value) async {
+            setState(() => _recommendedOnly = value);
+            await _fetchMatchedProviders();
+          },
         );
       case BookingStepType.schedulingAndLocation:
         return BookingStepBuilders.buildSchedulingAndLocationStep(
@@ -834,7 +837,27 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
         Card(
           child: ListTile(
             leading: const Icon(Icons.business, color: Colors.green),
-            title: const Text("Provider"),
+            title: Row(
+              children: [
+                const Text("Provider"),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _recommendedOnly ? Colors.blue[100] : Colors.orange[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _recommendedOnly ? "Recommended" : "All Matching",
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: _recommendedOnly ? Colors.blue[700] : Colors.orange[700],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
                 subtitle: _selectedProvider == null
                     ? Text(_providersLoading
                         ? "Loading providers..."
@@ -1191,21 +1214,51 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
     );
   }
 
-  Future<void> _showPreferencesPopover() async {
-    await showPreferencesPopover(
+  Future<void> _showProviderFilterDialog() async {
+    await showDialog(
       context: context,
-      recommendedOnly: _recommendedOnly,
-      isPurchaseMode: _isPurchaseMode,
-      onRecommendedOnlyChanged: (value) async {
-        setState(() => _recommendedOnly = value);
-        await _fetchMatchedProviders();
-      },
-      onApply: () {
-        // Refresh providers if needed
-        if (_selectedServices.isNotEmpty) {
-          _fetchMatchedProviders();
-        }
-      },
+      builder: (context) => AlertDialog(
+        title: const Text("Provider Filter"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Choose how providers are matched to your selected services:",
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            RadioListTile<bool>(
+              title: const Text("Recommended Only"),
+              subtitle: const Text("Show only providers that can handle ALL selected services"),
+              value: true,
+              groupValue: _recommendedOnly,
+              onChanged: (value) {
+                setState(() => _recommendedOnly = value!);
+                Navigator.pop(context);
+                _fetchMatchedProviders();
+              },
+            ),
+            RadioListTile<bool>(
+              title: const Text("All Matching"),
+              subtitle: const Text("Show providers that can handle ANY of the selected services"),
+              value: false,
+              groupValue: _recommendedOnly,
+              onChanged: (value) {
+                setState(() => _recommendedOnly = value!);
+                Navigator.pop(context);
+                _fetchMatchedProviders();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+        ],
+      ),
     );
   }
 

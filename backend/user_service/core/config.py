@@ -20,10 +20,12 @@ if not DATABASE_URL:
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_URL = os.getenv("REDIS_URL", f"redis://{REDIS_HOST}:6379")
 
-# JWT Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecret")
+# JWT Configuration (align with other services)
+# Accept either SECRET_KEY or JWT_SECRET_KEY
+SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET_KEY", "supersecret")
+JWT_SECRET_KEY = SECRET_KEY
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 43200
 
 # CORS Configuration
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")

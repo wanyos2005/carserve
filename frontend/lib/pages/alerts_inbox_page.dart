@@ -13,7 +13,7 @@ class AlertsInboxPage extends StatefulWidget {
 class _AlertsInboxPageState extends State<AlertsInboxPage> {
   final _controller = ScrollController();
   bool _loading = true;
-  List<dynamic> _alerts = [];
+  List<Alert> _alerts = [];
   int _offset = 0;
   final int _limit = 50;
   String? _filterType; // 'insurance_expiry', 'service_due'
@@ -46,8 +46,7 @@ class _AlertsInboxPageState extends State<AlertsInboxPage> {
 
     setState(() => _loading = true);
     final items = await AlertsService.getAlerts(
-      userId: userId,
-      type: _filterType,
+      alertType: _filterType,
       status: _filterStatus,
       limit: _limit,
       offset: refresh ? 0 : _offset,
@@ -70,23 +69,47 @@ class _AlertsInboxPageState extends State<AlertsInboxPage> {
     }
   }
 
-  Future<void> _markRead(dynamic alert) async {
-    final id = alert['id'] as String?;
-    if (id == null) return;
-    final ok = await AlertsService.markRead(id);
+  Future<void> _markRead(Alert alert) async {
+    final ok = await AlertsService.markAsRead(alert.id);
     if (ok) {
       setState(() {
-        alert['status'] = 'delivered';
+        // Update the alert status locally
+        final index = _alerts.indexWhere((a) => a.id == alert.id);
+        if (index != -1) {
+          _alerts[index] = Alert(
+            id: alert.id,
+            userId: alert.userId,
+            type: alert.type,
+            title: alert.title,
+            message: alert.message,
+            priority: alert.priority,
+            vehicleId: alert.vehicleId,
+            policyId: alert.policyId,
+            bookingId: alert.bookingId,
+            providerId: alert.providerId,
+            channels: alert.channels,
+            scheduledAt: alert.scheduledAt,
+            actionUrl: alert.actionUrl,
+            actionText: alert.actionText,
+            alertMetadata: alert.alertMetadata,
+            status: 'delivered',
+            sentAt: alert.sentAt,
+            deliveredAt: DateTime.now().toIso8601String(),
+            errorMessage: alert.errorMessage,
+            retryCount: alert.retryCount,
+            createdAt: alert.createdAt,
+            updatedAt: DateTime.now().toIso8601String(),
+          );
+        }
       });
     }
   }
 
-  void _openAction(dynamic alert) {
-    final url = alert['action_url'] as String?;
-    if (url == null || url.isEmpty) return;
+  void _openAction(Alert alert) {
+    if (alert.actionUrl == null || alert.actionUrl!.isEmpty) return;
     // For MVP: show snackbar; future: deep-link
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Open action: $url')),
+      SnackBar(content: Text('Open action: ${alert.actionUrl}')),
     );
   }
 
@@ -140,7 +163,7 @@ class _AlertsInboxPageState extends State<AlertsInboxPage> {
 }
 
 class _AlertTile extends StatelessWidget {
-  final dynamic alert;
+  final Alert alert;
   final VoidCallback onMarkRead;
   final VoidCallback onOpenAction;
 
@@ -148,17 +171,12 @@ class _AlertTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final type = (alert['type'] ?? '').toString();
-    final title = (alert['title'] ?? '').toString();
-    final message = (alert['message'] ?? '').toString();
-    final status = (alert['status'] ?? '').toString();
-    final createdAt = alert['created_at'];
-    final created = createdAt != null ? DateTime.tryParse(createdAt.toString()) : null;
+    final created = DateTime.tryParse(alert.createdAt);
     final timeStr = created != null ? DateFormat.yMMMd().add_jm().format(created) : '';
 
     IconData icon;
     Color color;
-    switch (type) {
+    switch (alert.type) {
       case 'insurance_expiry':
         icon = Icons.shield_moon;
         color = Colors.indigo;
@@ -177,18 +195,18 @@ class _AlertTile extends StatelessWidget {
         backgroundColor: color.withOpacity(0.1),
         child: Icon(icon, color: color),
       ),
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text(alert.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(message, maxLines: 2, overflow: TextOverflow.ellipsis),
+          Text(alert.message, maxLines: 2, overflow: TextOverflow.ellipsis),
           if (timeStr.isNotEmpty) Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (status == 'pending' || status == 'sent')
+          if (alert.isUnread)
             IconButton(
               icon: const Icon(Icons.mark_email_read),
               tooltip: 'Mark as read',

@@ -1,6 +1,6 @@
 # backend/booking_service/app/models/booking.py
 
-from sqlalchemy import Column, String, JSON, TIMESTAMP, Integer, func
+from sqlalchemy import Column, String, JSON, TIMESTAMP, Integer, Boolean, func
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
@@ -23,6 +23,13 @@ class Booking(Base):
     scheduled_at = Column(TIMESTAMP(timezone=True), nullable=True)
     location = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    # Pricing fields
+    base_price = Column(Integer, nullable=True)
+    agreed_price = Column(Integer, nullable=True)
+    has_negotiated = Column(Boolean, nullable=True)
+    negotiation_notes = Column(String, nullable=True)
+    # Expense linkage/guard
+    expense_recorded = Column(Boolean, nullable=False, default=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 

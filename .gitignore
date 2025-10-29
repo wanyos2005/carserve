@@ -66,6 +66,11 @@ frontend/android/app/debug/
 frontend/android/app/profile/
 frontend/android/app/release/
 
+# Android keystore and signing (CRITICAL - Never commit these!)
+frontend/android/*.keystore
+frontend/android/key.properties
+frontend/android/app/google-services.json
+
 # ===========================================
 # ARCHIVES & BACKUPS
 # ===========================================

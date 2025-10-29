@@ -11,6 +11,8 @@ CREATE SCHEMA IF NOT EXISTS insurance;
 CREATE SCHEMA IF NOT EXISTS expenses;
 CREATE SCHEMA IF NOT EXISTS service_providers;
 CREATE SCHEMA IF NOT EXISTS alerts;
+CREATE SCHEMA IF NOT EXISTS social_media;
+
 
 -- Users schema tables
 CREATE TABLE IF NOT EXISTS users.tbl_auth (

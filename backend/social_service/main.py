@@ -35,8 +35,20 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     body = await request.body()
+    content_type = request.headers.get("content-type", "")
+    if not body:
+        body_preview = "EMPTY"
+    elif ("application/json" in content_type) or content_type.startswith("text/"):
+        try:
+            body_preview = body.decode("utf-8")
+        except UnicodeDecodeError:
+            body_preview = f"<decoding error; {len(body)} bytes>"
+    else:
+        # Likely multipart/form-data or other binary payload
+        body_preview = f"<binary payload; {len(body)} bytes>"
+
     logging.getLogger("uvicorn").info(
-        f"Incoming {request.method} {request.url} | Body: {body.decode() if body else 'EMPTY'}"
+        f"Incoming {request.method} {request.url} | Body: {body_preview}"
     )
     response = await call_next(request)
     return response

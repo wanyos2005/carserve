@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriveOn Feature Graphic Template</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .feature-graphic {
+            width: 1024px;
+            height: 500px;
+            background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 100%);
+            border: 2px solid #ddd;
+            position: relative;
+            overflow: hidden;
+            margin: 20px auto;
+        }
+        
+        /* Concept A: Minimalist Professional */
+        .concept-a {
+            background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 100%);
+        }
+        
+        .concept-a .logo {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            width: 80px;
+            height: 80px;
+            background: #D32F2F;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .concept-a .title {
+            position: absolute;
+            top: 60px;
+            left: 160px;
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+        
+        .concept-a .subtitle {
+            position: absolute;
+            top: 120px;
+            left: 160px;
+            font-size: 20px;
+            color: #666;
+            margin: 0;
+        }
+        
+        .concept-a .features {
+            position: absolute;
+            bottom: 80px;
+            left: 50px;
+            right: 50px;
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .feature-item {
+            text-align: center;
+            color: #333;
+        }
+        
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .feature-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* Concept B: Automotive Theme */
+        .concept-b {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+        
+        .concept-b .logo {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            width: 80px;
+            height: 80px;
+            background: #D32F2F;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .concept-b .title {
+            position: absolute;
+            top: 60px;
+            left: 160px;
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            margin: 0;
+        }
+        
+        .concept-b .subtitle {
+            position: absolute;
+            top: 120px;
+            left: 160px;
+            font-size: 20px;
+            color: #E0E0E0;
+            margin: 0;
+        }
+        
+        .concept-b .features {
+            position: absolute;
+            bottom: 80px;
+            left: 50px;
+            right: 50px;
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .concept-b .feature-item {
+            color: white;
+        }
+        
+        /* Concept C: Feature Showcase */
+        .concept-c {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .concept-c .logo {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: 60px;
+            height: 60px;
+            background: #D32F2F;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .concept-c .title {
+            position: absolute;
+            top: 40px;
+            left: 110px;
+            font-size: 36px;
+            font-weight: bold;
+            color: white;
+            margin: 0;
+        }
+        
+        .concept-c .subtitle {
+            position: absolute;
+            top: 85px;
+            left: 110px;
+            font-size: 16px;
+            color: #E0E0E0;
+            margin: 0;
+        }
+        
+        .concept-c .features {
+            position: absolute;
+            top: 50%;
+            left: 50px;
+            right: 50px;
+            transform: translateY(-50%);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+        }
+        
+        .concept-c .feature-item {
+            text-align: center;
+            color: white;
+        }
+        
+        .concept-c .feature-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .concept-c .feature-text {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: #D32F2F;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #B71C1C;
+        }
+        
+        .btn.active {
+            background: #4CAF50;
+        }
+        
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 DriveOn Feature Graphic Template</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li>Choose a design concept below</li>
+                <li>Right-click on the feature graphic and "Save image as..."</li>
+                <li>Open in your preferred image editor (Canva, Figma, Photoshop)</li>
+                <li>Replace placeholder elements with your actual DriveOn logo</li>
+                <li>Customize colors, fonts, and layout as needed</li>
+                <li>Export as PNG (1024x500px)</li>
+            </ol>
+        </div>
+        
+        <div class="controls">
+            <button class="btn active" onclick="showConcept('a')">Concept A: Minimalist</button>
+            <button class="btn" onclick="showConcept('b')">Concept B: Automotive</button>
+            <button class="btn" onclick="showConcept('c')">Concept C: Feature Showcase</button>
+        </div>
+        
+        <div id="feature-graphic" class="feature-graphic concept-a">
+            <!-- Concept A: Minimalist Professional -->
+            <div class="logo">D</div>
+            <h1 class="title">DriveOn</h1>
+            <p class="subtitle">Your comprehensive car service platform</p>
+            <div class="features">
+                <div class="feature-item">
+                    <div class="feature-icon">🔧</div>
+                    <div class="feature-text">Service Booking</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-text">Insurance</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">💰</div>
+                    <div class="feature-text">Expenses</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">👥</div>
+                    <div class="feature-text">Social</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>🎯 Next Steps:</h3>
+            <ol>
+                <li>Create your feature graphic using one of the concepts above</li>
+                <li>Save it as <code>frontend/assets/feature_graphic.png</code></li>
+                <li>Write your app store description</li>
+                <li>Create your final release build</li>
+                <li>Submit to Google Play Store</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        function showConcept(concept) {
+            const graphic = document.getElementById('feature-graphic');
+            const buttons = document.querySelectorAll('.btn');
+            
+            // Remove all concept classes
+            graphic.className = 'feature-graphic';
+            
+            // Add selected concept class
+            graphic.classList.add('concept-' + concept);
+            
+            // Update button states
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

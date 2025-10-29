@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriveOn Feature Graphic - Concept C</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .feature-graphic {
+            width: 1024px;
+            height: 500px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 2px solid #ddd;
+            position: relative;
+            overflow: hidden;
+            margin: 20px auto;
+            color: white;
+        }
+        
+        .logo {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .logo img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+        
+        .title {
+            position: absolute;
+            top: 40px;
+            left: 110px;
+            font-size: 36px;
+            font-weight: bold;
+            color: white;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            position: absolute;
+            top: 85px;
+            left: 110px;
+            font-size: 16px;
+            color: #E0E0E0;
+            margin: 0;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .features {
+            position: absolute;
+            top: 50%;
+            left: 50px;
+            right: 50px;
+            transform: translateY(-50%);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+        }
+        
+        .feature-item {
+            text-align: center;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            padding: 20px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-item:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .feature-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .feature-text {
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.3;
+        }
+        
+        .tagline {
+            position: absolute;
+            bottom: 30px;
+            left: 50px;
+            right: 50px;
+            text-align: center;
+            font-size: 18px;
+            color: #E0E0E0;
+            font-weight: 300;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: #D32F2F;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #B71C1C;
+        }
+        
+        .btn.secondary {
+            background: #666;
+        }
+        
+        .btn.secondary:hover {
+            background: #555;
+        }
+        
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .download-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .canvas-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        #feature-canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 DriveOn Feature Graphic - Concept C</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li>This template uses your actual DriveOn logo from <code>frontend/assets/images/logo.png</code></li>
+                <li>Right-click on the feature graphic below and "Save image as..."</li>
+                <li>Save as <code>frontend/assets/feature_graphic.png</code></li>
+                <li>If you want to customize further, use the canvas version below</li>
+            </ol>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" onclick="downloadImage()">📥 Download PNG</button>
+            <button class="btn secondary" onclick="generateCanvas()">🎨 Generate Canvas Version</button>
+        </div>
+        
+        <!-- Main Feature Graphic -->
+        <div id="feature-graphic" class="feature-graphic">
+            <div class="logo">
+                <img src="frontend/assets/images/logo.png" alt="DriveOn Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div style="display: none; color: #D32F2F; font-size: 24px; font-weight: bold;">D</div>
+            </div>
+            <h1 class="title">DriveOn</h1>
+            <p class="subtitle">Your comprehensive car service platform</p>
+            <div class="features">
+                <div class="feature-item">
+                    <span class="feature-icon">🔧</span>
+                    <div class="feature-text">Service<br>Booking</div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🛡️</span>
+                    <div class="feature-text">Insurance<br>Management</div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">💰</span>
+                    <div class="feature-text">Expense<br>Tracking</div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">👥</span>
+                    <div class="feature-text">Social<br>Community</div>
+                </div>
+            </div>
+            <div class="tagline">Everything you need for your vehicle in one app</div>
+        </div>
+        
+        <!-- Canvas Version for Customization -->
+        <div class="canvas-container" id="canvas-container" style="display: none;">
+            <h3>🎨 Canvas Version (for customization)</h3>
+            <canvas id="feature-canvas" width="1024" height="500"></canvas>
+            <br><br>
+            <button class="btn" onclick="downloadCanvas()">📥 Download Canvas PNG</button>
+        </div>
+        
+        <div class="instructions">
+            <h3>🎯 Next Steps:</h3>
+            <ol>
+                <li>Download the feature graphic as PNG</li>
+                <li>Save it as <code>frontend/assets/feature_graphic.png</code></li>
+                <li>Move to app description writing</li>
+                <li>Create release build</li>
+                <li>Submit to Play Store</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        function downloadImage() {
+            // Create a temporary link to download the feature graphic
+            const graphic = document.getElementById('feature-graphic');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = 1024;
+            canvas.height = 500;
+            
+            // This would require html2canvas library for proper conversion
+            // For now, we'll provide instructions for manual download
+            alert('Right-click on the feature graphic above and select "Save image as..." to download it as PNG.');
+        }
+        
+        function generateCanvas() {
+            const container = document.getElementById('canvas-container');
+            container.style.display = 'block';
+            
+            const canvas = document.getElementById('feature-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, 1024, 500);
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 1024, 500);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1024, 500);
+            
+            // Add title
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('DriveOn', 110, 80);
+            
+            // Add subtitle
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#E0E0E0';
+            ctx.fillText('Your comprehensive car service platform', 110, 105);
+            
+            // Add tagline
+            ctx.font = '18px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Everything you need for your vehicle in one app', 512, 450);
+            
+            // Add feature boxes
+            const features = [
+                { icon: '🔧', text: 'Service\nBooking', x: 100 },
+                { icon: '🛡️', text: 'Insurance\nManagement', x: 300 },
+                { icon: '💰', text: 'Expense\nTracking', x: 500 },
+                { icon: '👥', text: 'Social\nCommunity', x: 700 }
+            ];
+            
+            features.forEach((feature, index) => {
+                const x = feature.x;
+                const y = 250;
+                
+                // Feature box background
+                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                ctx.fillRect(x - 50, y - 40, 100, 80);
+                
+                // Feature icon
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(feature.icon, x, y - 10);
+                
+                // Feature text
+                ctx.font = '12px Arial';
+                ctx.fillText(feature.text, x, y + 15);
+            });
+        }
+        
+        function downloadCanvas() {
+            const canvas = document.getElementById('feature-canvas');
+            const link = document.createElement('a');
+            link.download = 'driveon_feature_graphic.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>

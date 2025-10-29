@@ -37,7 +37,9 @@ REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_URL = os.getenv("REDIS_URL", f"redis://{REDIS_HOST}:6379")
 
 # JWT Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecret")
+# Accept either SECRET_KEY or JWT_SECRET_KEY to match issuer (user_service)
+SECRET_KEY = os.getenv("SECRET_KEY")
+JWT_SECRET_KEY = SECRET_KEY or os.getenv("JWT_SECRET_KEY", "supersecret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

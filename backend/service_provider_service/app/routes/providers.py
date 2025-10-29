@@ -364,6 +364,35 @@ def _get_garage_stats(provider_id: str, today) -> dict:
                 bookings = bookings_response.json()
                 active_bookings = [b for b in bookings if b.get('status') in ['pending', 'confirmed', 'in_progress']]
                 stats["active_bookings"] = len(active_bookings)
+                
+                # Calculate today's earnings from bookings (use agreed_price fallback to base_price)
+                bookings_earnings_today = 0
+                from datetime import datetime
+                for b in bookings:
+                    status = (b.get('status') or '').lower()
+                    if status in ['accepted', 'completed']:
+                        price = b.get('agreed_price') or b.get('base_price')
+                        if price is None:
+                            continue
+                        # Count earnings if either scheduled_at OR created_at is today
+                        scheduled_str = b.get('scheduled_at')
+                        created_str = b.get('created_at')
+                        try:
+                            scheduled_ok = False
+                            created_ok = False
+                            if scheduled_str:
+                                d = datetime.fromisoformat(str(scheduled_str).replace('Z', '+00:00')).date()
+                                scheduled_ok = (d == today)
+                            if created_str:
+                                dc = datetime.fromisoformat(str(created_str).replace('Z', '+00:00')).date()
+                                created_ok = (dc == today)
+                            if scheduled_ok or created_ok:
+                                bookings_earnings_today += int(price)
+                        except Exception:
+                            # If parsing fails, be conservative and include when accepted/completed
+                            bookings_earnings_today += int(price)
+                # Set today's earnings from bookings prices
+                stats["todays_earnings"] = bookings_earnings_today
             
             # Get service logs for this provider
             service_logs_response = client.get(f"{booking_service_url}/service-logs/provider/{provider_id}")
@@ -382,13 +411,7 @@ def _get_garage_stats(provider_id: str, today) -> dict:
                 stats["total_services_today"] = len(today_logs)
                 stats["completed_services_today"] = len(today_logs)
                 
-                # Calculate today's earnings
-                total_earnings = 0
-                for log in today_logs:
-                    if log.get('cost'):
-                        total_earnings += int(log['cost'])
-                
-                stats["todays_earnings"] = total_earnings
+                # Earnings are computed from bookings' prices above; do not double count with service_log costs
                 
                 # Calculate pending tasks (bookings + incomplete service logs)
                 pending_tasks = stats["active_bookings"] + len([log for log in service_logs if not log.get('performed_at')])
