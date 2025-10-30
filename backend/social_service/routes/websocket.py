@@ -144,31 +144,43 @@ async def handle_story_view(user_id: int, message: dict):
 
 # Real-time notification functions
 async def notify_new_post(user_id: int, post_data: dict, db: Session):
-    """Notify followers about new post"""
+    """Notify followers about new post via WebSocket AND FCM"""
+    # 1. WebSocket notification (for users currently online)
     message = {
         "type": "new_post",
         "post": post_data,
         "timestamp": datetime.now().isoformat()
     }
     await manager.broadcast_to_followers(message, user_id, db)
+    
+    # 2. FCM notification (for all followers, including offline users)
+    await send_fcm_new_post_notification(user_id, post_data, db)
 
 async def notify_new_comment(post_owner_id: int, comment_data: dict):
-    """Notify post owner about new comment"""
+    """Notify post owner about new comment via WebSocket AND FCM"""
+    # 1. WebSocket notification (if user is online)
     message = {
         "type": "new_comment",
         "comment": comment_data,
         "timestamp": datetime.now().isoformat()
     }
     await manager.send_personal_message(message, post_owner_id)
+    
+    # 2. FCM notification (for offline users)
+    await send_fcm_new_comment_notification(post_owner_id, comment_data)
 
 async def notify_new_like(content_owner_id: int, like_data: dict):
-    """Notify content owner about new like"""
+    """Notify content owner about new like via WebSocket AND FCM"""
+    # 1. WebSocket notification (if user is online)
     message = {
         "type": "new_like",
         "like": like_data,
         "timestamp": datetime.now().isoformat()
     }
     await manager.send_personal_message(message, content_owner_id)
+    
+    # 2. FCM notification (for offline users)
+    await send_fcm_new_like_notification(content_owner_id, like_data)
 
 async def notify_new_follow(user_id: int, follower_data: dict):
     """Notify user about new follower"""
@@ -209,3 +221,68 @@ async def get_online_users():
         "online_users": online_users,
         "count": len(online_users)
     }
+
+# =============================================================================
+# FCM NOTIFICATION HELPERS (via Alert Service)
+# =============================================================================
+
+async def send_fcm_new_post_notification(user_id: int, post_data: dict, db: Session):
+    """Send FCM notification for new post via alert service"""
+    try:
+        from services.notification_helper import NotificationHelper
+        
+        # Get followers
+        followers = db.execute(
+            "SELECT follower_id FROM social.follows WHERE following_id = :user_id",
+            {"user_id": user_id}
+        ).fetchall()
+        
+        if not followers:
+            return
+        
+        follower_ids = [follower[0] for follower in followers]
+        
+        # Send via alert service
+        notification_helper = NotificationHelper()
+        await notification_helper.send_new_post_notification(
+            post_id=str(post_data.get('id', '')),
+            user_id=user_id,
+            content=post_data.get('content', ''),
+            followers=follower_ids
+        )
+        
+    except Exception as e:
+        print(f"Failed to send FCM new post notification: {str(e)}")
+
+async def send_fcm_new_comment_notification(post_owner_id: int, comment_data: dict):
+    """Send FCM notification for new comment via alert service"""
+    try:
+        from services.notification_helper import NotificationHelper
+        
+        notification_helper = NotificationHelper()
+        await notification_helper.send_new_comment_notification(
+            post_id=str(comment_data.get('post_id', '')),
+            commenter_id=comment_data.get('user_id', 0),
+            commenter_name=comment_data.get('user_name', 'Someone'),
+            comment=comment_data.get('content', ''),
+            post_owner_id=post_owner_id
+        )
+        
+    except Exception as e:
+        print(f"Failed to send FCM new comment notification: {str(e)}")
+
+async def send_fcm_new_like_notification(content_owner_id: int, like_data: dict):
+    """Send FCM notification for new like via alert service"""
+    try:
+        from services.notification_helper import NotificationHelper
+        
+        notification_helper = NotificationHelper()
+        await notification_helper.send_new_like_notification(
+            post_id=str(like_data.get('post_id', '')),
+            liker_id=like_data.get('user_id', 0),
+            liker_name=like_data.get('user_name', 'Someone'),
+            post_owner_id=content_owner_id
+        )
+        
+    except Exception as e:
+        print(f"Failed to send FCM new like notification: {str(e)}")

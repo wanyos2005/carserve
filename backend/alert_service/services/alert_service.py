@@ -5,14 +5,40 @@ from typing import List, Optional
 from datetime import datetime
 
 from models.alert import Alert, AlertType, AlertStatus, AlertChannel
-from schemas.alert import AlertCreate, AlertUpdate
+from schemas.alert import AlertCreate, AlertUpdate, AlertResponse
 import logging
 
 class AlertService:
     def __init__(self, db: Session):
         self.db = db
 
-    async def create_alert(self, alert_data: AlertCreate) -> Alert:
+    def _to_response(self, alert: Alert) -> AlertResponse:
+        return AlertResponse(
+            id=alert.id,
+            user_id=alert.user_id,
+            type=alert.type,
+            title=alert.title,
+            message=alert.message,
+            priority=alert.priority,
+            vehicle_id=alert.vehicle_id,
+            policy_id=alert.policy_id,
+            booking_id=alert.booking_id,
+            provider_id=alert.provider_id,
+            channels=[c.value if hasattr(c, "value") else c for c in (alert.channels or [])],
+            status=alert.status,
+            scheduled_at=alert.scheduled_at,
+            sent_at=alert.sent_at,
+            delivered_at=alert.delivered_at,
+            action_url=alert.action_url,
+            action_text=alert.action_text,
+            alert_metadata=alert.alert_metadata,
+            retry_count=alert.retry_count,
+            error_message=alert.error_message,
+            created_at=alert.created_at,
+            updated_at=alert.updated_at,
+        )
+
+    async def create_alert(self, alert_data: AlertCreate) -> AlertResponse:
         """Create a new alert"""
         channels_as_strings = [
             c.value if hasattr(c, "value") else c
@@ -43,9 +69,9 @@ class AlertService:
             self.db.rollback()
             logging.getLogger(__name__).error(f"Failed to create alert: {e}")
             raise
-        return alert
+        return self._to_response(alert)
 
-    def create_alert_sync(self, alert_data: AlertCreate) -> Alert:
+    def create_alert_sync(self, alert_data: AlertCreate) -> AlertResponse:
         """Synchronous version: create a new alert (for use in threadpool)."""
         channels_as_strings = [
             c.value if hasattr(c, "value") else c
@@ -76,11 +102,12 @@ class AlertService:
             self.db.rollback()
             logging.getLogger(__name__).error(f"Failed to create alert: {e}")
             raise
-        return alert
+        return self._to_response(alert)
 
-    async def get_alert(self, alert_id: str) -> Optional[Alert]:
+    async def get_alert(self, alert_id: str) -> Optional[AlertResponse]:
         """Get a specific alert by ID"""
-        return self.db.query(Alert).filter(Alert.id == alert_id).first()
+        alert = self.db.query(Alert).filter(Alert.id == alert_id).first()
+        return self._to_response(alert) if alert else None
 
     async def get_alerts(
         self,
@@ -89,7 +116,7 @@ class AlertService:
         status: Optional[AlertStatus] = None,
         limit: int = 50,
         offset: int = 0
-    ) -> List[Alert]:
+    ) -> List[AlertResponse]:
         """Get alerts with optional filtering"""
         query = self.db.query(Alert)
         
@@ -100,11 +127,12 @@ class AlertService:
         if status:
             query = query.filter(Alert.status == status)
             
-        return query.order_by(desc(Alert.created_at)).offset(offset).limit(limit).all()
+        alerts = query.order_by(desc(Alert.created_at)).offset(offset).limit(limit).all()
+        return [self._to_response(a) for a in alerts]
 
-    async def update_alert(self, alert_id: str, alert_update: AlertUpdate) -> Optional[Alert]:
+    async def update_alert(self, alert_id: str, alert_update: AlertUpdate) -> Optional[AlertResponse]:
         """Update an alert"""
-        alert = await self.get_alert(alert_id)
+        alert = self.db.query(Alert).filter(Alert.id == alert_id).first()
         if not alert:
             return None
             
@@ -115,11 +143,11 @@ class AlertService:
         alert.updated_at = datetime.utcnow()
         self.db.commit()
         self.db.refresh(alert)
-        return alert
+        return self._to_response(alert)
 
     async def delete_alert(self, alert_id: str) -> bool:
         """Delete an alert"""
-        alert = await self.get_alert(alert_id)
+        alert = self.db.query(Alert).filter(Alert.id == alert_id).first()
         if not alert:
             return False
             
@@ -138,7 +166,7 @@ class AlertService:
 
     async def mark_alert_read(self, alert_id: str) -> bool:
         """Mark an alert as read (update status to delivered)"""
-        alert = await self.get_alert(alert_id)
+        alert = self.db.query(Alert).filter(Alert.id == alert_id).first()
         if not alert:
             return False
             
@@ -189,7 +217,7 @@ class AlertService:
         service_provider_name: str,
         service_type: str,
         discount_code: str = "FIRST10"
-    ) -> Optional[Alert]:
+    ) -> Optional[AlertResponse]:
         """Trigger app download prompt when a service is logged for a user without the app"""
         try:
             

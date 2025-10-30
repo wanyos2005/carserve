@@ -1,0 +1,1 @@
+{ "user_id": 2, "type": "promotional", "title": "Hello", "message": "From DriveOn", "priority": 1, "channels": ["push","in_app"] }

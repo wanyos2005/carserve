@@ -21,10 +21,15 @@ class Settings(BaseSettings):
     INSURANCE_SERVICE_URL: str = os.getenv("INSURANCE_SERVICE_URL", "http://insurance-service:8005")
     SERVICE_PROVIDER_URL: str = os.getenv("SERVICE_PROVIDER_URL", "http://service-provider:8003")
     # Notification services
+    # FCM V1 API Configuration
+    FCM_PROJECT_ID: str = os.getenv("FCM_PROJECT_ID", "")
+    FCM_PRIVATE_KEY: str = os.getenv("FCM_PRIVATE_KEY", "")
+    FCM_CLIENT_EMAIL: str = os.getenv("FCM_CLIENT_EMAIL", "")
+    # Legacy FCM (for backward compatibility)
     FCM_SERVER_KEY: str = os.getenv("FCM_SERVER_KEY", "")
-    TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
-    TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
-    TWILIO_PHONE_NUMBER: str = os.getenv("TWILIO_PHONE_NUMBER", "")
+    
+    # SMS Services
+    
     # Africa's Talking
     SMS_PROVIDER: str = os.getenv("SMS_PROVIDER", "africastalking")  # twilio | africastalking
     AT_USERNAME: str = os.getenv("AT_USERNAME", "sandbox")

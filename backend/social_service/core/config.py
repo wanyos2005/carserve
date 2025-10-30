@@ -90,8 +90,14 @@ RATE_LIMIT_REQUESTS_PER_MINUTE = int(os.getenv("RATE_LIMIT_REQUESTS_PER_MINUTE",
 
 # Notification Configuration
 ENABLE_NOTIFICATIONS = os.getenv("ENABLE_NOTIFICATIONS", "true").lower() == "true"
-FCM_SERVER_KEY = os.getenv("FCM_SERVER_KEY")
 PUSH_NOTIFICATION_ENABLED = os.getenv("PUSH_NOTIFICATION_ENABLED", "true").lower() == "true"
+
+# FCM V1 API Configuration
+FCM_PROJECT_ID = os.getenv("FCM_PROJECT_ID", "")
+FCM_PRIVATE_KEY = os.getenv("FCM_PRIVATE_KEY", "")
+FCM_CLIENT_EMAIL = os.getenv("FCM_CLIENT_EMAIL", "")
+# Legacy FCM (for backward compatibility)
+FCM_SERVER_KEY = os.getenv("FCM_SERVER_KEY", "")
 
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", f"redis://{REDIS_HOST}:6379/0")

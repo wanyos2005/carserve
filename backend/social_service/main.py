@@ -14,6 +14,7 @@ from routes.analytics import router as analytics_router
 from routes.advanced_analytics import router as advanced_analytics_router
 from routes.media import router as media_router
 from routes.websocket import router as websocket_router
+# Notifications now handled by alert-service
 from models import social as _models  # ensure model is imported before create_all
 
 app = FastAPI(
@@ -63,6 +64,7 @@ app.include_router(analytics_router, prefix="/social/analytics", tags=["social-a
 app.include_router(advanced_analytics_router, prefix="/social/advanced", tags=["social-advanced-analytics"])
 app.include_router(media_router, prefix="/social", tags=["social-media"])
 app.include_router(websocket_router, prefix="/social", tags=["social-websocket"])
+# Notifications now handled by alert-service
 
 # Health check endpoints
 @app.get("/health")

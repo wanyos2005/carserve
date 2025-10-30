@@ -115,6 +115,16 @@ class UnifiedPermissionService {
     );
   }
   
+  /// Notification permission (for FCM)
+  static Future<bool> requestNotificationPermission({BuildContext? context}) async {
+    return await _requestPermission(
+      Permission.notification,
+      title: 'Notification Permission Required',
+      message: 'DriveOn needs notification access to send you important alerts about your vehicle, service reminders, and social updates.',
+      context: context,
+    );
+  }
+  
   /// Check permission status
   static Future<bool> isPermissionGranted(Permission permission) async {
     return await permission.isGranted;
@@ -128,6 +138,7 @@ class UnifiedPermissionService {
       'storage': await isPermissionGranted(Permission.storage),
       'phone': await isPermissionGranted(Permission.phone),
       'sms': await isPermissionGranted(Permission.sms),
+      'notification': await isPermissionGranted(Permission.notification),
     };
   }
   

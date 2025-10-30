@@ -8,7 +8,7 @@ from sqlalchemy import text
 from core.config import ALLOWED_ORIGINS
 from routes.alerts import router as alerts_router
 from routes.rules import router as rules_router
-from routes.notifications import router as notifications_router
+# Centralized notifications now integrated into alerts router
 from services.metrics import snapshot
 from models import alert as _models  # ensure model is imported before create_all
 
@@ -45,7 +45,7 @@ async def log_requests(request: Request, call_next):
 # Include routers
 app.include_router(alerts_router, prefix="/alerts", tags=["alerts"])
 app.include_router(rules_router, prefix="/rules", tags=["alert-rules"])
-app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
+# Notifications consolidated under /alerts
 
 # Add direct route for /rules (without trailing slash) to handle nginx forwarding
 from routes.rules import get_alert_rules

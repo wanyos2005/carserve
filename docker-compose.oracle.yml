@@ -6,8 +6,7 @@ services:
     image: ghcr.io/wanyos2005/user-service:latest
     ports:
       - "8001:8001"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -64,8 +63,7 @@ services:
     image: ghcr.io/wanyos2005/vehicle-service:latest
     ports:
       - "8002:8002"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -110,8 +108,7 @@ services:
     image: ghcr.io/wanyos2005/service-provider:latest
     ports:
       - "8003:8003"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - ENVIRONMENT=production
@@ -155,8 +152,7 @@ services:
     image: ghcr.io/wanyos2005/booking-service:latest
     ports:
       - "8004:8004"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - ENVIRONMENT=production
@@ -200,8 +196,7 @@ services:
     image: ghcr.io/wanyos2005/insurance-service:latest
     ports:
       - "8005:8005"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -246,8 +241,7 @@ services:
     image: ghcr.io/wanyos2005/alert-service:latest
     ports:
       - "8006:8006"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -307,8 +301,7 @@ services:
 
   alert-worker:
     image: ghcr.io/wanyos2005/alert-service:latest
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -330,9 +323,7 @@ services:
       - AT_API_KEY=${AT_API_KEY}
       - AT_SENDER_ID=${AT_SENDER_ID}
       - FCM_SERVER_KEY=${FCM_SERVER_KEY}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
     restart: unless-stopped
@@ -367,8 +358,7 @@ services:
 
   alert-beat:
     image: ghcr.io/wanyos2005/alert-service:latest
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -413,8 +403,7 @@ services:
     image: ghcr.io/wanyos2005/expenses-service:latest
     ports:
       - "8007:8007"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - ENVIRONMENT=production
@@ -458,8 +447,7 @@ services:
     image: ghcr.io/wanyos2005/social-service:latest
     ports:
       - "8008:8008"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - DATABASE_URL=${NEON_DATABASE_URL}
       - REDIS_URL=${UPSTASH_REDIS_URL}
@@ -635,8 +623,7 @@ services:
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
-    env_file:
-      - .env
+    # No env_file - more secure, only inject specific variables
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
     volumes:

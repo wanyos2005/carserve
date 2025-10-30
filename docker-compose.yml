@@ -83,6 +83,7 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_HOST=${REDIS_HOST}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -187,7 +188,11 @@ services:
       - SMTP_FROM_NAME=${SMTP_FROM_NAME}
       - SMTP_TLS=${SMTP_TLS}
       - SMTP_SSL=${SMTP_SSL}
-      # Notification services (add when ready)
+      # FCM V1 API Configuration
+      - FCM_PROJECT_ID=${FCM_PROJECT_ID}
+      - FCM_PRIVATE_KEY=${FCM_PRIVATE_KEY}
+      - FCM_CLIENT_EMAIL=${FCM_CLIENT_EMAIL}
+      # Legacy FCM (for backward compatibility)
       - FCM_SERVER_KEY=${FCM_SERVER_KEY}
      
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
@@ -238,6 +243,11 @@ services:
       - AT_USERNAME=${AT_USERNAME}
       - AT_API_KEY=${AT_API_KEY}
       - AT_SENDER_ID=${AT_SENDER_ID}
+      # FCM V1 API Configuration
+      - FCM_PROJECT_ID=${FCM_PROJECT_ID}
+      - FCM_PRIVATE_KEY=${FCM_PRIVATE_KEY}
+      - FCM_CLIENT_EMAIL=${FCM_CLIENT_EMAIL}
+      # Legacy FCM (for backward compatibility)
       - FCM_SERVER_KEY=${FCM_SERVER_KEY}
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
@@ -329,6 +339,7 @@ services:
       - CLOUDFLARE_BUCKET=${CLOUDFLARE_BUCKET}
       - CLOUDFLARE_PUBLIC_URL=${CLOUDFLARE_PUBLIC_URL}
       - MODERATION_API_KEY=${MODERATION_API_KEY}
+      # FCM notifications now handled by alert-service
     depends_on:
       postgres:
         condition: service_healthy

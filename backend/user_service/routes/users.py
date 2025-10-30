@@ -261,6 +261,28 @@ def remove_fcm_token(user_id: int, db: Session = Depends(get_db)):
     db.commit()
     return FCMTokenResponse(message="FCM token removed successfully")
 
+# ---------------------------------------------------------------------------
+# Nginx compatibility routes (prefix-stripped by reverse proxy)
+# If the gateway location /users/ forwards and strips the prefix, user-service
+# will receive paths like "/{user_id}/fcm-token". Provide aliases below.
+# ---------------------------------------------------------------------------
+
+@router.get("/{user_id}/fcm-token", response_model=FCMTokenResponse)
+def get_user_fcm_token_alias(user_id: int, db: Session = Depends(get_db)):
+    return get_user_fcm_token(user_id, db)
+
+@router.post("/{user_id}/fcm-token", response_model=FCMTokenResponse)
+def register_fcm_token_alias(
+    user_id: int,
+    token_request: FCMTokenRequest,
+    db: Session = Depends(get_db)
+):
+    return register_fcm_token(user_id, token_request, db)
+
+@router.delete("/{user_id}/fcm-token", response_model=FCMTokenResponse)
+def remove_fcm_token_alias(user_id: int, db: Session = Depends(get_db)):
+    return remove_fcm_token(user_id, db)
+
 @router.post("/lookup")
 def lookup_users_by_ids(
     user_ids: list[int],

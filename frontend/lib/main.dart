@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:driveon_car_platform/pages/main_service_nav.dart';
 
 // Pages
@@ -24,6 +25,8 @@ import 'package:driveon_car_platform/pages/Insurance/insurance_marketplace.dart'
 // Services
 import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:driveon_car_platform/services/storage_service.dart';
+import 'package:driveon_car_platform/services/fcm_service.dart';
+import 'package:driveon_car_platform/services/unified_permission_service.dart';
 
 
 const abyssBlue = Color(0xFF0A192F); // dark navy blue
@@ -31,6 +34,9 @@ const abyssBlue = Color(0xFF0A192F); // dark navy blue
 void main() async {
   // Initialize Flutter binding first
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase first
+  await Firebase.initializeApp();
   
   // Initialize storage service
   await StorageService.initialize();
@@ -73,7 +79,12 @@ class _CarPlatformAppState extends State<CarPlatformApp> with WidgetsBindingObse
 
   Future<void> _initializeApp() async {
     try {
+      // 1. Initialize user context first
       final userContext = await UserContextService.initializeContext();
+      
+      // 2. Request notification permission and initialize FCM
+      await _initializeNotifications();
+      
       if (mounted) {
         setState(() {
           _userContext = userContext;
@@ -89,10 +100,33 @@ class _CarPlatformAppState extends State<CarPlatformApp> with WidgetsBindingObse
       }
     }
   }
+  
+  Future<void> _initializeNotifications() async {
+    try {
+      // Request notification permission
+      final notificationGranted = await UnifiedPermissionService.requestNotificationPermission();
+      
+      if (notificationGranted) {
+        // Initialize FCM service
+        await FCMService.initialize();
+        print('✅ FCM service initialized successfully');
+      } else {
+        print('❌ Notification permission denied - FCM not initialized');
+      }
+    } catch (e) {
+      print('❌ Failed to initialize notifications: $e');
+    }
+  }
 
   Future<void> _refreshAuthenticationState() async {
     try {
       final userContext = await UserContextService.refreshContext();
+      
+      // If user is now logged in, try to initialize FCM
+      if (userContext != null && userContext.userType != UserType.unknown) {
+        await _initializeNotifications();
+      }
+      
       if (mounted) {
         setState(() {
           _userContext = userContext;

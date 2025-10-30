@@ -14,6 +14,7 @@ class NotificationService:
     def __init__(self, db: Session):
         self.db = db
         self.alert_service = AlertService(db)
+        self._fcm_initialized = False
 
     async def send_alert(self, alert: Alert) -> bool:
         """Send alert through all configured channels"""
@@ -329,6 +330,52 @@ class NotificationService:
             )
             raise
 
+    # =====================
+    # Topic operations
+    # =====================
+
+    async def broadcast_to_topic(
+        self,
+        topic: str,
+        title: str,
+        message: str,
+        data: Dict[str, Any] | None = None,
+        image_url: str | None = None,
+    ) -> Dict[str, Any]:
+        """Broadcast a notification to an FCM topic via FCMService."""
+        try:
+            if not await self._ensure_fcm_initialized():
+                return {"success": False, "error": "FCM not initialized"}
+            from services.fcm_service import FCMService
+            result = FCMService.send_topic_notification(
+                topic=topic,
+                title=title,
+                body=message,
+                data=data,
+                image_url=image_url,
+            )
+            return result
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def subscribe_tokens_to_topic(self, topic: str, tokens: list[str]) -> Dict[str, Any]:
+        try:
+            if not await self._ensure_fcm_initialized():
+                return {"success": False, "error": "FCM not initialized"}
+            from services.fcm_service import FCMService
+            return FCMService.subscribe_to_topic(tokens, topic)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def unsubscribe_tokens_from_topic(self, topic: str, tokens: list[str]) -> Dict[str, Any]:
+        try:
+            if not await self._ensure_fcm_initialized():
+                return {"success": False, "error": "FCM not initialized"}
+            from services.fcm_service import FCMService
+            return FCMService.unsubscribe_from_topic(tokens, topic)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     async def _get_user_fcm_token(self, user_id: int) -> str:
         """Get user's FCM token from user service"""
         try:
@@ -369,29 +416,38 @@ class NotificationService:
         return None
 
     async def _send_fcm_notification(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Send notification via Firebase Cloud Messaging"""
+        """Send notification via Firebase Cloud Messaging V1 API"""
         try:
             from core.config import settings
-            import aiohttp
+            from services.fcm_service import FCMService
             
-            headers = {
-                'Authorization': f'key={settings.FCM_SERVER_KEY}',
-                'Content-Type': 'application/json'
-            }
+            # Initialize FCM service if not already done
+            if not FCMService.is_initialized():
+                if not FCMService.initialize(
+                    project_id=settings.FCM_PROJECT_ID,
+                    private_key=settings.FCM_PRIVATE_KEY,
+                    client_email=settings.FCM_CLIENT_EMAIL
+                ):
+                    return {'success': False, 'error': 'Failed to initialize FCM service'}
             
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    'https://fcm.googleapis.com/fcm/send',
-                    json=payload,
-                    headers=headers,
-                    timeout=10
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return {'success': True, 'response': data}
-                    else:
-                        text = await response.text()
-                        return {'success': False, 'error': f"HTTP {response.status}: {text}"}
+            # Extract data from payload
+            token = payload.get('to')
+            notification_data = payload.get('notification', {})
+            data = payload.get('data', {})
+            
+            if not token:
+                return {'success': False, 'error': 'No FCM token provided'}
+            
+            # Send notification using FCM V1 API
+            result = FCMService.send_notification(
+                token=token,
+                title=notification_data.get('title', ''),
+                body=notification_data.get('body', ''),
+                data=data,
+                image_url=notification_data.get('icon')
+            )
+            
+            return result
                 
         except Exception as e:
             return {'success': False, 'error': str(e)}
@@ -495,3 +551,170 @@ class NotificationService:
         """Get user service URL from config"""
         from core.config import settings
         return settings.USER_SERVICE_URL
+
+    # =============================================================================
+    # SOCIAL NOTIFICATION METHODS (Centralized)
+    # =============================================================================
+    
+    async def send_social_notification(
+        self,
+        user_id: int,
+        title: str,
+        message: str,
+        notification_type: str,
+        data: dict = None,
+        fcm_token: str = None
+    ) -> dict:
+        """Send social notification (likes, comments, follows, etc.)"""
+        try:
+            # Ensure FCM is initialized
+            if not await self._ensure_fcm_initialized():
+                return {
+                    'success': False,
+                    'error': 'FCM service not initialized',
+                    'message': 'Failed to send social notification'
+                }
+            
+            # Get FCM token if not provided
+            if not fcm_token:
+                fcm_token = await self._get_user_fcm_token(user_id)
+                if not fcm_token:
+                    return {
+                        'success': False,
+                        'error': 'No FCM token found for user',
+                        'message': 'Failed to send social notification'
+                    }
+            
+            # Prepare social data
+            social_data = data or {}
+            social_data.update({
+                'type': notification_type,
+                'click_action': 'FLUTTER_NOTIFICATION_CLICK'
+            })
+            
+            # Send FCM notification
+            result = await self._send_fcm_notification({
+                'to': fcm_token,
+                'notification': {
+                    'title': title,
+                    'body': message,
+                    'icon': 'ic_notification'
+                },
+                'data': social_data
+            })
+            
+            if result['success']:
+                logger.info(f"Social notification sent successfully: {result.get('message_id')}")
+                return {
+                    'success': True,
+                    'message_id': result.get('message_id'),
+                    'message': 'Social notification sent successfully'
+                }
+            else:
+                logger.error(f"Failed to send social notification: {result.get('error')}")
+                return {
+                    'success': False,
+                    'error': result.get('error'),
+                    'message': 'Failed to send social notification'
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to send social notification: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to send social notification'
+            }
+    
+    async def send_multicast_social_notification(
+        self,
+        user_ids: list,
+        title: str,
+        message: str,
+        notification_type: str,
+        data: dict = None,
+        fcm_tokens: list = None
+    ) -> dict:
+        """Send social notification to multiple users"""
+        try:
+            # Ensure FCM is initialized
+            if not await self._ensure_fcm_initialized():
+                return {
+                    'success': False,
+                    'error': 'FCM service not initialized',
+                    'message': 'Failed to send multicast social notification'
+                }
+            
+            # Get FCM tokens if not provided
+            if not fcm_tokens:
+                fcm_tokens = []
+                for user_id in user_ids:
+                    token = await self._get_user_fcm_token(user_id)
+                    if token:
+                        fcm_tokens.append(token)
+            
+            if not fcm_tokens:
+                return {
+                    'success': False,
+                    'error': 'No FCM tokens found for users',
+                    'message': 'Failed to send multicast social notification'
+                }
+            
+            # Prepare social data
+            social_data = data or {}
+            social_data.update({
+                'type': notification_type,
+                'click_action': 'FLUTTER_NOTIFICATION_CLICK'
+            })
+            
+            # Send FCM multicast notification using the FCM service
+            from services.fcm_service import FCMService
+            result = FCMService.send_multicast_notification(
+                tokens=fcm_tokens,
+                title=title,
+                body=message,
+                data=social_data,
+                image_url=social_data.get('image_url')
+            )
+            
+            if result['success']:
+                logger.info(f"Multicast social notification sent: {result.get('success_count')}/{len(fcm_tokens)} successful")
+                return {
+                    'success': True,
+                    'success_count': result.get('success_count'),
+                    'failure_count': result.get('failure_count'),
+                    'message': f"Multicast social notification sent to {result.get('success_count')}/{len(fcm_tokens)} users"
+                }
+            else:
+                logger.error(f"Failed to send multicast social notification: {result.get('error')}")
+                return {
+                    'success': False,
+                    'error': result.get('error'),
+                    'message': 'Failed to send multicast social notification'
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to send multicast social notification: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to send multicast social notification'
+            }
+    
+    async def _ensure_fcm_initialized(self) -> bool:
+        """Ensure FCM service is initialized"""
+        if not self._fcm_initialized:
+            from services.fcm_service import FCMService
+            from core.config import settings
+            
+            if FCMService.initialize(
+                project_id=settings.FCM_PROJECT_ID,
+                private_key=settings.FCM_PRIVATE_KEY,
+                client_email=settings.FCM_CLIENT_EMAIL
+            ):
+                self._fcm_initialized = True
+                logger.info("FCM service initialized for notifications")
+            else:
+                logger.error("Failed to initialize FCM service")
+                return False
+        return True

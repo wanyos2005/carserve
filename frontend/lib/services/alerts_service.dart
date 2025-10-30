@@ -158,7 +158,26 @@ class AlertsService {
       final response = await ApiService.get(url);
       
       if (response != null) {
-        return (response as List)
+        // Handle both direct list and wrapped response
+        List<dynamic> alertsList;
+        if (response is List) {
+          alertsList = response;
+        } else if (response is Map<String, dynamic>) {
+          // Check if response is wrapped in a 'data' field or similar
+          if (response.containsKey('data') && response['data'] is List) {
+            alertsList = response['data'];
+          } else if (response.containsKey('alerts') && response['alerts'] is List) {
+            alertsList = response['alerts'];
+          } else {
+            // If it's a single alert object, wrap it in a list
+            alertsList = [response];
+          }
+        } else {
+          print('Unexpected response format: ${response.runtimeType}');
+          return [];
+        }
+        
+        return alertsList
             .map((json) => Alert.fromJson(json))
             .toList();
       }

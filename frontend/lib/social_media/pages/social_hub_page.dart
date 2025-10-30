@@ -10,6 +10,7 @@ import 'package:driveon_car_platform/social_media/pages/create_post_page.dart';
 import 'package:driveon_car_platform/social_media/widgets/comments_section.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:driveon_car_platform/services/alerts_service.dart';
+import 'package:driveon_car_platform/services/fcm_service.dart';
 import 'package:driveon_car_platform/components/notifications_settings_sheet.dart';
 import 'dart:async';
 
@@ -61,6 +62,7 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
       _loadSocialContent().then((_) {
         _initializeRealtimeService();
         _loadNotifications();
+        _initializeFCM(); // Initialize FCM for push notifications
       });
     });
   }
@@ -285,6 +287,27 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
     } catch (e) {
       // Continue without real-time features
       _isRealtimeConnected = false;
+    }
+  }
+
+  /// Initialize FCM for push notifications
+  Future<void> _initializeFCM() async {
+    try {
+      // Check if FCM is already initialized
+      if (FCMService.fcmToken != null) {
+        print('✅ FCM already initialized with token: ${FCMService.fcmToken}');
+        return;
+      }
+      
+      // Initialize FCM service
+      final success = await FCMService.initialize();
+      if (success) {
+        print('✅ FCM initialized successfully in Social Hub');
+      } else {
+        print('❌ FCM initialization failed in Social Hub');
+      }
+    } catch (e) {
+      print('❌ Error initializing FCM in Social Hub: $e');
     }
   }
 

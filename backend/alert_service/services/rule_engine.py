@@ -7,10 +7,6 @@ import logging
 
 from models.alert import Alert, AlertType, AlertChannel, AlertStatus
 from schemas.alert import AlertCreate
-from crud.alert import (
-    create_alert as crud_create_alert,
-    get_alert as crud_get_alert,
-)
 from services.alert_service import AlertService
 from celery_app import celery_app
 from services.metrics import inc
@@ -73,7 +69,7 @@ class RuleEngine:
     async def process_alert(self, alert_id: str):
         """Process a specific alert for delivery"""
         try:
-            alert = crud_get_alert(self.db, alert_id)
+            alert = await self.alert_service.get_alert(alert_id)
             if not alert:
                 logger.error(f"Alert {alert_id} not found")
                 return
@@ -88,10 +84,10 @@ class RuleEngine:
                 
         except Exception as e:
             logger.error(f"Error processing alert {alert_id}: {str(e)}")
-            alert = crud_get_alert(self.db, alert_id)
-            if alert:
-                alert.status = AlertStatus.FAILED
-                alert.error_message = str(e)
+            db_alert = self.db.query(Alert).filter(Alert.id == alert_id).first()
+            if db_alert:
+                db_alert.status = AlertStatus.FAILED
+                db_alert.error_message = str(e)
                 self.db.commit()
 
     async def _create_insurance_expiry_alert(self, policy: Dict[str, Any], days_until_expiry: int):
