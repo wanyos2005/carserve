@@ -1,4 +1,4 @@
-name: Deploy FastAPI via SSM Sequentially
+name: Deploy FastAPI via SSM with Wait
 
 on:
   push:
@@ -20,9 +20,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy FastAPI via SSM
+      - name: Create deployment script
         run: |
-          # Save deployment script to file on runner
           cat <<'EOF' > deploy.sh
           cd ~/carserve || exit 1
           echo "Pulling latest code..."
@@ -37,12 +36,39 @@ jobs:
           docker system prune -f
           EOF
 
-          # Send the script to the EC2 instance and run it sequentially
+      - name: Send deployment command to SSM
+        id: deploy
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy FastAPI sequentially" \
+            --parameters commands=["/bin/bash ~/deploy.sh"] \
+            --query "Command.CommandId" --output text)
+          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for SSM command to complete
+        run: |
+          STATUS="Pending"
+          while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
+            sleep 10
+            STATUS=$(aws ssm list-command-invocations \
+              --command-id ${{ steps.deploy.outputs.command_id }} \
+              --details \
+              --query "CommandInvocations[0].Status" \
+              --output text)
+            echo "Current SSM status: $STATUS"
+          done
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "SSM deployment failed!"
+            exit 1
+          fi
+
+      - name: Verify .env exists
+        run: |
           aws ssm send-command \
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI app sequentially" \
-            --parameters commands=["/bin/bash ~/deploy.sh"] \
+            --parameters commands=["ls -la ~/carserve/.env"] \
             --region ${{ secrets.AWS_REGION }}
-
-          echo "Deployment command sent. Use AWS Console -> Systems Manager -> Run Command -> Command ID to check logs."
