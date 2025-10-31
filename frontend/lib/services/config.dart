@@ -9,7 +9,7 @@ class ApiConfig {
   //  - Production public IP:         http://152.70.28.112
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://192.168.0.103:8000', //'http://152.70.28.112', 
+     defaultValue: 'http://16.16.124.14:8000', // ✅ Public AWS VM IP //if local machine :'http://192.168.0.103:8000', //if oracle: 'http://152.70.28.112', 
   );
 }
 
