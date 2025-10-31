@@ -13,6 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ✅ Configure credentials globally for AWS CLI
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -20,6 +21,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # ✅ Debug context (optional)
+      - name: Verify AWS connection
+        run: |
+          echo "Verifying AWS identity and region..."
+          aws sts get-caller-identity
+          aws configure get region
+
+      # ✅ Actual deployment
       - name: Deploy via SSM
         id: deploy
         env:
@@ -62,12 +71,13 @@ jobs:
 
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
 
+      # ✅ Monitor and fetch SSM logs
       - name: Wait for SSM command to complete and fetch logs
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           STATUS="Pending"
-          echo "Waiting for SSM command (${{ steps.deploy.outputs.command_id }}) to complete..."
+          echo "Waiting for SSM command to complete..."
 
           while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
             sleep 10
