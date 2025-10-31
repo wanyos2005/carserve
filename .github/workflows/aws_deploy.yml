@@ -40,9 +40,9 @@ jobs:
                 "pip install boto3 || true",
                 "echo --- Generating .env from SSM ---",
                 "python3 generate_env_from_ssm1.py || (echo Failed to generate .env; exit 1)",
-                "echo 🧹 Cleaning invalid env line...",
-                "sed -i '/M1J2eEhWuw360DBh7F_Z14\\/8KNUAEaVwzTk39E_P1z4ZINNaWA9_5w==/d' /home/ubuntu/carserve/.env",
-                "echo ✅ Invalid .env line removed successfully",
+                echo "🧹 Cleaning invalid env line..."
+                grep -v "M1J2eEhWuw360DBh7F_Z14/8KNUAEaVwzTk39E_P1z4ZINNaWA9_5w==" /home/ubuntu/carserve/.env > /home/ubuntu/carserve/.env.tmp && mv /home/ubuntu/carserve/.env.tmp /home/ubuntu/carserve/.env
+                echo "✅ Invalid .env line removed successfully"
                 "if [ ! -f .env ]; then echo .env not found!; exit 1; fi",
                 "echo --- Building containers ---",
                 "docker compose -f docker-compose.aws.yml pull",
