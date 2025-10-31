@@ -13,14 +13,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Trigger deployment on EC2 via SSM
+        id: deploy
         run: |
           echo "🚀 Sending deployment command to EC2 via SSM..."
 
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI on EC2 using instance role" \
+            --comment "Deploy FastAPI using instance role" \
             --parameters '{
               "commands": [
                 "set -e",
@@ -44,8 +52,44 @@ jobs:
                 "echo --- Deployment complete ---"
               ]
             }' \
-            --region us-east-1 \
+            --region ${{ secrets.AWS_REGION }} \
             --query "Command.CommandId" \
             --output text)
 
           echo "SSM Command ID: $COMMAND_ID"
+          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for SSM command to complete and fetch logs
+        run: |
+          STATUS="Pending"
+          ATTEMPTS=0
+          echo "⏳ Waiting for SSM command to finish..."
+
+          while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
+            sleep 10
+            STATUS=$(aws ssm list-command-invocations \
+              --command-id ${{ steps.deploy.outputs.command_id }} \
+              --details \
+              --query "CommandInvocations[0].Status" \
+              --output text)
+            echo "Current SSM status: $STATUS"
+            ATTEMPTS=$((ATTEMPTS+1))
+            if [ "$ATTEMPTS" -gt 30 ]; then
+              echo "❌ Timeout waiting for SSM command."
+              exit 1
+            fi
+          done
+
+          echo "===== 🧾 SSM Deployment Logs ====="
+          aws ssm list-command-invocations \
+            --command-id ${{ steps.deploy.outputs.command_id }} \
+            --details \
+            --query "CommandInvocations[0].CommandPlugins[0].Output" \
+            --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "❌ SSM deployment failed!"
+            exit 1
+          fi
+
+          echo "✅ Deployment completed successfully!"
