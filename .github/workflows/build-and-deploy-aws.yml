@@ -159,7 +159,7 @@ jobs:
             echo "Generating .env from secrets..."
             touch .env
             chmod 600 .env
-            cat > .env << EOF
+            cat > .env << 'EOF'
 # Production Environment Configuration for AWS
 
 # External Database URLs
