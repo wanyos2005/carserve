@@ -22,8 +22,11 @@ jobs:
 
       - name: Deploy via SSM
         id: deploy
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           echo "🚀 Starting deployment via SSM..."
+          echo "Using region: $AWS_REGION"
 
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
@@ -53,21 +56,23 @@ jobs:
                 "echo --- Deployment complete ---"
               ]
             }' \
-            --region "$${{ secrets.AWS_REGION }}" \
+            --region "$AWS_REGION" \
             --query "Command.CommandId" \
             --output text)
 
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait for SSM command to complete and fetch logs
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           STATUS="Pending"
-          echo "Waiting for SSM command ($${{ steps.deploy.outputs.command_id }}) to complete..."
+          echo "Waiting for SSM command (${{ steps.deploy.outputs.command_id }}) to complete..."
 
           while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
             sleep 10
             STATUS=$(aws ssm list-command-invocations \
-              --command-id "$${{ steps.deploy.outputs.command_id }}" \
+              --command-id "${{ steps.deploy.outputs.command_id }}" \
               --details \
               --query "CommandInvocations[0].Status" \
               --output text)
@@ -76,7 +81,7 @@ jobs:
 
           echo "===== SSM deployment logs ====="
           aws ssm list-command-invocations \
-            --command-id "$${{ steps.deploy.outputs.command_id }}" \
+            --command-id "${{ steps.deploy.outputs.command_id }}" \
             --details \
             --query "CommandInvocations[0].CommandPlugins[0].Output" \
             --output text
