@@ -20,18 +20,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Run deployment commands on EC2 via SSM
-        uses: aws-actions/aws-ssm-run-command@v2
-        with:
-          targets: "InstanceIds=i-0ec6c2b1be34e3c5f"  # Your EC2 instance ID
-          document-name: "AWS-RunShellScript"
-          parameters: |
-            commands=[
+      - name: Deploy via SSM
+        run: |
+          aws ssm send-command \
+            --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy FastAPI app" \
+            --parameters 'commands=[
               "cd ~/carserve",
               "git pull origin main",
-              "echo 'Generating .env from SSM...'",
+              "echo \"Generating .env from SSM...\"",
               "python3 generate_env_from_ssm1.py",
               "docker compose -f docker-compose.aws.yml pull",
               "docker compose -f docker-compose.aws.yml up -d --build",
               "docker system prune -f"
-            ]
+            ]' \
+            --region ${{ secrets.AWS_REGION }}
+
