@@ -1,15 +1,16 @@
 import boto3
-import os
 import re
 
-prefix = "/prod"         # e.g. /dev, /staging, /prod
+prefix = "/prod"
 output_file = ".env"
 
 ssm = boto3.client("ssm")
 
+# The known bad pattern (adjust if needed)
+BAD_LINE_PATTERN = re.compile(r"^M1J2eEhWuw360DBh7F_Z14/8KNUAEaVwzTk39E_P1z4ZINNaWA9_5w==")
 
 def sanitize_key(key: str) -> str:
-    """Convert invalid environment variable names to safe format."""
+    """Ensure valid env key name."""
     key = key.strip().split("/")[-1]
     key = re.sub(r"[^A-Za-z0-9_]", "_", key)
     if re.match(r"^[0-9]", key):
@@ -18,7 +19,6 @@ def sanitize_key(key: str) -> str:
 
 
 def fetch_all_parameters(prefix):
-    """Fetch all SSM params recursively."""
     params = {}
     next_token = None
 
@@ -44,7 +44,6 @@ def fetch_all_parameters(prefix):
 
 
 def is_valid_env_pair(key, value):
-    """Ensure the key and value form a valid KEY=value line for Docker."""
     if not key or not value:
         return False
     if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key):
@@ -56,8 +55,8 @@ def is_valid_env_pair(key, value):
 
 def write_env_file(params):
     cleaned_params = {}
+
     for k, v in params.items():
-        # Clean quotes
         if v.startswith('""') and v.endswith('""'):
             v = v[2:-2]
         elif v.startswith('"') and v.endswith('"'):
@@ -65,13 +64,14 @@ def write_env_file(params):
 
         v = v.replace("\\n", "\n").strip()
 
-        # Skip any malformed pairs
+        # Skip malformed pairs
         if not is_valid_env_pair(k, v):
             print(f"⚠️ Skipping malformed variable: {k}={v[:10]}...")
             continue
 
         cleaned_params[k] = v
 
+    # --- Write initial file ---
     with open(output_file, "w", encoding="utf-8") as f:
         for key, value in cleaned_params.items():
             if "\n" in value:
@@ -81,7 +81,18 @@ def write_env_file(params):
             else:
                 f.write(f"{key}={value}\n")
 
-    print(f"✅ .env file created successfully with {len(cleaned_params)} valid variables.")
+    # --- Post-cleanup pass: remove known bad lines ---
+    with open(output_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    filtered_lines = [ln for ln in lines if not BAD_LINE_PATTERN.match(ln.strip())]
+
+    if len(filtered_lines) != len(lines):
+        print(f"🧹 Removed {len(lines) - len(filtered_lines)} bad line(s) from .env")
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.writelines(filtered_lines)
+
+    print(f"✅ .env file finalized successfully with {len(filtered_lines)} clean variables.")
 
 
 def main():
