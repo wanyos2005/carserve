@@ -141,7 +141,7 @@ jobs:
             chmod 600 .env
             chown root:root .env
             
-            cat > .env << EOF
+            cat > .env << 'EOF'
 # Production Environment Configuration
 # Generated from GitHub Secrets during CI/CD deployment
 
@@ -271,7 +271,7 @@ EOF
             sudo apt install -y fail2ban aide ufw
             
             # Configure fail2ban for SSH protection
-            sudo tee /etc/fail2ban/jail.local << EOF
+            sudo tee /etc/fail2ban/jail.local << 'EOF'
 [DEFAULT]
 bantime = 3600
 findtime = 600
