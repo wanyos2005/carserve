@@ -1,3 +1,25 @@
+name: Deploy FastAPI via SSM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Deploy via SSM
         id: deploy
         run: |
@@ -34,3 +56,28 @@
             --output text)
 
           echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for SSM command to complete and fetch logs
+        run: |
+          STATUS="Pending"
+          while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
+            sleep 10
+            STATUS=$(aws ssm list-command-invocations \
+              --command-id ${{ steps.deploy.outputs.command_id }} \
+              --details \
+              --query "CommandInvocations[0].Status" \
+              --output text)
+            echo "Current SSM status: $STATUS"
+          done
+
+          echo "===== SSM deployment logs ====="
+          aws ssm list-command-invocations \
+            --command-id ${{ steps.deploy.outputs.command_id }} \
+            --details \
+            --query "CommandInvocations[0].CommandPlugins[0].Output" \
+            --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "SSM deployment failed!"
+            exit 1
+          fi
