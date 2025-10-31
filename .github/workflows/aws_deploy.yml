@@ -1,4 +1,4 @@
-name: Deploy to AWS EC2
+name: Deploy FastAPI via SSM
 
 on:
   push:
@@ -13,29 +13,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH key
-        run: |
-          # Create SSH directory
-          mkdir -p ~/.ssh
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-          # Save the SSH private key from GitHub Secrets
-          printf "%s" "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/fastapi-key.pem
-          chmod 600 ~/.ssh/fastapi-key.pem
-
-          # Add remote host to known_hosts to avoid SSH prompts
-          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts || true
-
-
-      - name: Deploy to EC2
-        run: |
-          ssh -i ~/.ssh/fastapi-key.pem ubuntu@${{ secrets.AWS_HOST }} <<'EOF'
-            cd ~/carserve
-            git pull origin main
-
-            echo "Generating .env from SSM..."
-            python3 generate_env_from_ssm1.py
-
-            docker compose -f docker-compose.aws.yml pull
-            docker compose -f docker-compose.aws.yml up -d --build
-            docker system prune -f
-          EOF
+      - name: Run deployment commands on EC2 via SSM
+        uses: aws-actions/aws-ssm-run-command@v2
+        with:
+          targets: "InstanceIds=i-0ec6c2b1be34e3c5f"  # Your EC2 instance ID
+          document-name: "AWS-RunShellScript"
+          parameters: |
+            commands=[
+              "cd ~/carserve",
+              "git pull origin main",
+              "echo 'Generating .env from SSM...'",
+              "python3 generate_env_from_ssm1.py",
+              "docker compose -f docker-compose.aws.yml pull",
+              "docker compose -f docker-compose.aws.yml up -d --build",
+              "docker system prune -f"
+            ]
