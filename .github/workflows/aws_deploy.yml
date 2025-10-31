@@ -1,4 +1,4 @@
-name: Deploy FastAPI via SSM
+name: Deploy FastAPI via SSM Sequentially
 
 on:
   push:
@@ -20,20 +20,29 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy via SSM
+      - name: Deploy FastAPI via SSM
         run: |
+          # Save deployment script to file on runner
+          cat <<'EOF' > deploy.sh
+          cd ~/carserve || exit 1
+          echo "Pulling latest code..."
+          git pull origin main
+
+          echo "Generating .env from SSM..."
+          python3 generate_env_from_ssm1.py || exit 1
+
+          echo "Starting Docker containers..."
+          docker compose -f docker-compose.aws.yml pull
+          docker compose -f docker-compose.aws.yml up -d --build
+          docker system prune -f
+          EOF
+
+          # Send the script to the EC2 instance and run it sequentially
           aws ssm send-command \
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI app" \
-            --parameters 'commands=[
-              "cd ~/carserve",
-              "git pull origin main",
-              "echo \"Generating .env from SSM...\"",
-              "python3 generate_env_from_ssm1.py",
-              "docker compose -f docker-compose.aws.yml pull",
-              "docker compose -f docker-compose.aws.yml up -d --build",
-              "docker system prune -f"
-            ]' \
+            --comment "Deploy FastAPI app sequentially" \
+            --parameters commands=["/bin/bash ~/deploy.sh"] \
             --region ${{ secrets.AWS_REGION }}
 
+          echo "Deployment command sent. Use AWS Console -> Systems Manager -> Run Command -> Command ID to check logs."
