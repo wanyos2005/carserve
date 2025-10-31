@@ -1,4 +1,4 @@
-name: Deploy FastAPI via SSM with Wait
+name: Deploy FastAPI via SSM with Logs
 
 on:
   push:
@@ -23,6 +23,7 @@ jobs:
       - name: Create deployment script
         run: |
           cat <<'EOF' > deploy.sh
+          set -e
           cd ~/carserve || exit 1
           echo "Pulling latest code..."
           git pull origin main
@@ -65,10 +66,11 @@ jobs:
             exit 1
           fi
 
-      - name: Verify .env exists
+      - name: Fetch SSM command logs
         run: |
-          aws ssm send-command \
-            --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
-            --document-name "AWS-RunShellScript" \
-            --parameters commands=["ls -la ~/carserve/.env"] \
-            --region ${{ secrets.AWS_REGION }}
+          echo "===== SSM deployment logs ====="
+          aws ssm list-command-invocations \
+            --command-id ${{ steps.deploy.outputs.command_id }} \
+            --details \
+            --query "CommandInvocations[0].CommandPlugins[0].Output" \
+            --output text
