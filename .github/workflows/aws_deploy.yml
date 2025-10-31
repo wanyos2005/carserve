@@ -10,11 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials securely from GitHub Secrets
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -22,7 +20,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 3️⃣ Deploy to EC2 instance using SSM
       - name: Deploy via SSM
         id: deploy
         run: |
@@ -56,22 +53,21 @@ jobs:
                 "echo --- Deployment complete ---"
               ]
             }' \
-            --region "${{ secrets.AWS_REGION }}" \
+            --region "$${{ secrets.AWS_REGION }}" \
             --query "Command.CommandId" \
             --output text)
 
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
 
-      # 4️⃣ Wait for SSM command to finish and print logs
       - name: Wait for SSM command to complete and fetch logs
         run: |
           STATUS="Pending"
-          echo "⏳ Waiting for SSM command to finish..."
+          echo "Waiting for SSM command ($${{ steps.deploy.outputs.command_id }}) to complete..."
 
           while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
             sleep 10
             STATUS=$(aws ssm list-command-invocations \
-              --command-id "${{ steps.deploy.outputs.command_id }}" \
+              --command-id "$${{ steps.deploy.outputs.command_id }}" \
               --details \
               --query "CommandInvocations[0].Status" \
               --output text)
@@ -80,7 +76,7 @@ jobs:
 
           echo "===== SSM deployment logs ====="
           aws ssm list-command-invocations \
-            --command-id "${{ steps.deploy.outputs.command_id }}" \
+            --command-id "$${{ steps.deploy.outputs.command_id }}" \
             --details \
             --query "CommandInvocations[0].CommandPlugins[0].Output" \
             --output text
