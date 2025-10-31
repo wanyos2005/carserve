@@ -12,5 +12,6 @@ class ApiConfig {
      defaultValue: 'http://16.16.124.14:8000', // ✅ Public AWS VM IP //if local machine :'http://192.168.0.103:8000', //if oracle: 'http://152.70.28.112', 
   );
 }
+//
 
-
+//ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.124.14
