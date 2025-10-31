@@ -13,26 +13,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS region
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Verify AWS access from GitHub
+      - name: Trigger deployment on EC2 via SSM
         run: |
-          echo "🔍 Verifying AWS access..."
-          aws sts get-caller-identity
-          echo "✅ AWS access verified."
-
-      - name: Deploy via SSM
-        id: deploy
-        run: |
-          echo "🚀 Sending deployment command to EC2 via AWS SSM..."
+          echo "🚀 Sending deployment command to EC2 via SSM..."
 
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI cleanly" \
+            --comment "Deploy FastAPI on EC2 using instance role" \
             --parameters '{
               "commands": [
                 "set -e",
@@ -41,14 +29,13 @@ jobs:
                 "cd /home/ubuntu/carserve || exit 1",
                 "echo --- Fixing git safe directory ownership ---",
                 "git config --system --add safe.directory /home/ubuntu/carserve || true",
-                "echo --- Installing boto3 ---",
-                "sudo apt-get update -y && sudo apt-get install -y python3-pip",
+                "echo --- Installing dependencies ---",
+                "sudo apt-get update -y && sudo apt-get install -y python3-pip docker.io docker-compose-plugin",
                 "pip install boto3 || true",
                 "echo --- Generating .env from SSM ---",
                 "python3 generate_env_from_ssm1.py || (echo Failed to generate .env; exit 1)",
-                "echo 🧹 Cleaning invalid env line...",
+                "echo --- Cleaning invalid env lines ---",
                 "grep -v 'M1J2eEhWuw360DBh7F_Z14/8KNUAEaVwzTk39E_P1z4ZINNaWA9_5w==' /home/ubuntu/carserve/.env > /home/ubuntu/carserve/.env.tmp && mv /home/ubuntu/carserve/.env.tmp /home/ubuntu/carserve/.env",
-                "echo ✅ Invalid .env line removed successfully",
                 "if [ ! -f .env ]; then echo .env not found!; exit 1; fi",
                 "echo --- Building containers ---",
                 "docker compose -f docker-compose.aws.yml pull",
@@ -57,44 +44,8 @@ jobs:
                 "echo --- Deployment complete ---"
               ]
             }' \
-            --region ${{ secrets.AWS_REGION }} \
+            --region us-east-1 \
             --query "Command.CommandId" \
             --output text)
 
-          echo "📡 SSM Command ID: $COMMAND_ID"
-          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
-
-      - name: Wait for SSM command to complete and fetch logs
-        run: |
-          echo "⏳ Waiting for SSM command to finish..."
-          STATUS="Pending"
-          ATTEMPTS=0
-
-          while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
-            sleep 10
-            STATUS=$(aws ssm list-command-invocations \
-              --command-id ${{ steps.deploy.outputs.command_id }} \
-              --details \
-              --query "CommandInvocations[0].Status" \
-              --output text)
-            echo "Current SSM status: $STATUS"
-            ATTEMPTS=$((ATTEMPTS+1))
-            if [ "$ATTEMPTS" -gt 30 ]; then
-              echo "❌ Timeout waiting for SSM command."
-              exit 1
-            fi
-          done
-
-          echo "===== 🧾 SSM Deployment Logs ====="
-          aws ssm list-command-invocations \
-            --command-id ${{ steps.deploy.outputs.command_id }} \
-            --details \
-            --query "CommandInvocations[0].CommandPlugins[0].Output" \
-            --output text
-
-          if [ "$STATUS" != "Success" ]; then
-            echo "❌ SSM deployment failed!"
-            exit 1
-          fi
-
-          echo "✅ Deployment completed successfully!"
+          echo "SSM Command ID: $COMMAND_ID"
