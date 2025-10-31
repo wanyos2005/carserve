@@ -15,10 +15,16 @@ jobs:
 
       - name: Setup SSH key
         run: |
+          # Create SSH directory
           mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/fastapi-key.pem
+
+          # Save the SSH private key from GitHub Secrets
+          printf "%s" "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/fastapi-key.pem
           chmod 600 ~/.ssh/fastapi-key.pem
-          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+
+          # Add remote host to known_hosts to avoid SSH prompts
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts || true
+
 
       - name: Deploy to EC2
         run: |
