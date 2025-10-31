@@ -21,85 +21,13 @@ jobs:
           ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2
-        env:
-          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
-          AT_API_KEY: ${{ secrets.AT_API_KEY }}
-          AT_USERNAME: ${{ secrets.AT_USERNAME }}
-          CLOUDFLARE_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_ACCESS_KEY_ID }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_BUCKET: ${{ secrets.CLOUDFLARE_BUCKET }}
-          CLOUDFLARE_PUBLIC_URL: ${{ secrets.CLOUDFLARE_PUBLIC_URL }}
-          CLOUDFLARE_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_SECRET_ACCESS_KEY }}
-          FCM_CLIENT_EMAIL: ${{ secrets.FCM_CLIENT_EMAIL }}
-          FCM_PRIVATE_KEY: ${{ secrets.FCM_PRIVATE_KEY }}
-          FCM_PROJECT_ID: ${{ secrets.FCM_PROJECT_ID }}
-          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
-          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-          MAIL_PORT: ${{ secrets.MAIL_PORT }}
-          MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
-          MAIL_SSL: ${{ secrets.MAIL_SSL }}
-          MAIL_TLS: ${{ secrets.MAIL_TLS }}
-          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
-          MODERATION_API_KEY: ${{ secrets.MODERATION_API_KEY }}
-          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          SMS_PROVIDER: ${{ secrets.SMS_PROVIDER }}
-          SMTP_FROM_EMAIL: ${{ secrets.SMTP_FROM_EMAIL }}
-          SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_SSL: ${{ secrets.SMTP_SSL }}
-          SMTP_TLS: ${{ secrets.SMTP_TLS }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL }}
         run: |
           ssh -i ~/.ssh/fastapi-key.pem ubuntu@${{ secrets.AWS_HOST }} <<'EOF'
             cd ~/carserve
             git pull origin main
 
-            echo "Generating .env from GitHub secrets..."
-            cat > .env <<EOL
-ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
-AT_API_KEY=${AT_API_KEY}
-AT_USERNAME=${AT_USERNAME}
-CLOUDFLARE_ACCESS_KEY_ID=${CLOUDFLARE_ACCESS_KEY_ID}
-CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
-CLOUDFLARE_BUCKET=${CLOUDFLARE_BUCKET}
-CLOUDFLARE_PUBLIC_URL=${CLOUDFLARE_PUBLIC_URL}
-CLOUDFLARE_SECRET_ACCESS_KEY=${CLOUDFLARE_SECRET_ACCESS_KEY}
-FCM_CLIENT_EMAIL=${FCM_CLIENT_EMAIL}
-FCM_PRIVATE_KEY=${FCM_PRIVATE_KEY}
-FCM_PROJECT_ID=${FCM_PROJECT_ID}
-GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
-JWT_SECRET_KEY=${JWT_SECRET_KEY}
-MAIL_FROM=${MAIL_FROM}
-MAIL_FROM_NAME=${MAIL_FROM_NAME}
-MAIL_PASSWORD=${MAIL_PASSWORD}
-MAIL_PORT=${MAIL_PORT}
-MAIL_SERVER=${MAIL_SERVER}
-MAIL_SSL=${MAIL_SSL}
-MAIL_TLS=${MAIL_TLS}
-MAIL_USERNAME=${MAIL_USERNAME}
-MODERATION_API_KEY=${MODERATION_API_KEY}
-NEON_DATABASE_URL=${NEON_DATABASE_URL}
-SMS_PROVIDER=${SMS_PROVIDER}
-SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
-SMTP_FROM_NAME=${SMTP_FROM_NAME}
-SMTP_HOST=${SMTP_HOST}
-SMTP_PASSWORD=${SMTP_PASSWORD}
-SMTP_PORT=${SMTP_PORT}
-SMTP_SSL=${SMTP_SSL}
-SMTP_TLS=${SMTP_TLS}
-SMTP_USERNAME=${SMTP_USERNAME}
-UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN}
-UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL}
-UPSTASH_REDIS_URL=${UPSTASH_REDIS_URL}
-EOL
+            echo "Generating .env from SSM..."
+            python3 generate_env_from_ssm1.py
 
             docker compose -f docker-compose.aws.yml pull
             docker compose -f docker-compose.aws.yml up -d --build
