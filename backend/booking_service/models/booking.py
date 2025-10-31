@@ -72,5 +72,3 @@ class ServiceLog(Base):
     notes = Column(String, nullable=True)
 
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-
-
