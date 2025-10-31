@@ -1,74 +1,191 @@
-name: Deploy FastAPI via SSM
+version: "3.9"
 
-on:
-  push:
-    branches:
-      - main
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: AdminDb
+      POSTGRES_PASSWORD: Ngojakwanza
+      POSTGRES_DB: car_platform
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U AdminDb -d car_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # API Gateway / Reverse proxy
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: gateway
+    depends_on:
+      - user-service
+      - vehicle-service
+      - service-provider
+      - booking-service
+      - insurance-service
+      - alert-service
+      - expenses-service
+      - social-service
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.aws.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+  user-service:
+    image: ghcr.io/wanyos2005/user-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-      - name: Deploy via SSM
-        id: deploy
-        run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI cleanly" \
-            --parameters 'commands=[
-              "set -e",
-              "echo --- Starting fresh deployment on EC2 ---",
-              "cd /home/ubuntu",
-              "cd carserve",
-              "git pull origin main || true",
-              "python3 generate_env_from_ssm.py || (echo Failed to generate .env; exit 1)",
-              "sleep 5",
-              "if [ ! -f .env ]; then echo .env not found!; exit 1; fi",
-              "echo --- Building containers ---",
-              "docker compose -f docker-compose.aws.yml pull",
-              "docker compose -f docker-compose.aws.yml up -d --build",
-              "docker system prune -f",
-              "echo --- Deployment complete ---"
-            ]' \
-            --region ${{ secrets.AWS_REGION }} \
-            --query "Command.CommandId" \
-            --output text)
+  vehicle-service:
+    image: ghcr.io/wanyos2005/vehicle-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+  service-provider:
+    image: ghcr.io/wanyos2005/service-provider:latest
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-      - name: Wait for SSM command to complete and fetch logs
-        run: |
-          STATUS="Pending"
-          while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
-            sleep 10
-            STATUS=$(aws ssm list-command-invocations \
-              --command-id ${{ steps.deploy.outputs.command_id }} \
-              --details \
-              --query "CommandInvocations[0].Status" \
-              --output text)
-            echo "Current SSM status: $STATUS"
-          done
+  booking-service:
+    image: ghcr.io/wanyos2005/booking-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-          echo "===== SSM deployment logs ====="
-          aws ssm list-command-invocations \
-            --command-id ${{ steps.deploy.outputs.command_id }} \
-            --details \
-            --query "CommandInvocations[0].CommandPlugins[0].Output" \
-            --output text
+  insurance-service:
+    image: ghcr.io/wanyos2005/insurance-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-          if [ "$STATUS" != "Success" ]; then
-            echo "SSM deployment failed!"
-            exit 1
-          fi
+  alert-service:
+    image: ghcr.io/wanyos2005/alert-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: separate workers if you use them in prod
+  alert-worker:
+    image: ghcr.io/wanyos2005/alert-worker:latest
+    env_file: .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  alert-beat:
+    image: ghcr.io/wanyos2005/alert-beat:latest
+    env_file: .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  expenses-service:
+    image: ghcr.io/wanyos2005/expenses-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  social-service:
+    image: ghcr.io/wanyos2005/social-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    volumes:
+      - social_uploads:/app/uploads
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres-data:
+  redis-data:
+  social_uploads:
+
+networks:
+  default:
+    driver: bridge
+
+

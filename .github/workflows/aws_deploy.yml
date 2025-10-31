@@ -26,17 +26,24 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI inline" \
+            --comment "Deploy FastAPI cleanly" \
             --parameters 'commands=[
-              "cd /home/ubuntu",
-              "if [ ! -d carserve ]; then git clone https://github.com/wanyos2005/carserve.git; fi",
-              "cd carserve",
-              "git pull origin main",
-              "echo \"Generating .env from SSM...\"",
-              "python3 generate_env_from_ssm1.py || echo \".env generation failed\"",
-              "sleep 5",
-              "if [ -f docker-compose.aws.yml ]; then docker compose -f docker-compose.aws.yml up -d --build; else echo \"No compose file\"; fi",
-              "docker system prune -f"
+              "set -e",
+              "echo --- Starting deployment on EC2 ---",
+              "cd /home/ubuntu/carserve || exit 1",
+              "echo --- Fixing git safe directory ownership ---",
+              "git config --global --add safe.directory /home/ubuntu/carserve",
+              "echo --- Installing boto3 ---",
+              "sudo apt-get update -y && sudo apt-get install -y python3-pip",
+              "pip install boto3",
+              "echo --- Generating .env from SSM ---",
+              "python3 generate_env_from_ssm1.py || (echo Failed to generate .env; exit 1)",
+              "if [ ! -f .env ]; then echo .env not found!; exit 1; fi",
+              "echo --- Building containers ---",
+              "docker compose -f docker-compose.aws.yml pull",
+              "docker compose -f docker-compose.aws.yml up -d --build",
+              "docker system prune -f -y",
+              "echo --- Deployment complete ---"
             ]' \
             --region ${{ secrets.AWS_REGION }} \
             --query "Command.CommandId" \
