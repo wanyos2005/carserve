@@ -1,4 +1,4 @@
-name: Deploy FastAPI via SSM with Logs
+name: Deploy FastAPI via SSM
 
 on:
   push:
@@ -20,35 +20,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Create deployment script
-        run: |
-          cat <<'EOF' > deploy.sh
-          set -e
-          cd ~/carserve || exit 1
-          echo "Pulling latest code..."
-          git pull origin main
-
-          echo "Generating .env from SSM..."
-          python3 generate_env_from_ssm1.py || exit 1
-
-          echo "Starting Docker containers..."
-          docker compose -f docker-compose.aws.yml pull
-          docker compose -f docker-compose.aws.yml up -d --build
-          docker system prune -f
-          EOF
-
-      - name: Send deployment command to SSM
+      - name: Deploy via SSM
         id: deploy
         run: |
           COMMAND_ID=$(aws ssm send-command \
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI sequentially" \
-            --parameters commands=["/bin/bash ~/deploy.sh"] \
-            --query "Command.CommandId" --output text)
+            --comment "Deploy FastAPI inline" \
+            --parameters 'commands=[
+              "cd /home/ubuntu",
+              "if [ ! -d carserve ]; then git clone https://github.com/wanyos2005/carserve.git; fi",
+              "cd carserve",
+              "git pull origin main",
+              "echo \"Generating .env from SSM...\"",
+              "python3 generate_env_from_ssm1.py || echo \".env generation failed\"",
+              "sleep 5",
+              "if [ -f docker-compose.aws.yml ]; then docker compose -f docker-compose.aws.yml up -d --build; else echo \"No compose file\"; fi",
+              "docker system prune -f"
+            ]' \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "Command.CommandId" \
+            --output text)
+
           echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
 
-      - name: Wait for SSM command to complete
+      - name: Wait for SSM command to complete and fetch logs
         run: |
           STATUS="Pending"
           while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
@@ -61,16 +57,14 @@ jobs:
             echo "Current SSM status: $STATUS"
           done
 
-          if [ "$STATUS" != "Success" ]; then
-            echo "SSM deployment failed!"
-            exit 1
-          fi
-
-      - name: Fetch SSM command logs
-        run: |
           echo "===== SSM deployment logs ====="
           aws ssm list-command-invocations \
             --command-id ${{ steps.deploy.outputs.command_id }} \
             --details \
             --query "CommandInvocations[0].CommandPlugins[0].Output" \
             --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "SSM deployment failed!"
+            exit 1
+          fi
