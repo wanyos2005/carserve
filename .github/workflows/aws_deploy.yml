@@ -1,25 +1,3 @@
-name: Deploy FastAPI via SSM
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Deploy via SSM
         id: deploy
         run: |
@@ -27,55 +5,32 @@ jobs:
             --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy FastAPI cleanly" \
-            --parameters 'commands=[
-              "set -e",
-              "export HOME=/home/ubuntu",
-              "echo --- Starting deployment on EC2 ---",
-              "cd /home/ubuntu/carserve || exit 1",
-              "echo --- Fixing git safe directory ownership ---",
-              "git config --system --add safe.directory /home/ubuntu/carserve || true",
-              "echo --- Installing boto3 ---",
-              "sudo apt-get update -y && sudo apt-get install -y python3-pip",
-              "pip install boto3 || true",
-              "echo --- Generating .env from SSM ---",
-              "python3 generate_env_from_ssm1.py || (echo Failed to generate .env; exit 1)",
-              echo "🧹 Cleaning invalid env line..."
-              sed -i '/M1J2eEhWuw360DBh7F_Z14\/8KNUAEaVwzTk39E_P1z4ZINNaWA9_5w==/d' /home/ubuntu/carserve/.env
-              echo "✅ Invalid .env line removed successfully"
-              "if [ ! -f .env ]; then echo .env not found!; exit 1; fi",
-              "echo --- Building containers ---",
-              "docker compose -f docker-compose.aws.yml pull",
-              "docker compose -f docker-compose.aws.yml up -d --build",
-              "docker system prune -f -y",
-              "echo --- Deployment complete ---"
-            ]' \
+            --parameters '{
+              "commands": [
+                "set -e",
+                "export HOME=/home/ubuntu",
+                "echo --- Starting deployment on EC2 ---",
+                "cd /home/ubuntu/carserve || exit 1",
+                "echo --- Fixing git safe directory ownership ---",
+                "git config --system --add safe.directory /home/ubuntu/carserve || true",
+                "echo --- Installing boto3 ---",
+                "sudo apt-get update -y && sudo apt-get install -y python3-pip",
+                "pip install boto3 || true",
+                "echo --- Generating .env from SSM ---",
+                "python3 generate_env_from_ssm1.py || (echo Failed to generate .env; exit 1)",
+                "echo 🧹 Cleaning invalid env line...",
+                "sed -i '/M1J2eEhWuw360DBh7F_Z14\\/8KNUAEaVwzTk39E_P1z4ZINNaWA9_5w==/d' /home/ubuntu/carserve/.env",
+                "echo ✅ Invalid .env line removed successfully",
+                "if [ ! -f .env ]; then echo .env not found!; exit 1; fi",
+                "echo --- Building containers ---",
+                "docker compose -f docker-compose.aws.yml pull",
+                "docker compose -f docker-compose.aws.yml up -d --build",
+                "docker system prune -f -y",
+                "echo --- Deployment complete ---"
+              ]
+            }' \
             --region ${{ secrets.AWS_REGION }} \
             --query "Command.CommandId" \
             --output text)
 
           echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
-
-      - name: Wait for SSM command to complete and fetch logs
-        run: |
-          STATUS="Pending"
-          while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
-            sleep 10
-            STATUS=$(aws ssm list-command-invocations \
-              --command-id ${{ steps.deploy.outputs.command_id }} \
-              --details \
-              --query "CommandInvocations[0].Status" \
-              --output text)
-            echo "Current SSM status: $STATUS"
-          done
-
-          echo "===== SSM deployment logs ====="
-          aws ssm list-command-invocations \
-            --command-id ${{ steps.deploy.outputs.command_id }} \
-            --details \
-            --query "CommandInvocations[0].CommandPlugins[0].Output" \
-            --output text
-
-          if [ "$STATUS" != "Success" ]; then
-            echo "SSM deployment failed!"
-            exit 1
-          fi
