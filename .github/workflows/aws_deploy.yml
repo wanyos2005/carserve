@@ -13,18 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS region
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Verify AWS credentials
+      - name: Verify AWS access from GitHub
         run: |
-          echo "🔍 Verifying AWS credentials..."
+          echo "🔍 Verifying AWS access..."
           aws sts get-caller-identity
-          echo "✅ AWS credentials verified successfully."
+          echo "✅ AWS access verified."
 
       - name: Deploy via SSM
         id: deploy
@@ -46,14 +44,6 @@ jobs:
                 "echo --- Installing boto3 ---",
                 "sudo apt-get update -y && sudo apt-get install -y python3-pip",
                 "pip install boto3 || true",
-                "echo --- Writing AWS credentials file ---",
-                "mkdir -p ~/.aws",
-                "echo \"[default]\" > ~/.aws/credentials",
-                "echo \"aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}\" >> ~/.aws/credentials",
-                "echo \"aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}\" >> ~/.aws/credentials",
-                "echo \"[default]\" > ~/.aws/config",
-                "echo \"region=${{ secrets.AWS_REGION }}\" >> ~/.aws/config",
-                "chmod 600 ~/.aws/credentials",
                 "echo --- Generating .env from SSM ---",
                 "python3 generate_env_from_ssm1.py || (echo Failed to generate .env; exit 1)",
                 "echo 🧹 Cleaning invalid env line...",
