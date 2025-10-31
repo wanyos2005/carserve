@@ -16,9 +16,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: $${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: $${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: $${{ secrets.AWS_REGION }}
 
       - name: Deploy via SSM
         id: deploy
@@ -51,7 +51,7 @@ jobs:
                 "echo --- Deployment complete ---"
               ]
             }' \
-            --region ${{ secrets.AWS_REGION }} \
+            --region $${{ secrets.AWS_REGION }} \
             --query "Command.CommandId" \
             --output text)
 
@@ -63,7 +63,7 @@ jobs:
           while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
             sleep 10
             STATUS=$(aws ssm list-command-invocations \
-              --command-id ${{ steps.deploy.outputs.command_id }} \
+              --command-id $${{ steps.deploy.outputs.command_id }} \
               --details \
               --query "CommandInvocations[0].Status" \
               --output text)
@@ -72,7 +72,7 @@ jobs:
 
           echo "===== SSM deployment logs ====="
           aws ssm list-command-invocations \
-            --command-id ${{ steps.deploy.outputs.command_id }} \
+            --command-id $${{ steps.deploy.outputs.command_id }} \
             --details \
             --query "CommandInvocations[0].CommandPlugins[0].Output" \
             --output text
