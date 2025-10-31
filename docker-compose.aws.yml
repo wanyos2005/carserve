@@ -1,0 +1,191 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: AdminDb
+      POSTGRES_PASSWORD: Ngojakwanza
+      POSTGRES_DB: car_platform
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U AdminDb -d car_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # API Gateway / Reverse proxy
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: gateway
+    depends_on:
+      - user-service
+      - vehicle-service
+      - service-provider
+      - booking-service
+      - insurance-service
+      - alert-service
+      - expenses-service
+      - social-service
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.aws.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  user-service:
+    image: ghcr.io/wanyos2005/user-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  vehicle-service:
+    image: ghcr.io/wanyos2005/vehicle-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  service-provider:
+    image: ghcr.io/wanyos2005/service-provider:latest
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  booking-service:
+    image: ghcr.io/wanyos2005/booking-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  insurance-service:
+    image: ghcr.io/wanyos2005/insurance-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  alert-service:
+    image: ghcr.io/wanyos2005/alert-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: separate workers if you use them in prod
+  alert-worker:
+    image: ghcr.io/wanyos2005/alert-worker:latest
+    env_file: .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  alert-beat:
+    image: ghcr.io/wanyos2005/alert-beat:latest
+    env_file: .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  expenses-service:
+    image: ghcr.io/wanyos2005/expenses-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  social-service:
+    image: ghcr.io/wanyos2005/social-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    volumes:
+      - social_uploads:/app/uploads
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres-data:
+  redis-data:
+  social_uploads:
+
+networks:
+  default:
+    driver: bridge
+
+

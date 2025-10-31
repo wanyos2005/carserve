@@ -101,15 +101,7 @@ class RealtimeService {
     });
   }
 
-  /// Send story view notification
-  static void sendStoryView(String storyId, int storyOwnerId) {
-    sendMessage({
-      'type': STORY_VIEWED,
-      'story_id': storyId,
-      'story_owner_id': storyOwnerId,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-  }
+  
 
   /// Start heartbeat to keep connection alive
   static void _startHeartbeat() {
@@ -148,10 +140,7 @@ class RealtimeService {
     return listenFor(NEW_FOLLOW);
   }
 
-  /// Listen for story views
-  static Stream<Map<String, dynamic>> get storyViewsStream {
-    return listenFor(STORY_VIEWED);
-  }
+
 
   /// Listen for typing indicators
   static Stream<Map<String, dynamic>> get typingIndicatorsStream {
