@@ -43,8 +43,15 @@ SCHEMAS=(
     "social"
 )
 
+# Find postgres container name
+POSTGRES_CONTAINER=$(docker ps --format '{{.Names}}' | grep -E "postgres" | head -1)
+if [ -z "$POSTGRES_CONTAINER" ]; then
+    echo -e "${RED}✗${NC} Postgres container not found!"
+    exit 1
+fi
+
 for schema in "${SCHEMAS[@]}"; do
-    if docker-compose -f "$COMPOSE_FILE" exec -T postgres psql -U AdminDb -d car_platform -c "CREATE SCHEMA IF NOT EXISTS $schema;" > /dev/null 2>&1; then
+    if docker exec "$POSTGRES_CONTAINER" psql -U AdminDb -d car_platform -c "CREATE SCHEMA IF NOT EXISTS $schema;" > /dev/null 2>&1; then
         print_status 0 "Schema '$schema' created/verified"
     else
         print_status 1 "Failed to create schema '$schema'"
@@ -75,15 +82,24 @@ for service_name in "${!SERVICES[@]}"; do
     echo -e "${BLUE}Processing $service_name (schema: $schema_name)...${NC}"
     
     # Check if container exists and is running
-    if ! docker-compose -f "$COMPOSE_FILE" ps "$service_name" | grep -q "Up"; then
-        echo -e "${YELLOW}⚠ Container '$service_name' is not running. Skipping...${NC}"
+    # Docker Compose v2 uses container names with project prefix
+    if ! docker ps --format '{{.Names}}' | grep -qE "(^${service_name}$|^.*-${service_name}$|^${service_name}-.*$)"; then
+        echo -e "${YELLOW}⚠ Container matching '$service_name' is not running. Skipping...${NC}"
+        continue
+    fi
+    
+    # Find the actual container name
+    CONTAINER_NAME=$(docker ps --format '{{.Names}}' | grep -E "(^${service_name}$|^.*-${service_name}$|^${service_name}-.*$)" | head -1)
+    if [ -z "$CONTAINER_NAME" ]; then
+        echo -e "${YELLOW}⚠ Could not find container name for '$service_name'. Skipping...${NC}"
         continue
     fi
     
     # Step 2a: Upgrade head first (this will create alembic_version table and tables)
     # We upgrade first because if tables don't exist, this is the correct approach
     echo "  → Upgrading to head (creating tables from migrations)..."
-    UPGRADE_OUTPUT=$(docker-compose -f "$COMPOSE_FILE" exec -T "$service_name" alembic upgrade head 2>&1 || true)
+    echo "    Using container: $CONTAINER_NAME"
+    UPGRADE_OUTPUT=$(docker exec "$CONTAINER_NAME" alembic upgrade head 2>&1 || true)
     
     if echo "$UPGRADE_OUTPUT" | grep -q "Running upgrade\|CREATE TABLE\|Target database is up to date"; then
         print_status 0 "Upgraded $service_name to head"
@@ -95,10 +111,10 @@ for service_name in "${!SERVICES[@]}"; do
     else
         # If upgrade fails, try stamping head first (in case alembic_version table doesn't exist)
         echo "  → Upgrade failed, attempting to stamp head first..."
-        STAMP_OUTPUT=$(docker-compose -f "$COMPOSE_FILE" exec -T "$service_name" alembic stamp head 2>&1 || true)
+        STAMP_OUTPUT=$(docker exec "$CONTAINER_NAME" alembic stamp head 2>&1 || true)
         if echo "$STAMP_OUTPUT" | grep -q "stamped"; then
             echo -e "${GREEN}    ✓${NC} Stamped head, retrying upgrade..."
-            UPGRADE_OUTPUT=$(docker-compose -f "$COMPOSE_FILE" exec -T "$service_name" alembic upgrade head 2>&1 || true)
+            UPGRADE_OUTPUT=$(docker exec "$CONTAINER_NAME" alembic upgrade head 2>&1 || true)
             if echo "$UPGRADE_OUTPUT" | grep -q "Running upgrade\|Target database is up to date"; then
                 print_status 0 "Upgraded $service_name after stamping"
             else
@@ -113,12 +129,12 @@ for service_name in "${!SERVICES[@]}"; do
     
     # Step 2b: Autogenerate (detect any model changes that aren't in migrations)
     echo "  → Running autogenerate (checking for model changes)..."
-    AUTOGEN_OUTPUT=$(docker-compose -f "$COMPOSE_FILE" exec -T "$service_name" alembic revision --autogenerate -m "Auto-generated migration" 2>&1 || true)
+    AUTOGEN_OUTPUT=$(docker exec "$CONTAINER_NAME" alembic revision --autogenerate -m "Auto-generated migration" 2>&1 || true)
     if echo "$AUTOGEN_OUTPUT" | grep -q "Generating.*migration"; then
         print_status 0 "New migration generated for $service_name (model changes detected)"
         echo "$AUTOGEN_OUTPUT" | grep -E "Generating|migration" | sed 's/^/    /'
         echo "  → Applying newly generated migration..."
-        docker-compose -f "$COMPOSE_FILE" exec -T "$service_name" alembic upgrade head > /dev/null 2>&1 && \
+        docker exec "$CONTAINER_NAME" alembic upgrade head > /dev/null 2>&1 && \
             print_status 0 "Applied new migration for $service_name"
     elif echo "$AUTOGEN_OUTPUT" | grep -q "No changes"; then
         echo -e "${GREEN}  ✓${NC} No model changes detected for $service_name"
@@ -134,7 +150,7 @@ for service_name in "${!SERVICES[@]}"; do
     
     # Step 2c: Final stamp head to ensure version table is correct
     echo "  → Final stamp head (ensuring version table is correct)..."
-    FINAL_STAMP=$(docker-compose -f "$COMPOSE_FILE" exec -T "$service_name" alembic stamp head 2>&1 || true)
+    FINAL_STAMP=$(docker exec "$CONTAINER_NAME" alembic stamp head 2>&1 || true)
     if echo "$FINAL_STAMP" | grep -q "stamped\|Target database is up to date"; then
         echo -e "${GREEN}  ✓${NC} Version table synchronized for $service_name"
     else
@@ -153,12 +169,12 @@ echo ""
 echo "Verification commands:"
 echo ""
 echo "  # List all schemas:"
-echo "  docker-compose -f $COMPOSE_FILE exec postgres psql -U AdminDb -d car_platform -c '\\dn'"
+echo "  docker compose -f $COMPOSE_FILE exec postgres psql -U AdminDb -d car_platform -c '\\dn'"
 echo ""
 echo "  # List tables in a specific schema (e.g., users):"
-echo "  docker-compose -f $COMPOSE_FILE exec postgres psql -U AdminDb -d car_platform -c '\\dt users.*'"
+echo "  docker compose -f $COMPOSE_FILE exec postgres psql -U AdminDb -d car_platform -c '\\dt users.*'"
 echo ""
 echo "  # Check alembic version for a schema:"
-echo "  docker-compose -f $COMPOSE_FILE exec postgres psql -U AdminDb -d car_platform -c 'SELECT * FROM users.alembic_version;'"
+echo "  docker compose -f $COMPOSE_FILE exec postgres psql -U AdminDb -d car_platform -c 'SELECT * FROM users.alembic_version;'"
 echo ""
 

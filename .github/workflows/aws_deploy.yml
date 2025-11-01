@@ -39,6 +39,8 @@ jobs:
               'cd /home/ubuntu/carserve || exit 1',
               'echo --- Fixing git safe directory ownership ---',
               'git config --system --add safe.directory /home/ubuntu/carserve || true',
+              'echo --- Pulling latest code from GitHub ---',
+              'git pull origin main || echo \"Git pull failed, continuing with existing code\"',
               'echo --- Building and running containers ---',
               'docker compose -f docker-compose.aws.yml pull',
               'docker compose -f docker-compose.aws.yml up -d --build',
