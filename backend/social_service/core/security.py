@@ -14,13 +14,16 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
+            print(f"ERROR: Token payload missing 'sub' field. Payload: {payload}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return int(user_id)
-    except JWTError:
+    except JWTError as e:
+        print(f"ERROR: JWT validation failed - {type(e).__name__}: {str(e)}")
+        print(f"DEBUG: JWT_SECRET_KEY length: {len(JWT_SECRET_KEY)}, Algorithm: {ALGORITHM}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",

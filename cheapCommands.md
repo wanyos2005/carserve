@@ -141,3 +141,91 @@ df -h
 
 check images currently used, docker images and docker ps
 reduce system logs: sudo journalctl --vacuum-size=50M
+
+ssh into ec2.  ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.124.14
+
+Run STATUS="Pending"
+⏳ Waiting for SSM command to finish...
+Current SSM status: Failed
+===== 🧾 SSM Deployment Logs =====
+--- Starting deployment on EC2 ---
+--- Fixing git safe directory ownership ---
+--- Pulling latest code from GitHub ---
+Updating 66e3d01..01298fd
+Fast-forward
+ backend/social_service/main.py    |  34 ++++++---
+ cheapCommands.md                  | 143 ++++++++++++++++++++++++++++++++++++++
+ frontend/lib/services/config.dart |   2 +-
+ 3 files changed, 169 insertions(+), 10 deletions(-)
+--- Building and running containers ---
+
+----------ERROR-------
+From https://github.com/wanyos2005/carserve
+ * branch            main       -> FETCH_HEAD
+   66e3d01..01298fd  main       -> origin/main
+time="2025-11-01T17:46:15Z" level=warning msg="/home/ubuntu/carserve/docker-compose.aws.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ booking-service Pulling 
+ expenses-service Pulling 
+ social-service Pulling 
+ alert-service Pulling 
+ postgres Pulling 
+ insurance-service Pulling 
+ service-provider Pulling 
+ alert-worker Pulling 
+ nginx Pulling 
+ alert-beat Pulling 
+ redis Pulling 
+ user-service Pulling 
+ vehicle-service Pulling 
+ booking-service Pulled 
+ social-service Pulled 
+ expenses-service Pulled 
+ alert-service Pulled 
+ service-provider Pulled 
+ vehicle-service Pulled 
+ alert-beat Pulled 
+ alert-worker Pulled 
+ insurance-service Pulled 
+ user-service Pulled 
+ postgres Pulled 
+ nginx Pulled 
+ redis Pulled 
+time="2025-11-01T17:46:17Z" level=warning msg="/home/ubuntu/carserve/docker-compose.aws.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container carserve-postgres-1  Running
+ Container carserve-redis-1  Running
+ Container carserve-alert-beat-1  Running
+ Container carserve-alert-worker-1  Running
+ Container carserve-user-service-1  Running
+ Container carserve-alert-service-1  Running
+ Container carserve-booking-service-1  Running
+ Container carserve-vehicle-service-1  Running
+ Container carserve-service-provider-1  Running
+ Container carserve-insurance-service-1  Running
+ Container carserve-expenses-service-1  Running
+ Container carserve-social-service-1  Running
+ Container gateway  Running
+unknown shorthand flag: 'y' in -y
+
+Usage:  docker system prune [OPTIONS]
+
+Run 'docker system prune --help' for more information
+failed to run commands: exit status 125
+❌ SSM deployment failed!
+Error: Process completed with exit code 1.
+
+"To fix the Docker buildx permission issue, run these commands on your EC2 instance:
+
+sudo chown -R ubuntu:ubuntu ~/.docker
+docker compose -f docker-compose.aws.yml build social-service"
+
+docker compose -f docker-compose.aws.yml up -d social-service
+
+to read a file:
+cat ~/carserve/.env | grep JWT_SECRET_KEY
+
+to edit the file, a line:
+# Edit the  file to remove quotes
+sed -i 's/JWop="npg_GHDT\/?envious"/JWT_SECRET_KEY=npg_U5VcT\/?envius/' ~/carserve/.env
+
+confirm the content or variable of a docker container file:
+docker compose -f docker-compose.aws.yml exec social-service env | grep secret key
