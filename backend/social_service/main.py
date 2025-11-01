@@ -38,28 +38,24 @@ async def log_requests(request: Request, call_next):
     content_type = request.headers.get("content-type", "")
     
     # Skip body reading for multipart/form-data (file uploads) to avoid consuming the stream
-    # FastAPI needs the stream intact to read file uploads. Reading it here would prevent
-    # FastAPI from accessing the files in the route handler.
+    # FastAPI needs the stream to parse multipart data
     if "multipart/form-data" in content_type:
-        body_preview = "<multipart/form-data file upload>"
-    elif request.method == "GET":
+        body_preview = f"<multipart/form-data upload>"
+    elif request.method in ("GET", "HEAD", "DELETE"):
         body_preview = "EMPTY"
     else:
-        # Only read body for non-multipart requests (JSON, text, etc.)
-        # These don't require stream preservation
+        # Only read body for non-upload requests
         try:
             body = await request.body()
             if not body:
                 body_preview = "EMPTY"
             elif ("application/json" in content_type) or content_type.startswith("text/"):
                 try:
-                    # Limit preview length to avoid huge logs
-                    decoded = body.decode("utf-8")
-                    body_preview = decoded[:500] + "..." if len(decoded) > 500 else decoded
+                    body_preview = body.decode("utf-8")
                 except UnicodeDecodeError:
                     body_preview = f"<decoding error; {len(body)} bytes>"
             else:
-                # Other binary payload
+                # Binary payload
                 body_preview = f"<binary payload; {len(body)} bytes>"
         except Exception as e:
             body_preview = f"<error reading body: {str(e)}>"
