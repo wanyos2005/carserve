@@ -4,6 +4,7 @@ import 'package:driveon_car_platform/pages/provider_management_page.dart';
 import 'package:driveon_car_platform/pages/AdminPages/service_management_page.dart';
 import 'package:driveon_car_platform/pages/AdminPages/admin_management_page.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/auth_service.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -26,6 +27,11 @@ class AdminDashboard extends StatelessWidget {
                 ),
               );
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: "Logout",
+            onPressed: () => _showLogoutDialog(context),
           ),
         ],
       ),
@@ -316,6 +322,55 @@ class AdminDashboard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// Show logout confirmation dialog
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.logout, color: Colors.red),
+              SizedBox(width: 8),
+              Text("Logout"),
+            ],
+          ),
+          content: const Text(
+            "Are you sure you want to logout? You'll need to sign in again to access your account.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close dialog
+                
+                // Perform logout
+                await AuthService.logout();
+                await UserContextService.clearContext();
+                
+                // Navigate to login page
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/login',
+                    (route) => false,
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Logout"),
+            ),
+          ],
+        );
+      },
     );
   }
 }

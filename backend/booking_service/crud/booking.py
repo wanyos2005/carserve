@@ -1,5 +1,6 @@
 # backend/booking_service/app/crud/booking.py
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from models.booking import Booking, ServiceLog
 from schemas.booking import BookingCreate, BookingUpdate, ServiceLogCreate
@@ -50,8 +51,22 @@ def update_booking(db: Session, booking_id: str, updates: BookingUpdate):
     b = db.query(Booking).filter(Booking.id == booking_id).first()
     if not b:
         return None
-    for k, v in updates.dict(exclude_unset=True).items():
+    
+    # Track if status is changing to "completed"
+    old_status = b.status
+    updates_dict = updates.dict(exclude_unset=True)
+    new_status = updates_dict.get('status') if 'status' in updates_dict else old_status
+    
+    # If status is changing to "completed", set completed_at
+    if new_status and new_status.lower() == 'completed' and old_status.lower() != 'completed':
+        # Only set if not already set
+        if not b.completed_at:
+            b.completed_at = datetime.utcnow()
+    
+    # Apply all updates
+    for k, v in updates_dict.items():
         setattr(b, k, v)
+    
     db.commit()
     db.refresh(b)
     return b

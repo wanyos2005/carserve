@@ -31,6 +31,8 @@ class Booking(Base):
     # Expense linkage/guard
     expense_recorded = Column(Boolean, nullable=False, default=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    # Completion timestamp - set when status changes to "completed"
+    completed_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
 
 class ServiceLog(Base):

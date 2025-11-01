@@ -370,26 +370,60 @@ def _get_garage_stats(provider_id: str, today) -> dict:
                 from datetime import datetime
                 for b in bookings:
                     status = (b.get('status') or '').lower()
+                    
+                    # Skip cancelled bookings - they don't generate earnings
+                    if status == 'cancelled':
+                        continue
+                    
                     if status in ['accepted', 'completed']:
                         price = b.get('agreed_price') or b.get('base_price')
                         if price is None:
                             continue
-                        # Count earnings if either scheduled_at OR created_at is today
-                        scheduled_str = b.get('scheduled_at')
-                        created_str = b.get('created_at')
+                        
+                        booking_id = b.get('id', 'unknown')
+                        should_count = False
+                        
                         try:
-                            scheduled_ok = False
-                            created_ok = False
-                            if scheduled_str:
-                                d = datetime.fromisoformat(str(scheduled_str).replace('Z', '+00:00')).date()
-                                scheduled_ok = (d == today)
-                            if created_str:
-                                dc = datetime.fromisoformat(str(created_str).replace('Z', '+00:00')).date()
-                                created_ok = (dc == today)
-                            if scheduled_ok or created_ok:
-                                bookings_earnings_today += int(price)
-                        except Exception:
-                            # If parsing fails, be conservative and include when accepted/completed
+                            if status == 'completed':
+                                # For completed bookings, use completed_at if available
+                                completed_str = b.get('completed_at')
+                                if completed_str:
+                                    completed_date = datetime.fromisoformat(str(completed_str).replace('Z', '+00:00')).date()
+                                    if completed_date == today:
+                                        should_count = True
+                                        print(f"Completed booking {booking_id}: completed_at={completed_date}, counting as today's earnings")
+                                else:
+                                    # Fallback: use created_at if completed_at not available
+                                    created_str = b.get('created_at')
+                                    if created_str:
+                                        dc = datetime.fromisoformat(str(created_str).replace('Z', '+00:00')).date()
+                                        if dc == today:
+                                            should_count = True
+                                            print(f"Completed booking {booking_id}: completed_at missing, using created_at={dc}, counting as today's earnings")
+                            else:  # accepted status
+                                # For accepted bookings, count if created today or scheduled today
+                                scheduled_str = b.get('scheduled_at')
+                                created_str = b.get('created_at')
+                                
+                                scheduled_ok = False
+                                created_ok = False
+                                
+                                if scheduled_str:
+                                    d = datetime.fromisoformat(str(scheduled_str).replace('Z', '+00:00')).date()
+                                    scheduled_ok = (d == today)
+                                
+                                if created_str:
+                                    dc = datetime.fromisoformat(str(created_str).replace('Z', '+00:00')).date()
+                                    created_ok = (dc == today)
+                                
+                                should_count = scheduled_ok or created_ok
+                                
+                        except Exception as e:
+                            print(f"Error parsing dates for booking {booking_id}: {e}")
+                            # Don't count if we can't parse dates (to avoid counting old bookings)
+                        
+                        if should_count:
+                            print(f"Adding {price} to today's earnings from booking {booking_id} (status: {status})")
                             bookings_earnings_today += int(price)
                 # Set today's earnings from bookings prices
                 stats["todays_earnings"] = bookings_earnings_today

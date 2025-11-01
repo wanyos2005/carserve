@@ -36,7 +36,8 @@ class BookingOut(BookingCreate):
     id: str
     status: str
     created_at: Optional[datetime]
-    expense_recorded: Optional[bool]
+    completed_at: Optional[datetime]
+    expense_recorded: Optional[bool] = False
 
     class Config:
         from_attributes = True
