@@ -22,7 +22,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Step 3: Trigger SSM deployment on EC2
+      # Step 3: Trigger SSM deployment on EC2 (skip .env setup)
       - name: Trigger deployment on EC2 via SSM
         id: deploy
         run: |
@@ -39,16 +39,7 @@ jobs:
               'cd /home/ubuntu/carserve || exit 1',
               'echo --- Fixing git safe directory ownership ---',
               'git config --system --add safe.directory /home/ubuntu/carserve || true',
-              'echo --- Installing Python dependencies ---',
-              'sudo apt-get update -y',
-              'sudo apt-get install -y python3-pip || true',
-              'pip install boto3 || true',
-              'echo --- Generating .env from SSM ---',
-              'python3 generate_env_from_ssm1.py || (echo Failed to generate .env; exit 1)',
-              'echo --- Cleaning invalid env lines ---',
-              'grep -v \"M1J2eEhWuw360DBh7F_Z14/8KNUAEaVwzTk39E_P1z4ZINNaWA9_5w==\" /home/ubuntu/carserve/.env > /home/ubuntu/carserve/.env.tmp && mv /home/ubuntu/carserve/.env.tmp /home/ubuntu/carserve/.env',
-              'if [ ! -f .env ]; then echo .env not found!; exit 1; fi',
-              'echo --- Building containers ---',
+              'echo --- Building and running containers ---',
               'docker compose -f docker-compose.aws.yml pull',
               'docker compose -f docker-compose.aws.yml up -d --build',
               'docker system prune -f -y',
