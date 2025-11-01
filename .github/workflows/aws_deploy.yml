@@ -22,7 +22,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Step 3: Trigger SSM deployment on EC2 (skip .env setup)
+      # Step 3: Trigger SSM deployment on EC2
       - name: Trigger deployment on EC2 via SSM
         id: deploy
         run: |
@@ -45,7 +45,7 @@ jobs:
               'docker system prune -f -y',
               'echo --- Deployment complete ---'
             ]" \
-            --region $${{ secrets.AWS_REGION }} \
+            --region ${{ secrets.AWS_REGION }} \
             --query "Command.CommandId" \
             --output text)
 
