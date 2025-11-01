@@ -111,3 +111,13 @@ def root():
         "status": "running",
         "docs": "/docs"
     }
+
+# Temporary debug endpoint to check JWT key
+@app.get("/debug/jwt-key")
+def debug_jwt_key():
+    from core.config import JWT_SECRET_KEY, ALGORITHM
+    return {
+        "jwt_secret_key": JWT_SECRET_KEY,
+        "jwt_secret_key_length": len(JWT_SECRET_KEY),
+        "algorithm": ALGORITHM
+    }

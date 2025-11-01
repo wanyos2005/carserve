@@ -52,6 +52,9 @@ services:
         max-file: "3"
 
   user-service:
+    build:
+      context: ./backend/user_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/user-service:latest
     env_file: .env
     depends_on:
