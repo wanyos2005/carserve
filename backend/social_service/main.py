@@ -49,14 +49,14 @@ async def log_requests(request: Request, call_next):
             body = await request.body()
             if not body:
                 body_preview = "EMPTY"
-    elif ("application/json" in content_type) or content_type.startswith("text/"):
-        try:
-            body_preview = body.decode("utf-8")
-        except UnicodeDecodeError:
-            body_preview = f"<decoding error; {len(body)} bytes>"
-    else:
+            elif ("application/json" in content_type) or content_type.startswith("text/"):
+                try:
+                    body_preview = body.decode("utf-8")
+                except UnicodeDecodeError:
+                    body_preview = f"<decoding error; {len(body)} bytes>"
+            else:
                 # Binary payload
-        body_preview = f"<binary payload; {len(body)} bytes>"
+                body_preview = f"<binary payload; {len(body)} bytes>"
         except Exception as e:
             body_preview = f"<error reading body: {str(e)}>"
 
