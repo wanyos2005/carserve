@@ -34,16 +34,3 @@ async def health_check():
 @app.get("/metrics")
 def metrics():
     return {"status": "metrics endpoint", "message": "Prometheus metrics not implemented yet"}
-
-# Temporary debug endpoint to check JWT key
-@app.get("/debug/jwt-key")
-def debug_jwt_key():
-    from core.config import SECRET_KEY, JWT_SECRET_KEY, ALGORITHM
-    return {
-        "secret_key": SECRET_KEY,
-        "secret_key_length": len(SECRET_KEY) if SECRET_KEY else 0,
-        "jwt_secret_key": JWT_SECRET_KEY,
-        "jwt_secret_key_length": len(JWT_SECRET_KEY) if JWT_SECRET_KEY else 0,
-        "algorithm": ALGORITHM,
-        "keys_match": SECRET_KEY == JWT_SECRET_KEY
-    }

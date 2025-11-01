@@ -23,9 +23,6 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         return int(user_id)
     except JWTError as e:
         print(f"ERROR: JWT validation failed - {type(e).__name__}: {str(e)}")
-        print(f"DEBUG: JWT_SECRET_KEY length: {len(JWT_SECRET_KEY)}, Algorithm: {ALGORITHM}")
-        print(f"DEBUG: JWT_SECRET_KEY value: '{JWT_SECRET_KEY}'")
-        print(f"DEBUG: Token preview (first 50 chars): {credentials.credentials[:50]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
