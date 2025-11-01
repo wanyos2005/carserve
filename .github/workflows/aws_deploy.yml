@@ -45,7 +45,7 @@ jobs:
               'docker system prune -f -y',
               'echo --- Deployment complete ---'
             ]" \
-            --region ${{ secrets.AWS_REGION }} \
+            --region $${{ secrets.AWS_REGION }} \
             --query "Command.CommandId" \
             --output text)
 
