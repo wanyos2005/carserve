@@ -170,6 +170,8 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/social-service:latest
     env_file: .env
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     depends_on:
       - postgres
       - redis
