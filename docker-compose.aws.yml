@@ -68,6 +68,9 @@ services:
         max-file: "3"
 
   vehicle-service:
+    build:
+      context: ./backend/vehicle_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/vehicle-service:latest
     env_file: .env
     depends_on:
@@ -81,6 +84,9 @@ services:
         max-file: "3"
 
   service-provider:
+    build:
+      context: ./backend/service_provider_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/service-provider:latest
     env_file: .env
     depends_on:
@@ -93,6 +99,9 @@ services:
         max-file: "3"
 
   booking-service:
+    build:
+      context: ./backend/booking_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/booking-service:latest
     env_file: .env
     depends_on:
@@ -105,6 +114,9 @@ services:
         max-file: "3"
 
   insurance-service:
+    build:
+      context: ./backend/insurance_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/insurance-service:latest
     env_file: .env
     depends_on:
@@ -118,6 +130,9 @@ services:
         max-file: "3"
 
   alert-service:
+    build:
+      context: ./backend/alert_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/alert-service:latest
     env_file: .env
     depends_on:
@@ -132,6 +147,9 @@ services:
 
   # Optional: separate workers if you use them in prod
   alert-worker:
+    build:
+      context: ./backend/alert_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/alert-worker:latest
     env_file: .env
     depends_on:
@@ -144,6 +162,9 @@ services:
         max-file: "3"
 
   alert-beat:
+    build:
+      context: ./backend/alert_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/alert-beat:latest
     env_file: .env
     depends_on:
@@ -156,6 +177,9 @@ services:
         max-file: "3"
 
   expenses-service:
+    build:
+      context: ./backend/expenses_service
+      dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/expenses-service:latest
     env_file: .env
     depends_on:
