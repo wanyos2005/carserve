@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'vehicle_list_page.dart';
 import 'services_providers_page.dart';
 import 'history_page.dart';
+import 'user_loyalty_page.dart';
 import '../social_media/pages/social_hub_page.dart';
 import '../components/notifications_settings_sheet.dart';
 import '../services/alerts_service.dart';
@@ -196,6 +197,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             () => Navigator.push(
                               context,
                               MaterialPageRoute(builder: (_) => const HistoryPage()),
+                            ),
+                          ),
+                          _buildPrivilegeItem(
+                            "Loyalty Program",
+                            Icons.stars,
+                            Colors.amber,
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const UserLoyaltyPage()),
                             ),
                           ),
                           _buildPrivilegeItem(

@@ -43,6 +43,28 @@ def create_log(payload: ServiceLogCreate, db: Session = Depends(get_db)):
                 pass
     except Exception:
         pass
+    
+    # 🔥 NEW: Award loyalty points if cost present
+    try:
+        if log.cost and log.user_id:
+            loyalty_url = os.getenv("LOYALTY_SERVICE_URL", "http://loyalty-service:8009")
+            body = {
+                "user_id": log.user_id,
+                "provider_id": log.provider_id,
+                "service_id": log.service_id,
+                "amount_spent": int(log.cost),
+                "reference_type": "service_log",
+                "reference_id": log.id,
+            }
+            # Fire and forget - don't block service logging
+            try:
+                with httpx.Client(timeout=7.0) as client:
+                    client.post(f"{loyalty_url}/loyalty/points/award", json=body)
+            except Exception as e:
+                print(f"Warning: Failed to award loyalty points: {e}")
+    except Exception as e:
+        print(f"Warning: Error in loyalty points integration: {e}")
+    
     return log
 
 
@@ -57,6 +79,12 @@ def create_bulk_logs(payloads: List[ServiceLogCreate], db: Session = Depends(get
     except Exception as e:
         # Don't fail the service logging if alert trigger fails
         print(f"Warning: Failed to trigger app download prompts: {e}")
+    
+    # 🔥 NEW: Award loyalty points for bulk logs
+    try:
+        _award_loyalty_points_for_logs(logs)
+    except Exception as e:
+        print(f"Warning: Failed to award loyalty points for bulk logs: {e}")
     
     return logs
 
@@ -184,3 +212,47 @@ def _call_alert_service_for_app_prompt(
                 
     except Exception as e:
         print(f"❌ Failed to call alert service for user {user_id}: {e}")
+
+
+def _award_loyalty_points_for_logs(logs: List[ServiceLog]):
+    """Award loyalty points for service logs"""
+    try:
+        loyalty_url = os.getenv("LOYALTY_SERVICE_URL", "http://loyalty-service:8009")
+        
+        # Group by user to avoid duplicate calls for same user
+        user_logs = {}
+        for log in logs:
+            if log.cost and log.user_id:
+                if log.user_id not in user_logs:
+                    user_logs[log.user_id] = []
+                user_logs[log.user_id].append(log)
+        
+        # Award points for each user (aggregate costs)
+        for user_id, user_service_logs in user_logs.items():
+            total_cost = sum(log.cost for log in user_service_logs if log.cost)
+            if total_cost > 0:
+                # Use first log for provider/service context
+                first_log = user_service_logs[0]
+                body = {
+                    "user_id": user_id,
+                    "provider_id": first_log.provider_id,
+                    "service_id": first_log.service_id,
+                    "amount_spent": total_cost,
+                    "reference_type": "service_log",
+                    "reference_id": first_log.id,  # Reference first log
+                }
+                
+                # Fire and forget
+                try:
+                    with httpx.Client(timeout=3.0) as client:
+                        response = client.post(f"{loyalty_url}/loyalty/points/award", json=body)
+                        if response.status_code == 200:
+                            result = response.json()
+                            print(f"✅ Awarded {result.get('points_awarded', 0)} points to user {user_id}")
+                        else:
+                            print(f"⚠️ Loyalty service returned {response.status_code} for user {user_id}")
+                except Exception as e:
+                    print(f"❌ Failed to award loyalty points for user {user_id}: {e}")
+                    
+    except Exception as e:
+        print(f"❌ Error in _award_loyalty_points_for_logs: {e}")

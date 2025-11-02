@@ -132,6 +132,7 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - LOYALTY_SERVICE_URL=http://loyalty-service:8009
     depends_on:
       postgres:
         condition: service_healthy
@@ -352,6 +353,32 @@ services:
       retries: 3
       start_period: 40s
 
+  loyalty-service:
+    build:
+      context: ./backend/loyalty_service
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend/loyalty_service:/app
+    ports:
+      - "8009:8009"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - PORT=8009
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8009/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   
   gateway:
     image: nginx:alpine
@@ -375,6 +402,8 @@ services:
       expenses-service:
         condition: service_started
       social-service:
+        condition: service_started
+      loyalty-service:
         condition: service_started
 
 volumes:

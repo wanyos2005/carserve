@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:driveon_car_platform/pages/AdminPages/edit_our_services_page.dart';
 import 'package:driveon_car_platform/pages/manage_templates_page.dart';
 import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/pages/ProviderPages/provider_loyalty_page.dart';
 
 class ProviderSettingsPage extends StatelessWidget {
   final String providerId;
@@ -88,6 +89,25 @@ class ProviderSettingsPage extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (_) => ManageTemplatesPage(providerId: providerId),
+                            ),
+                          );
+                        },
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Loyalty Program Card
+                      _buildSettingsCard(
+                        context,
+                        title: 'Loyalty Program',
+                        subtitle: 'Manage your loyalty program participation and settings',
+                        icon: Icons.stars,
+                        color: Colors.purple,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProviderLoyaltyPage(providerId: providerId),
                             ),
                           );
                         },

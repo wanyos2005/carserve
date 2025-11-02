@@ -3,6 +3,7 @@ import 'package:driveon_car_platform/pages/admin/provider_user_link_page.dart';
 import 'package:driveon_car_platform/pages/provider_management_page.dart';
 import 'package:driveon_car_platform/pages/AdminPages/service_management_page.dart';
 import 'package:driveon_car_platform/pages/AdminPages/admin_management_page.dart';
+import 'package:driveon_car_platform/pages/AdminPages/loyalty_management_page.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:driveon_car_platform/services/auth_service.dart';
 
@@ -172,6 +173,25 @@ class AdminDashboard extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => ServiceManagementPage(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Loyalty Program Management
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.stars, color: Colors.amber),
+                title: const Text("Loyalty Program"),
+                subtitle: const Text("Manage loyalty rules, rewards, and provider participation"),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LoyaltyManagementPage(),
                     ),
                   );
                 },
