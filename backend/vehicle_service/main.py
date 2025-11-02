@@ -28,8 +28,9 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     body = await request.body()
+    auth_header = request.headers.get("Authorization", "NOT PRESENT")
     logger.info(
-        f"Incoming {request.method} {request.url} | Body: {body.decode() if body else 'EMPTY'}"
+        f"Incoming {request.method} {request.url} | Body: {body.decode() if body else 'EMPTY'} | Auth: {auth_header[:20] + '...' if auth_header != 'NOT PRESENT' and len(auth_header) > 20 else auth_header}"
     )
     response = await call_next(request)
     return response

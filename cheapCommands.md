@@ -216,9 +216,12 @@ Error: Process completed with exit code 1.
 "To fix the Docker buildx permission issue, run these commands on your EC2 instance:
 
 sudo chown -R ubuntu:ubuntu ~/.docker
+
 docker compose -f docker-compose.aws.yml build social-service"
 
 docker compose -f docker-compose.aws.yml up -d social-service
+
+docker compose -f docker-compose.aws.yml exec nginx nginx -s reload
 
 to read a file:
 cat ~/carserve/.env | grep JWT_SECRET_KEY
