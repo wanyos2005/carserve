@@ -226,17 +226,105 @@ curl http://localhost/health
 curl http://localhost/users/health
 ```
 
-### Alternative: Reboot Instance via AWS Console
+### Alternative: Recover via AWS Console (When SSM is Unavailable)
 
-If SSM also doesn't work:
+If SSM Agent is not online, you need to reboot the instance via AWS Console:
+
+#### Step 1: Reboot the Instance
 
 1. Go to **AWS Console** → **EC2** → **Instances**
-2. Select your instance
-3. Click **Instance state** → **Reboot instance**
-4. Wait 2-3 minutes for reboot
-5. Try SSH again
+2. Select your instance (check the box next to it)
+3. Click **Instance state** dropdown → **Reboot instance**
+4. Confirm the reboot
+5. Wait **3-5 minutes** for the instance to fully restart
 
-After reboot, make sure to apply the updated `docker-compose.aws.yml` with resource limits.
+#### Step 2: Verify Instance Status
+
+After waiting, check:
+- **Status checks**: Should show "2/2 checks passed"
+- **Instance state**: Should show "running"
+
+#### Step 3: Try SSH Again
+
+Once the instance is running, try SSH again:
+
+```powershell
+ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.124.14
+```
+
+If SSH still hangs, wait 1-2 more minutes and try again (services may still be starting).
+
+#### Step 4: Apply Resource Limits (CRITICAL - Do This Immediately!)
+
+**⚠️ IMPORTANT**: Apply the fixes **immediately** after SSH works, or the instance will exhaust memory again!
+
+Once you're connected via SSH:
+
+```bash
+# 1. Navigate to your project directory
+cd ~/car
+# or wherever your docker-compose.aws.yml file is located
+
+# 2. Pull latest changes (if using git)
+git pull
+# OR manually upload the updated docker-compose.aws.yml file
+
+# 3. Stop all containers
+docker compose -f docker-compose.aws.yml down
+
+# 4. Verify they're stopped
+docker ps -a
+
+# 5. Restart with resource limits
+docker compose -f docker-compose.aws.yml up -d
+
+# 6. Monitor startup (watch for errors)
+docker compose -f docker-compose.aws.yml ps
+docker compose -f docker-compose.aws.yml logs -f --tail=50
+```
+
+#### Step 5: Verify Services are Running
+
+```bash
+# Check all containers
+docker compose -f docker-compose.aws.yml ps
+
+# Should see all services as "running" or "healthy"
+# If any are restarting, check logs:
+docker compose -f docker-compose.aws.yml logs <service-name>
+
+# Test health endpoint
+curl http://localhost/health
+
+# Check memory usage
+free -h
+docker stats --no-stream
+```
+
+#### Alternative: Stop and Start Instance (If Reboot Doesn't Work)
+
+If reboot doesn't resolve it:
+
+1. **AWS Console** → **EC2** → **Instances**
+2. Select instance → **Instance state** → **Stop instance**
+3. Wait for instance to fully stop (status: "stopped")
+4. **Instance state** → **Start instance**
+5. Wait **5-7 minutes** for full boot and services to start
+6. Try SSH again
+
+**Note**: Stopping/starting changes the public IP unless you're using an Elastic IP. Check the new IP in the console.
+
+#### If You Can't Access via SSH After Reboot
+
+If SSH still doesn't work after reboot:
+
+1. **Check Security Group**: Ensure port 22 is open for your IP
+2. **Check Instance Status**: Ensure all status checks pass
+3. **Check CloudWatch Logs**: 
+   - Go to **CloudWatch** → **Logs** → **Log groups**
+   - Look for `/var/log/syslog` or system logs
+4. **Try EC2 Instance Connect** (if enabled):
+   - **EC2 Console** → Select instance → **Connect** → **EC2 Instance Connect** tab
 
 ### Resource Allocation Summary
 

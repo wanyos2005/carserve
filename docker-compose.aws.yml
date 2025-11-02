@@ -45,9 +45,6 @@ services:
 
   # API Gateway / Reverse proxy
   nginx:
-    build:
-      context: ./nginx.aws.conf
-      dockerfile: Dockerfile
     image: nginx:1.25-alpine
     container_name: gateway
     depends_on:

@@ -214,8 +214,10 @@ failed to run commands: exit status 125
 Error: Process completed with exit code 1.
 
 "To fix the Docker buildx permission issue, run these commands on your EC2 instance:
-
+# 1. Fix docker permissions
 sudo chown -R ubuntu:ubuntu ~/.docker
+# 1. Fix git permissions
+sudo chown -R ubuntu:ubuntu ~/carserve/.gitsudo chown -R ubuntu:ubuntu ~/carserve
 
 docker compose -f docker-compose.aws.yml build social-service"
 
