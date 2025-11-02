@@ -11,3 +11,4 @@ docker compose -f docker-compose.aws.yml exec service-provider python seed_data_
 echo "Done!"
 
 
+
