@@ -234,3 +234,8 @@ sed -i 's/JWop="npg_GHDT\/?envious"/JWT_SECRET_KEY=npg_U5VcT\/?envius/' ~/carser
 
 confirm the content or variable of a docker container file:
 docker compose -f docker-compose.aws.yml exec social-service env | grep secret key
+
+building the apk and bundle:
+flutter build apk --release //for unoffficial apk you can send to people inboxes to download
+
+flutter build appbundle --release // for playstore
