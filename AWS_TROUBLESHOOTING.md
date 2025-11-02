@@ -149,6 +149,113 @@ For production, consider:
 3. **Web Application Firewall**: Consider AWS WAF for additional protection
 4. **Rate Limiting**: Already configured in nginx, but verify it's working
 
+## Problem: 504 Gateway Timeout & SSH Hanging
+
+### Symptoms
+- Getting `504 Gateway Time-out` from nginx
+- SSH connection establishes but hangs after handshake
+- Instance appears unresponsive
+
+### Root Cause: Resource Exhaustion on t3.small
+
+A **t3.small** instance has only **2GB RAM**. Running 11+ Docker containers without resource limits can cause:
+- Memory exhaustion (OOM kills)
+- System swap thrashing
+- Services becoming unresponsive
+- SSH hanging due to system overload
+
+### Solution: Apply Resource Limits
+
+The `docker-compose.aws.yml` file has been updated with resource limits. You need to:
+
+#### Step 1: Recover Access Using AWS Systems Manager (SSM)
+
+If SSH is hanging, use AWS Systems Manager Session Manager:
+
+1. Go to **AWS Console** → **EC2** → **Instances**
+2. Select your instance
+3. Click **Connect** → **Session Manager** tab
+4. Click **Connect**
+
+#### Step 2: Restart Containers with Resource Limits
+
+Once connected via SSM, run:
+
+```bash
+# Navigate to project directory (adjust path if different)
+cd ~/car  # or wherever your docker-compose.aws.yml is located
+
+# Pull latest configuration (if using git)
+git pull  # optional
+
+# Stop all containers
+docker compose -f docker-compose.aws.yml down
+
+# Restart with new resource limits
+docker compose -f docker-compose.aws.yml up -d
+
+# Monitor startup
+docker compose -f docker-compose.aws.yml ps
+```
+
+#### Step 3: Monitor Resource Usage
+
+```bash
+# Check memory usage
+free -h
+
+# Check container memory usage
+docker stats --no-stream
+
+# Check system load
+top
+# or
+htop  # if installed
+```
+
+#### Step 4: Verify Services are Running
+
+```bash
+# Check all containers are running
+docker compose -f docker-compose.aws.yml ps
+
+# Test nginx health endpoint
+curl http://localhost/health
+
+# Test a service endpoint
+curl http://localhost/users/health
+```
+
+### Alternative: Reboot Instance via AWS Console
+
+If SSM also doesn't work:
+
+1. Go to **AWS Console** → **EC2** → **Instances**
+2. Select your instance
+3. Click **Instance state** → **Reboot instance**
+4. Wait 2-3 minutes for reboot
+5. Try SSH again
+
+After reboot, make sure to apply the updated `docker-compose.aws.yml` with resource limits.
+
+### Resource Allocation Summary
+
+The updated configuration allocates:
+- **PostgreSQL**: 384M limit (256M reserved)
+- **Redis**: 128M limit (64M reserved)
+- **Nginx**: 128M limit (64M reserved)
+- **8 Microservices**: 256M each (128M reserved each)
+- **Alert Workers**: 128M + 64M (64M + 32M reserved)
+
+**Total Reserved**: ~1.5GB, leaving ~500MB for OS and overhead
+
+### Preventing Future Issues
+
+1. **Monitor CloudWatch**: Set up alarms for CPU and memory
+2. **Consider Upgrading**: If traffic grows, upgrade to t3.medium (4GB) or t3.large (8GB)
+3. **Use Autoscaling**: Set up Auto Scaling Groups for production
+4. **Enable Swap**: Add swap space as emergency buffer (not recommended for production)
+
 ## Common Mistakes
 
 1. ❌ Only opening port 22 (SSH) - missing port 80
@@ -156,4 +263,6 @@ For production, consider:
 3. ❌ Wrong security group attached to the instance
 4. ❌ Multiple security groups with conflicting rules
 5. ❌ NACL blocking traffic (less common)
+6. ❌ Running too many containers on t3.small without resource limits
+7. ❌ Not monitoring resource usage until instance becomes unresponsive
 

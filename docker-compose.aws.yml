@@ -15,6 +15,14 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   redis:
     image: redis:7-alpine
@@ -26,9 +34,20 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
 
   # API Gateway / Reverse proxy
   nginx:
+    build:
+      context: ./nginx.aws.conf
+      dockerfile: Dockerfile
     image: nginx:1.25-alpine
     container_name: gateway
     depends_on:
@@ -45,6 +64,14 @@ services:
     volumes:
       - ./nginx.aws.conf:/etc/nginx/nginx.conf:ro
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
     logging:
       driver: json-file
       options:
@@ -61,6 +88,14 @@ services:
       - postgres
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:
@@ -77,6 +112,14 @@ services:
       - postgres
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:
@@ -92,6 +135,14 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:
@@ -107,6 +158,14 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:
@@ -123,6 +182,14 @@ services:
       - postgres
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:
@@ -139,6 +206,14 @@ services:
       - postgres
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:
@@ -155,6 +230,14 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.3'
+        reservations:
+          memory: 64M
+          cpus: '0.15'
     logging:
       driver: json-file
       options:
@@ -170,6 +253,14 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.2'
+        reservations:
+          memory: 32M
+          cpus: '0.1'
     logging:
       driver: json-file
       options:
@@ -185,6 +276,14 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:
@@ -203,6 +302,14 @@ services:
       - postgres
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     volumes:
       - social_uploads:/app/uploads
     logging:
