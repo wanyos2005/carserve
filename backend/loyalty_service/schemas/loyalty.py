@@ -45,7 +45,7 @@ class LoyaltyTransactionBase(BaseModel):
     service_id: Optional[str] = None
     amount_spent: Optional[int] = None
     expires_at: Optional[datetime] = None
-    metadata: Optional[Dict[str, Any]] = None
+    extra_metadata: Optional[Dict[str, Any]] = None
 
 class LoyaltyTransactionCreate(LoyaltyTransactionBase):
     account_id: str
@@ -139,7 +139,12 @@ class RewardBase(BaseModel):
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     image_url: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    # Extra metadata (aligned with model's extra_metadata)
+    extra_metadata: Optional[Dict[str, Any]] = None
+    # Funding
+    funding_model: Optional[str] = Field(default="platform")  # platform, provider, co_funded
+    funding_provider_id: Optional[str] = None
+    co_fund_split_pct: Optional[int] = None
 
 class RewardCreate(RewardBase):
     pass
@@ -183,12 +188,50 @@ class LoyaltyRedemption(BaseModel):
     reward_type: str
     reward_value: Optional[Dict[str, Any]] = None
     voucher_code: Optional[str] = None
+    is_consumed: Optional[bool] = None
+    validated_at: Optional[datetime] = None
+    validated_by_provider_id: Optional[str] = None
     fulfilled_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+# ============ Voucher Validation ============
+class VoucherValidateRequest(BaseModel):
+    provider_id: str
+    voucher_code: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class VoucherValidateResponse(BaseModel):
+    success: bool
+    redemption_id: Optional[str] = None
+    reward_id: Optional[str] = None
+    message: str
+
+
+# ============ Provider Sponsor Reward Request ============
+class ProviderSponsorRewardRequest(BaseModel):
+    provider_id: str
+    name: str
+    reward_type: str  # voucher/discount/cashback
+    points_cost: int
+    # value
+    discount_percentage: Optional[Decimal] = None
+    discount_amount: Optional[int] = None
+    cashback_amount: Optional[int] = None
+    voucher_code_template: Optional[str] = None
+    # funding
+    funding_model: str  # provider or co_funded
+    co_fund_split_pct: Optional[int] = None
+    # availability
+    total_available: Optional[int] = None
+    valid_from: Optional[datetime] = None
+    valid_until: Optional[datetime] = None
+    min_tier_required: Optional[str] = None
+    description: Optional[str] = None
 
 
 # ============ Account Summary ============

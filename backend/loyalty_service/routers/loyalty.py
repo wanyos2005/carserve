@@ -26,6 +26,9 @@ from schemas.loyalty import (
     ProviderOptInRequest,
     ProviderOptInResponse,
     ProviderLoyaltyUsage,
+    VoucherValidateRequest,
+    VoucherValidateResponse,
+    ProviderSponsorRewardRequest,
 )
 from crud import loyalty as crud
 from services.points_calculator import PointsCalculator
@@ -292,12 +295,11 @@ def create_reward(reward: RewardCreate, db: Session = Depends(get_db)):
 
 @router.get("/rewards", response_model=List[Reward])
 def list_rewards(
-    min_tier: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=100),
+    is_active: Optional[bool] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """List available rewards"""
-    return crud.list_available_rewards(db, min_tier=min_tier, limit=limit)
+    """List rewards (admin). If is_active is None, return all; otherwise filter."""
+    return crud.list_rewards(db, is_active=is_active)
 
 
 @router.get("/rewards/{reward_id}", response_model=Reward)
@@ -535,3 +537,25 @@ def list_participating_providers(db: Session = Depends(get_db)):
     """List all providers participating in loyalty program"""
     return crud.list_participating_providers(db)
 
+
+# ============ Voucher Validation (Provider) ============
+@router.post("/vouchers/validate", response_model=VoucherValidateResponse)
+def validate_voucher(request: VoucherValidateRequest, db: Session = Depends(get_db)):
+    """Providers validate a voucher code (one-time use)."""
+    ok, redemption, message = crud.validate_voucher(db, request.provider_id, request.voucher_code)
+    if not ok or not redemption:
+        return VoucherValidateResponse(success=False, redemption_id=None, reward_id=None, message=message)
+    return VoucherValidateResponse(success=True, redemption_id=redemption.id, reward_id=redemption.reward_id, message=message)
+
+
+# ============ Provider Sponsored Rewards ============
+@router.post("/providers/{provider_id}/rewards/proposals", response_model=Reward)
+def sponsor_reward(provider_id: str, request: ProviderSponsorRewardRequest, db: Session = Depends(get_db)):
+    """Providers propose a sponsored reward. Created inactive; admin must approve/activate."""
+    if request.provider_id != provider_id:
+        raise HTTPException(status_code=400, detail="provider_id mismatch")
+    try:
+        reward = crud.create_provider_sponsored_reward(db, request)
+        return reward
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

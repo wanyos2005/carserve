@@ -261,8 +261,8 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Points Required: ${reward['points_required'] ?? 0}'),
-                      Text('Min Tier: ${reward['min_tier'] ?? 'Any'}'),
+                      Text('Points Required: ${reward['points_cost'] ?? reward['points_required'] ?? 0}'),
+                      Text('Min Tier: ${reward['min_tier_required'] ?? reward['min_tier'] ?? 'Any'}'),
                       Text(
                         reward['is_active'] == true ? 'Active' : 'Inactive',
                         style: TextStyle(
@@ -540,6 +540,10 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
     final nameController = TextEditingController();
     final pointsController = TextEditingController();
     final minTierController = TextEditingController(text: 'bronze');
+    final fundingProviderController = TextEditingController();
+    final coFundPctController = TextEditingController();
+    String fundingModel = 'platform';
+    String rewardType = 'voucher';
 
     await showDialog(
       context: context,
@@ -555,8 +559,19 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
               ),
               TextField(
                 controller: pointsController,
-                decoration: const InputDecoration(labelText: 'Points Required'),
+                decoration: const InputDecoration(labelText: 'Points Cost'),
                 keyboardType: TextInputType.number,
+              ),
+              DropdownButtonFormField<String>(
+                value: rewardType,
+                decoration: const InputDecoration(labelText: 'Reward Type'),
+                items: const [
+                  DropdownMenuItem(value: 'voucher', child: Text('Voucher')),
+                  DropdownMenuItem(value: 'discount', child: Text('Discount')),
+                  DropdownMenuItem(value: 'cashback', child: Text('Cashback')),
+                  DropdownMenuItem(value: 'gift', child: Text('Gift')),
+                ],
+                onChanged: (v) => rewardType = v ?? 'voucher',
               ),
               TextField(
                 controller: minTierController,
@@ -564,6 +579,33 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
                   labelText: 'Minimum Tier (bronze/silver/gold/platinum)',
                 ),
               ),
+              const SizedBox(height: 12),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Funding', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: fundingModel,
+                decoration: const InputDecoration(labelText: 'Funding Model'),
+                items: const [
+                  DropdownMenuItem(value: 'platform', child: Text('Platform-funded')),
+                  DropdownMenuItem(value: 'provider', child: Text('Provider-funded')),
+                  DropdownMenuItem(value: 'co_funded', child: Text('Co-funded')),
+                ],
+                onChanged: (v) => fundingModel = v ?? 'platform',
+              ),
+              if (fundingModel != 'platform')
+                TextField(
+                  controller: fundingProviderController,
+                  decoration: const InputDecoration(labelText: 'Funding Provider ID'),
+                ),
+              if (fundingModel == 'co_funded')
+                TextField(
+                  controller: coFundPctController,
+                  decoration: const InputDecoration(labelText: 'Provider Share (%)'),
+                  keyboardType: TextInputType.number,
+                ),
             ],
           ),
         ),
@@ -577,9 +619,13 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
               try {
                 await ApiService.post('/loyalty/rewards', {
                   'name': nameController.text,
-                  'points_required': int.tryParse(pointsController.text) ?? 0,
-                  'min_tier': minTierController.text.toLowerCase(),
+                  'reward_type': rewardType,
+                  'points_cost': int.tryParse(pointsController.text) ?? 0,
+                  'min_tier_required': minTierController.text.toLowerCase(),
                   'is_active': true,
+                  'funding_model': fundingModel,
+                  if (fundingModel != 'platform') 'funding_provider_id': fundingProviderController.text,
+                  if (fundingModel == 'co_funded') 'co_fund_split_pct': int.tryParse(coFundPctController.text ?? ''),
                 });
                 if (mounted) {
                   Navigator.pop(context);
@@ -609,6 +655,9 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
       text: (reward['min_tier'] ?? reward['min_tier_required'] ?? 'bronze').toString(),
     );
     bool isActive = reward['is_active'] == true;
+    String fundingModel = (reward['funding_model'] ?? 'platform').toString();
+    final fundingProviderController = TextEditingController(text: reward['funding_provider_id']?.toString() ?? '');
+    final coFundPctController = TextEditingController(text: reward['co_fund_split_pct']?.toString() ?? '');
 
     await showDialog(
       context: context,
@@ -625,7 +674,7 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
                 ),
                 TextField(
                   controller: pointsController,
-                  decoration: const InputDecoration(labelText: 'Points Required'),
+                  decoration: const InputDecoration(labelText: 'Points Cost'),
                   keyboardType: TextInputType.number,
                 ),
                 TextField(
@@ -634,6 +683,33 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
                     labelText: 'Minimum Tier (bronze/silver/gold/platinum)',
                   ),
                 ),
+                const SizedBox(height: 12),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Funding', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: fundingModel,
+                  decoration: const InputDecoration(labelText: 'Funding Model'),
+                  items: const [
+                    DropdownMenuItem(value: 'platform', child: Text('Platform-funded')),
+                    DropdownMenuItem(value: 'provider', child: Text('Provider-funded')),
+                    DropdownMenuItem(value: 'co_funded', child: Text('Co-funded')),
+                  ],
+                  onChanged: (v) => setDialogState(() => fundingModel = v ?? 'platform'),
+                ),
+                if (fundingModel != 'platform')
+                  TextField(
+                    controller: fundingProviderController,
+                    decoration: const InputDecoration(labelText: 'Funding Provider ID'),
+                  ),
+                if (fundingModel == 'co_funded')
+                  TextField(
+                    controller: coFundPctController,
+                    decoration: const InputDecoration(labelText: 'Provider Share (%)'),
+                    keyboardType: TextInputType.number,
+                  ),
                 CheckboxListTile(
                   title: const Text('Active'),
                   value: isActive,
@@ -657,6 +733,9 @@ class _LoyaltyManagementPageState extends State<LoyaltyManagementPage>
                     'points_cost': int.tryParse(pointsController.text) ?? reward['points_cost'] ?? 0,
                     'min_tier_required': minTierController.text.toLowerCase(),
                     'is_active': isActive,
+                    'funding_model': fundingModel,
+                    if (fundingModel != 'platform') 'funding_provider_id': fundingProviderController.text,
+                    if (fundingModel == 'co_funded') 'co_fund_split_pct': int.tryParse(coFundPctController.text),
                   });
                   if (mounted) {
                     Navigator.pop(context);

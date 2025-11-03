@@ -132,7 +132,8 @@ class LoyaltyService {
         .map((e) => "${e.key}=${Uri.encodeComponent(e.value)}")
         .join("&");
     
-    final res = await ApiService.get('$_baseUrl/transactions/user/$userId?$queryString');
+    // Backend route is /loyalty/transactions/{user_id}
+    final res = await ApiService.get('$_baseUrl/transactions/$userId?$queryString');
     if (res is List) {
       return res;
     }
@@ -146,6 +147,59 @@ class LoyaltyService {
       return res;
     }
     return [];
+  }
+
+  /// Provider: propose a sponsored reward (created inactive, pending admin approval)
+  static Future<Map<String, dynamic>?> sponsorReward({
+    required String providerId,
+    required String name,
+    required String rewardType, // voucher/discount/cashback
+    required int pointsCost,
+    int? discountAmount,
+    double? discountPercentage,
+    int? cashbackAmount,
+    String? voucherCodeTemplate,
+    required String fundingModel, // provider or co_funded
+    int? coFundSplitPct,
+    int? totalAvailable,
+    String? minTierRequired,
+    DateTime? validFrom,
+    DateTime? validUntil,
+    String? description,
+  }) async {
+    final body = <String, dynamic>{
+      'provider_id': providerId,
+      'name': name,
+      'reward_type': rewardType,
+      'points_cost': pointsCost,
+      'funding_model': fundingModel,
+      if (discountAmount != null) 'discount_amount': discountAmount,
+      if (discountPercentage != null) 'discount_percentage': discountPercentage,
+      if (cashbackAmount != null) 'cashback_amount': cashbackAmount,
+      if (voucherCodeTemplate != null) 'voucher_code_template': voucherCodeTemplate,
+      if (coFundSplitPct != null) 'co_fund_split_pct': coFundSplitPct,
+      if (totalAvailable != null) 'total_available': totalAvailable,
+      if (minTierRequired != null) 'min_tier_required': minTierRequired,
+      if (validFrom != null) 'valid_from': validFrom.toIso8601String(),
+      if (validUntil != null) 'valid_until': validUntil.toIso8601String(),
+      if (description != null) 'description': description,
+    };
+    final res = await ApiService.post('$_baseUrl/providers/$providerId/rewards/proposals', body);
+    if (res is Map) return Map<String, dynamic>.from(res);
+    return null;
+  }
+
+  /// Provider: validate a voucher code (one-time use)
+  static Future<Map<String, dynamic>?> validateVoucher({
+    required String providerId,
+    required String voucherCode,
+  }) async {
+    final res = await ApiService.post('$_baseUrl/vouchers/validate', {
+      'provider_id': providerId,
+      'voucher_code': voucherCode,
+    });
+    if (res is Map) return Map<String, dynamic>.from(res);
+    return null;
   }
 }
 

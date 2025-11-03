@@ -153,6 +153,11 @@ class Reward(Base):
     # Image/icon
     image_url = Column(String(512), nullable=True)
     
+    # Funding/settlement
+    funding_model = Column(String(20), nullable=False, default="platform")  # platform, provider, co_funded
+    funding_provider_id = Column(String, nullable=True)
+    co_fund_split_pct = Column(Integer, nullable=True)  # 0-100, platform pays (100 - pct)
+
     # Metadata
     extra_metadata = Column(JSON, nullable=True)  # Additional reward-specific data (renamed from metadata)
     
@@ -185,6 +190,9 @@ class LoyaltyRedemption(Base):
     
     # Voucher/code (for voucher-type rewards)
     voucher_code = Column(String(255), nullable=True, unique=True, index=True)
+    is_consumed = Column(Boolean, default=False, nullable=False, index=True)
+    validated_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    validated_by_provider_id = Column(String, nullable=True, index=True)
     
     # Fulfillment
     fulfilled_at = Column(TIMESTAMP(timezone=True), nullable=True)
@@ -198,6 +206,11 @@ class LoyaltyRedemption(Base):
     cancelled_at = Column(TIMESTAMP(timezone=True), nullable=True)
     cancellation_reason = Column(Text, nullable=True)
     
+    # Settlement tracking (optional, for provider-funded/co-funded)
+    settlement_status = Column(String(20), default="pending", nullable=False)  # pending, settled
+    settlement_provider_amount = Column(Integer, nullable=True)
+    settlement_platform_amount = Column(Integer, nullable=True)
+
     # Relationships
     account = relationship("LoyaltyAccount", back_populates="redemptions")
     reward = relationship("Reward", back_populates="redemptions")

@@ -587,7 +587,146 @@ class _ProviderLoyaltyPageState extends State<ProviderLoyaltyPage> {
                     ),
             ),
           ),
+        const SizedBox(height: 12),
+        // Sponsor Reward CTA
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _isProcessing ? null : _showSponsorRewardDialog,
+            icon: const Icon(Icons.campaign),
+            label: const Text('Sponsor a Reward'),
+          ),
+        ),
       ],
+    );
+  }
+
+  Future<void> _showSponsorRewardDialog() async {
+    final nameController = TextEditingController();
+    final pointsController = TextEditingController();
+    final valueController = TextEditingController();
+    final voucherTemplateController = TextEditingController();
+    final totalAvailableController = TextEditingController();
+    final minTierController = TextEditingController(text: 'bronze');
+    final coFundPctController = TextEditingController();
+    String rewardType = 'voucher';
+    String fundingModel = 'provider';
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Sponsor a Reward'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Reward Name'),
+                ),
+                TextField(
+                  controller: pointsController,
+                  decoration: const InputDecoration(labelText: 'Points Cost'),
+                  keyboardType: TextInputType.number,
+                ),
+                DropdownButtonFormField<String>(
+                  value: rewardType,
+                  decoration: const InputDecoration(labelText: 'Reward Type'),
+                  items: const [
+                    DropdownMenuItem(value: 'voucher', child: Text('Voucher')),
+                    DropdownMenuItem(value: 'discount', child: Text('Discount')),
+                    DropdownMenuItem(value: 'cashback', child: Text('Cashback')),
+                  ],
+                  onChanged: (v) => setStateDialog(() => rewardType = v ?? 'voucher'),
+                ),
+                if (rewardType == 'voucher')
+                  TextField(
+                    controller: voucherTemplateController,
+                    decoration: const InputDecoration(labelText: 'Voucher Code Template (e.g., FUEL10)'),
+                  ),
+                if (rewardType == 'discount')
+                  TextField(
+                    controller: valueController,
+                    decoration: const InputDecoration(labelText: 'Discount Amount (KES) or %'),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                if (rewardType == 'cashback')
+                  TextField(
+                    controller: valueController,
+                    decoration: const InputDecoration(labelText: 'Cashback Amount (KES)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                DropdownButtonFormField<String>(
+                  value: fundingModel,
+                  decoration: const InputDecoration(labelText: 'Funding Model'),
+                  items: const [
+                    DropdownMenuItem(value: 'provider', child: Text('Provider-funded')),
+                    DropdownMenuItem(value: 'co_funded', child: Text('Co-funded')),
+                  ],
+                  onChanged: (v) => setStateDialog(() => fundingModel = v ?? 'provider'),
+                ),
+                if (fundingModel == 'co_funded')
+                  TextField(
+                    controller: coFundPctController,
+                    decoration: const InputDecoration(labelText: 'Provider Share (%)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                TextField(
+                  controller: totalAvailableController,
+                  decoration: const InputDecoration(labelText: 'Total Available (optional)'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: minTierController,
+                  decoration: const InputDecoration(labelText: 'Minimum Tier (bronze/silver/gold/platinum)'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final pointsCost = int.tryParse(pointsController.text) ?? 0;
+                  final totalAvail = int.tryParse(totalAvailableController.text);
+                  final coPct = int.tryParse(coFundPctController.text);
+                  final res = await LoyaltyService.sponsorReward(
+                    providerId: widget.providerId,
+                    name: nameController.text,
+                    rewardType: rewardType,
+                    pointsCost: pointsCost,
+                    fundingModel: fundingModel,
+                    coFundSplitPct: coPct,
+                    totalAvailable: totalAvail,
+                    minTierRequired: minTierController.text.toLowerCase(),
+                    voucherCodeTemplate: voucherTemplateController.text.isEmpty ? null : voucherTemplateController.text,
+                    discountAmount: (rewardType == 'discount') ? int.tryParse(valueController.text) : null,
+                    cashbackAmount: (rewardType == 'cashback') ? int.tryParse(valueController.text) : null,
+                  );
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Proposal submitted for approval')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Submit Proposal'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

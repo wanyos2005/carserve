@@ -21,6 +21,8 @@ from schemas.loyalty import (
     RedemptionCreate,
     ProviderLoyaltyConfigCreate,
     ProviderLoyaltyConfigUpdate,
+    VoucherValidateRequest,
+    ProviderSponsorRewardRequest,
 )
 
 
@@ -278,6 +280,14 @@ def get_reward(db: Session, reward_id: str) -> Optional[Reward]:
     return db.query(Reward).filter(Reward.id == reward_id).first()
 
 
+def list_rewards(db: Session, is_active: Optional[bool] = None) -> List[Reward]:
+    """List rewards, optionally filter by active flag (admin view)."""
+    query = db.query(Reward)
+    if is_active is not None:
+        query = query.filter(Reward.is_active == is_active)
+    return query.order_by(Reward.points_cost).all()
+
+
 def list_available_rewards(
     db: Session,
     min_tier: Optional[str] = None,
@@ -351,6 +361,37 @@ def delete_reward(db: Session, reward_id: str) -> bool:
     return True
 
 
+def create_provider_sponsored_reward(db: Session, req: ProviderSponsorRewardRequest) -> Reward:
+    """Create a provider-sponsored reward as inactive pending admin approval."""
+    funding_model = req.funding_model
+    if funding_model not in ("provider", "co_funded"):
+        raise ValueError("Invalid funding_model for provider sponsorship")
+
+    reward = Reward(
+        name=req.name,
+        description=req.description,
+        reward_type=req.reward_type,
+        points_cost=req.points_cost,
+        discount_percentage=req.discount_percentage,
+        discount_amount=req.discount_amount,
+        cashback_amount=req.cashback_amount,
+        voucher_code_template=req.voucher_code_template,
+        is_active=False,  # Pending admin approval
+        total_available=req.total_available,
+        max_redemptions_per_user=None,
+        min_tier_required=req.min_tier_required,
+        valid_from=req.valid_from,
+        valid_until=req.valid_until,
+        funding_model=funding_model,
+        funding_provider_id=req.provider_id,
+        co_fund_split_pct=req.co_fund_split_pct,
+    )
+    db.add(reward)
+    db.commit()
+    db.refresh(reward)
+    return reward
+
+
 # ============ Redemption CRUD ============
 def create_redemption(
     db: Session,
@@ -400,7 +441,11 @@ def create_redemption(
     # Generate voucher code if needed
     voucher_code = None
     if reward.reward_type == "voucher" and reward.voucher_code_template:
-        voucher_code = f"{reward.voucher_code_template}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        # Add a short random suffix to avoid collisions within the same second
+        import uuid
+        random_suffix = uuid.uuid4().hex[:6].upper()
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
+        voucher_code = f"{reward.voucher_code_template}-{timestamp}-{random_suffix}"
     
     # Create redemption record
     redemption = LoyaltyRedemption(
@@ -431,6 +476,10 @@ def create_redemption(
         transaction_reason=f"Redeemed: {reward.name}",
         reference_type="redemption",
         reference_id=redemption.id,
+        extra_metadata={
+            "voucher_code": voucher_code,
+            "reward_id": reward_id,
+        },
     )
     
     db.commit()
@@ -490,6 +539,64 @@ def expire_points(db: Session, days_old: int = 365):
     
     db.commit()
     return expired_count
+
+
+# ============ Voucher Validation (Provider) ============
+def validate_voucher(db: Session, provider_id: str, voucher_code: str) -> (bool, Optional[LoyaltyRedemption], str):
+    """Validate and consume a voucher by providers. One-time use."""
+    # Find pending redemption with matching voucher and unconsumed
+    redemption = db.query(LoyaltyRedemption).filter(
+        and_(
+            LoyaltyRedemption.voucher_code == voucher_code,
+            LoyaltyRedemption.is_consumed == False,
+            LoyaltyRedemption.status.in_(["pending", "fulfilled"])  # still usable
+        )
+    ).first()
+    if not redemption:
+        return False, None, "Invalid or already used voucher"
+
+    reward = get_reward(db, redemption.reward_id)
+    if not reward or reward.reward_type != "voucher":
+        return False, None, "Voucher not found or not a voucher-type reward"
+
+    # Validity window
+    now = datetime.now(timezone.utc)
+    if reward.valid_from and reward.valid_from > now:
+        return False, None, "Voucher not yet valid"
+    if reward.valid_until and reward.valid_until < now:
+        return False, None, "Voucher expired"
+
+    # Funding constraints: if provider-funded or co-funded, provider must match
+    if reward.funding_model in ("provider", "co_funded"):
+        if not reward.funding_provider_id or reward.funding_provider_id != provider_id:
+            return False, None, "Voucher is not funded by this provider"
+
+    # Consume voucher
+    redemption.is_consumed = True
+    redemption.validated_at = now
+    redemption.validated_by_provider_id = provider_id
+    redemption.status = "fulfilled"
+
+    # Settlement amounts (basic placeholder)
+    provider_amount = 0
+    platform_amount = 0
+    if reward.funding_model == "provider":
+        provider_amount = reward.discount_amount or 0
+    elif reward.funding_model == "co_funded":
+        pct = reward.co_fund_split_pct or 0
+        base = (reward.discount_amount or 0)
+        provider_amount = int(base * pct / 100)
+        platform_amount = base - provider_amount
+    else:
+        platform_amount = reward.discount_amount or 0
+
+    redemption.settlement_provider_amount = provider_amount
+    redemption.settlement_platform_amount = platform_amount
+    redemption.settlement_status = "pending"
+
+    db.commit()
+    db.refresh(redemption)
+    return True, redemption, "Voucher validated successfully"
 
 
 # ============ Provider Loyalty Config CRUD ============

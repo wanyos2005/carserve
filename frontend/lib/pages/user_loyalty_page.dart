@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:driveon_car_platform/services/loyalty_service.dart';
+import 'package:flutter/services.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:driveon_car_platform/services/api_service.dart';
 
@@ -43,7 +44,7 @@ class _UserLoyaltyPageState extends State<UserLoyaltyPage>
 
       final account = await LoyaltyService.getUserAccount(int.parse(userId));
       final transactions = await LoyaltyService.getUserTransactions(int.parse(userId));
-      final rewards = await ApiService.get('/loyalty/rewards');
+      final rewards = await ApiService.get('/loyalty/rewards?is_active=true');
       
       setState(() {
         _account = account;
@@ -413,8 +414,10 @@ class _UserLoyaltyPageState extends State<UserLoyaltyPage>
         final isEarned = transaction['transaction_type'] == 'earned';
         final points = transaction['points_delta'] ?? 0;
         final date = transaction['created_at'];
+        final extra = transaction['extra_metadata'];
+        final voucherCode = (extra is Map) ? extra['voucher_code'] : null;
 
-        return Card(
+         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: Container(
@@ -429,9 +432,42 @@ class _UserLoyaltyPageState extends State<UserLoyaltyPage>
               ),
             ),
             title: Text(transaction['transaction_reason'] ?? 'Transaction'),
-            subtitle: Text(
-              date != null ? _formatDate(date) : 'Unknown date',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  date != null ? _formatDate(date) : 'Unknown date',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                if (!isEarned && voucherCode != null && voucherCode is String && voucherCode.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.confirmation_number, size: 16, color: Colors.purple),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: SelectableText(
+                            'Voucher: $voucherCode',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            await Clipboard.setData(ClipboardData(text: voucherCode));
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Voucher code copied')),
+                              );
+                            }
+                          },
+                          child: const Text('Copy', style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             trailing: Text(
               '${isEarned ? '+' : ''}$points',
@@ -560,9 +596,36 @@ class _UserLoyaltyPageState extends State<UserLoyaltyPage>
         });
 
         if (result != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Reward redeemed successfully!')),
-          );
+          final code = result['voucher_code'];
+          if (code != null && code is String && code.isNotEmpty) {
+            await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Voucher Code'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(code, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    const Text('Present this code at the station. One-time use.'),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Reward redeemed successfully!')),
+            );
+          }
           _loadData();
         }
       } catch (e) {
