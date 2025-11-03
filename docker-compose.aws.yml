@@ -56,6 +56,7 @@ services:
       - alert-service
       - expenses-service
       - social-service
+      - loyalty-service
     ports:
       - "80:80"
     volumes:
@@ -152,6 +153,8 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/booking-service:latest
     env_file: .env
+    environment:
+      - LOYALTY_SERVICE_URL=http://loyalty-service:8009
     depends_on:
       - postgres
     restart: unless-stopped
@@ -309,6 +312,29 @@ services:
           cpus: '0.25'
     volumes:
       - social_uploads:/app/uploads
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  loyalty-service:
+    build:
+      context: ./backend/loyalty_service
+      dockerfile: Dockerfile
+    image: ghcr.io/wanyos2005/loyalty-service:latest
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
     logging:
       driver: json-file
       options:

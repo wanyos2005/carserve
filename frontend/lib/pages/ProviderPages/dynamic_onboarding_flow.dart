@@ -104,37 +104,44 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
   }
 
   Widget _buildCompletionStep() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.check_circle,
-          size: 80,
-          color: _config.primaryColor,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 80,
+              color: _config.primaryColor,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Registration Complete! 🎉',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: _config.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your ${_config.type == OnboardingType.serviceProvider ? 'service provider' : 'insurance partner'} account has been created successfully.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
-        Text(
-          'Registration Complete! 🎉',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: _config.primaryColor,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Your ${_config.type == OnboardingType.serviceProvider ? 'service provider' : 'insurance partner'} account has been created successfully.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildNavigationButtons() {
     final isLastStep = _currentStep >= _config.steps.length;
-    final bool canProceed = !isLastStep && _config.steps[_currentStep].validator(_data);
+    final bool canProceed = !isLastStep && 
+        _currentStep < _config.steps.length && 
+        _config.steps[_currentStep].validator(_data);
 
     return Column(
       children: [
@@ -217,7 +224,13 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
   }
 
   void _finishOnboarding() {
-    Navigator.of(context).pop();
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      // If we can't pop, navigate to a default screen
+      // You may want to navigate to a specific route like provider dashboard
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    }
   }
 
   void _completeRegistration() async {
@@ -234,15 +247,20 @@ class _DynamicOnboardingFlowState extends State<DynamicOnboardingFlow> {
         await _completeInsurancePartnerRegistration();
       }
       
-      setState(() {
-        _currentStep = _config.steps.length; // Move to completion step
-      });
+      // Only update to completion step if registration was successful
+      if (mounted) {
+        setState(() {
+          _currentStep = _config.steps.length; // Move to completion step
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      _showErrorDialog('Registration Failed', 'Error: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorDialog('Registration Failed', 'Error: ${e.toString()}');
+      }
     }
   }
 
