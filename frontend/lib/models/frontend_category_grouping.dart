@@ -1,4 +1,4 @@
-//file used to group the different categories of businesses for the frontend, for easier display and selection during onboarding
+ //file used to group the different categories of businesses for the frontend, for easier display and selection during onboarding
 import 'package:flutter/material.dart';
 
 /// Frontend-only grouping of the 17 backend categories for better UX
