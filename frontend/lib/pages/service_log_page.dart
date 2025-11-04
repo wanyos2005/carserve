@@ -17,7 +17,6 @@ class ServiceLogPage extends StatefulWidget {
 class _ServiceLogPageState extends State<ServiceLogPage> {
   bool _loading = false;
   bool _initialLoading = true;
-  bool _manualProvider = true;
 
   List<dynamic> _vehicles = [];
   List<Map<String, dynamic>> _services = [];
@@ -30,7 +29,6 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
   String? _selectedVehicleId;
   DateTime? _performedAt;
 
-  final TextEditingController _providerNameCtrl = TextEditingController();
   final TextEditingController _mileageCtrl = TextEditingController();
   final TextEditingController _servedByCtrl = TextEditingController();
   final TextEditingController _costCtrl = TextEditingController();
@@ -112,60 +110,45 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
         "service_items": serviceItems,
       };
 
-      // Provider logic
-      if (_manualProvider) {
-        if (_providerNameCtrl.text.trim().isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Please enter provider name.")),
-          );
-          setState(() => _loading = false);
-          return;
-        }
-
-        final newProvider = await ProviderService.quickCreateProvider(
-          _providerNameCtrl.text.trim(),
-        );
-
-        debugPrint("🔍 New provider created: $newProvider");
-        debugPrint("🔍 Provider name controller text: '${_providerNameCtrl.text.trim()}'");
-
-        if (newProvider != null) {
-          logData["provider_id"] = newProvider["id"];
-          logData["provider_name"] = newProvider["name"];
-          debugPrint("✅ Added provider to logData: ${newProvider["id"]}, ${newProvider["name"]}");
-          debugPrint("🔍 logData after adding provider: $logData");
-        } else {
-          debugPrint("❌ Failed to create provider - newProvider is null");
-        }
-      } else if (_selectedProvider != null) {
+      // Provider logic - now handled by enhanced_provider_selector
+      if (_selectedProvider != null) {
         // Handle both possible field names for provider ID and name
         final providerId = _selectedProvider!["provider_id"] ?? _selectedProvider!["id"];
         final providerName = _selectedProvider!["provider_name"] ?? _selectedProvider!["name"];
         
         logData["provider_id"] = providerId;
         logData["provider_name"] = providerName;
-        debugPrint("✅ Added selected provider to logData: $providerId, $providerName");
+        debugPrint("✅ Added provider to logData: $providerId, $providerName");
         debugPrint("🔍 Full selected provider object: $_selectedProvider");
       } else {
-        debugPrint("❌ No provider selected and manual provider is disabled");
-      }
-
-      // Check if we have provider information
-      if (!logData.containsKey("provider_id") || !logData.containsKey("provider_name")) {
-        debugPrint("⚠️ WARNING: No provider information in logData!");
-        // You might want to show an error to the user here
+        debugPrint("⚠️ WARNING: No provider selected");
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("⚠️ Warning: No provider information will be saved")),
+          const SnackBar(content: Text("⚠️ Warning: Please select a provider")),
         );
+        setState(() => _loading = false);
+        return;
       }
 
       debugPrint("🔍 Final logData before sending: $logData");
-      debugPrint("🔍 Manual provider mode: $_manualProvider");
       debugPrint("🔍 Selected provider: $_selectedProvider");
-      debugPrint("🔍 Provider name controller text: '${_providerNameCtrl.text}'");
       debugPrint("🔍 logData contains provider_id: ${logData.containsKey('provider_id')}");
       debugPrint("🔍 logData contains provider_name: ${logData.containsKey('provider_name')}");
-      await BookingService.createServiceLog(logData);
+      final response = await BookingService.createServiceLog(logData);
+
+      // Prompt for rating if provider exists
+      // Include log ID to prevent duplicate ratings
+      try {
+        final providerId = _selectedProvider?["provider_id"] ?? _selectedProvider?["id"];
+        final uid = _me?["id"];
+        final logId = response?["id"]?.toString();
+        if (providerId != null && uid != null) {
+          await _showRatingDialog(
+            userId: uid as int, 
+            providerId: providerId as String,
+            logId: logId,
+          );
+        }
+      } catch (_) {}
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("✅ Service logged successfully")),
@@ -235,46 +218,28 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
             const Divider(),
 
             // Provider section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Manual Provider Entry"),
-                Switch(
-                  value: _manualProvider,
-                  onChanged: (v) => setState(() => _manualProvider = v),
+            ListTile(
+              leading: const Icon(Icons.store),
+              title: Text(_selectedProvider == null
+                  ? "Select Provider"
+                  : _selectedProvider!["provider_name"] ?? "Unknown Provider"),
+              subtitle: _selectedProvider != null && _selectedProvider!["is_manual"] == true
+                  ? const Text("Manual entry", style: TextStyle(fontStyle: FontStyle.italic))
+                  : null,
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => EnhancedProviderSelector(
+                  filteredProviders: _providers,
+                  selectedServices: _selectedServices,
+                  recommendedOnly: false,
+                  selectedProvider: _selectedProvider,
+                  onSelect: (provider) =>
+                      setState(() => _selectedProvider = provider),
                 ),
-              ],
+              ),
             ),
-
-            if (_manualProvider) ...[
-              TextField(
-                controller: _providerNameCtrl,
-                decoration: const InputDecoration(
-                  labelText: "Provider Name",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ] else ...[
-              ListTile(
-                leading: const Icon(Icons.store),
-                title: Text(_selectedProvider == null
-                    ? "Select Provider"
-                    : _selectedProvider!["provider_name"]),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => EnhancedProviderSelector(
-                    filteredProviders: _providers,
-                    selectedServices: _selectedServices,
-                    recommendedOnly: false,
-                    selectedProvider: _selectedProvider,
-                    onSelect: (provider) =>
-                        setState(() => _selectedProvider = provider),
-                  ),
-                ),
-              ),
-            ],
             const Divider(),
 
             TextField(
@@ -343,6 +308,59 @@ class _ServiceLogPageState extends State<ServiceLogPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showRatingDialog({required int userId, required String providerId, String? bookingId, String? logId}) async {
+    int selected = 5;
+    final commentCtrl = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Rate Provider"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final idx = i + 1;
+                  return StatefulBuilder(
+                    builder: (c, setS) => IconButton(
+                      icon: Icon(idx <= selected ? Icons.star : Icons.star_border, color: Colors.amber),
+                      onPressed: () { setS(() { selected = idx; }); },
+                    ),
+                  );
+                }),
+              ),
+              TextField(
+                controller: commentCtrl,
+                decoration: const InputDecoration(labelText: "Comment (optional)"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Skip")),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await ProviderService.rateProvider(
+                    providerId: providerId,
+                    rating: selected,
+                    comment: commentCtrl.text.trim().isEmpty ? null : commentCtrl.text.trim(),
+                    userId: userId,
+                    bookingId: bookingId,
+                    logId: logId,
+                  );
+                } catch (_) {}
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      },
     );
   }
 }

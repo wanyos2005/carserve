@@ -273,6 +273,48 @@ class AlertService:
             logging.getLogger(__name__).error(f"Failed to trigger app download prompt: {e}", exc_info=True)
             return None
 
+    async def trigger_rating_request(
+        self,
+        user_id: int,
+        provider_id: str,
+        booking_id: Optional[str] = None,
+        log_id: Optional[str] = None,
+        title: str = "Rate your service provider",
+        message: str = "How was your recent service? Please rate your provider.",
+        channels: Optional[list] = None,
+    ) -> AlertResponse:
+        try:
+            channels = channels or [AlertChannel.IN_APP, AlertChannel.PUSH]
+            action_url = None
+            if booking_id:
+                action_url = f"/rate?provider_id={provider_id}&booking_id={booking_id}"
+            elif log_id:
+                action_url = f"/rate?provider_id={provider_id}&log_id={log_id}"
+            else:
+                action_url = f"/rate?provider_id={provider_id}"
+
+            alert_data = AlertCreate(
+                user_id=user_id,
+                type=AlertType.RATING_REQUEST,
+                title=title,
+                message=message,
+                priority=2,
+                channels=channels,
+                booking_id=booking_id,
+                provider_id=provider_id,
+                action_url=action_url,
+                action_text="Rate now",
+                alert_metadata={
+                    "booking_id": booking_id,
+                    "log_id": log_id,
+                },
+            )
+            alert = await self.create_alert(alert_data)
+            return alert
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to trigger rating request: {e}", exc_info=True)
+            raise
+
     async def _get_enhanced_vehicle_info(self, vehicle_id: str) -> str:
         """Query vehicle service to get proper vehicle name (plate, model, make, yom)"""
         try:

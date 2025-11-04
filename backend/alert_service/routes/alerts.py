@@ -84,6 +84,20 @@ async def get_alerts(
     service = AlertService(db)
     return await service.get_alerts(user_id=user_id, alert_type=alert_type, status=status, limit=limit, offset=offset)
 
+# Support no-trailing-slash variant to avoid proxy redirect issues (consistent with rules.py pattern)
+@router.get("", response_model=List[AlertResponse])
+async def get_alerts_no_slash(
+    user_id: Optional[int] = None,
+    alert_type: Optional[AlertType] = None,
+    status: Optional[AlertStatus] = None,
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    """Get alerts with optional filtering (no trailing slash variant)"""
+    service = AlertService(db)
+    return await service.get_alerts(user_id=user_id, alert_type=alert_type, status=status, limit=limit, offset=offset)
+
 @router.get("/{alert_id}", response_model=AlertResponse)
 async def get_alert(alert_id: str, db: Session = Depends(get_db)):
     """Get a specific alert by ID"""
@@ -177,6 +191,99 @@ async def trigger_app_download_prompt(
         logging.getLogger("uvicorn").error(f"Failed to trigger app download prompt: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to trigger app download prompt: {str(e)}")
 
+# ================================
+# Rating Request Trigger Endpoint
+# ================================
+class RatingRequest(BaseModel):
+    user_id: int
+    provider_id: str
+    booking_id: Optional[str] = None
+    log_id: Optional[str] = None
+    title: Optional[str] = "Rate your service provider"
+    message: Optional[str] = "How was your recent service? Please rate your provider."
+
+@router.post("/trigger/rating-request", response_model=AlertResponse)
+async def trigger_rating_request(
+    req: RatingRequest,
+    db: Session = Depends(get_db)
+):
+    """Trigger a rating request alert for a user after service completion"""
+    try:
+        service = AlertService(db)
+        alert = await service.trigger_rating_request(
+            user_id=req.user_id,
+            provider_id=req.provider_id,
+            booking_id=req.booking_id,
+            log_id=req.log_id,
+            title=req.title or "Rate your service provider",
+            message=req.message or "How was your recent service? Please rate your provider.",
+        )
+        celery_app.send_task("deliver_alert", args=[alert.id])
+        return alert
+    except Exception as e:
+        logging.getLogger("uvicorn").error(f"Failed to trigger rating request: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to trigger rating request: {str(e)}")
+
+@router.post("/rating-submitted")
+async def rating_submitted(
+    data: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """Track that a rating was submitted (called by service-provider service)"""
+    try:
+        user_id = data.get("user_id")
+        provider_id = data.get("provider_id")
+        log_id = data.get("log_id")
+        booking_id = data.get("booking_id")
+        rating = data.get("rating")
+        
+        # Find the related rating request alert and mark it as delivered/completed
+        # This helps track that the user acted on the alert
+        from sqlalchemy import and_
+        
+        query = db.query(Alert).filter(
+            and_(
+                Alert.user_id == user_id,
+                Alert.provider_id == provider_id,
+                Alert.type == AlertType.RATING_REQUEST
+            )
+        )
+        
+        if log_id:
+            query = query.filter(
+                Alert.alert_metadata.contains({"log_id": log_id})
+            )
+        elif booking_id:
+            query = query.filter(
+                Alert.booking_id == booking_id
+            )
+        
+        alert = query.order_by(Alert.created_at.desc()).first()
+        
+        if alert:
+            # Update alert metadata to indicate rating was submitted
+            metadata = alert.alert_metadata or {}
+            metadata["rating_submitted"] = True
+            metadata["rating_value"] = rating
+            metadata["rating_submitted_at"] = datetime.utcnow().isoformat()
+            alert.alert_metadata = metadata
+            
+            # Mark as delivered if still pending
+            if alert.status == AlertStatus.PENDING:
+                alert.status = AlertStatus.DELIVERED
+                alert.delivered_at = datetime.utcnow()
+            
+            db.commit()
+            logging.getLogger("uvicorn").info(
+                f"Rating submitted tracked for alert {alert.id}, user {user_id}, provider {provider_id}"
+            )
+            return {"success": True, "alert_id": alert.id}
+        
+        return {"success": False, "message": "No matching alert found"}
+    except Exception as e:
+        logging.getLogger("uvicorn").error(f"Failed to track rating submission: {e}")
+        return {"success": False, "error": str(e)}
+
 @router.get("/user/{user_id}/unread-count")
 async def get_unread_alert_count(user_id: int, db: Session = Depends(get_db)):
     """Get count of unread alerts for a user"""
@@ -184,7 +291,7 @@ async def get_unread_alert_count(user_id: int, db: Session = Depends(get_db)):
     count = await service.get_unread_count(user_id)
     return {"user_id": user_id, "unread_count": count}
 
-@router.patch("/{alert_id}/mark-read")
+@router.post("/{alert_id}/mark-read")
 async def mark_alert_read(alert_id: str, db: Session = Depends(get_db)):
     """Mark an alert as read"""
     service = AlertService(db)

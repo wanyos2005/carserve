@@ -13,6 +13,7 @@ class AlertType(str, enum.Enum):
     CLAIM_UPDATE = "claim_update"
     PAYMENT_REMINDER = "payment_reminder"
     APP_DOWNLOAD_PROMPT = "app_download_prompt"
+    RATING_REQUEST = "rating_request"
 
 class AlertStatus(str, enum.Enum):
     PENDING = "pending"

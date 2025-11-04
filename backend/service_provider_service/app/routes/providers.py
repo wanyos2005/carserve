@@ -11,7 +11,8 @@ from app.schemas.provider import (
     ProviderCreate, Provider, ProviderUpdate, ProviderOut,
     Service as ServiceSchema,  # ✅ alias schema
     ServiceCreate, ServiceUpdate, ProviderQuickCreate, ProviderQuickOut,
-    ProviderServiceAttach, ProviderServiceCreate, ServiceTemplateCreate, ServiceTemplateRead
+    ProviderServiceAttach, ProviderServiceCreate, ServiceTemplateCreate, ServiceTemplateRead,
+    ProviderRatingCreate, ProviderRatingOut
 )
 from app.schemas.category import (
     ProviderCategory, ProviderCategoryCreate,
@@ -715,6 +716,27 @@ def attach_services_to_provider(
         created_or_updated.append(ps)
 
     return created_or_updated
+
+# -----------------------
+# Provider Ratings
+# -----------------------
+@router.post("/{provider_id}/ratings", response_model=ProviderRatingOut)
+def rate_provider(provider_id: str, payload: ProviderRatingCreate, db: Session = Depends(get_db)):
+    # Ensure provider exists
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    r = crud_provider.create_provider_rating(db, provider_id, payload)
+    return r
+
+
+@router.get("/{provider_id}/ratings", response_model=List[ProviderRatingOut])
+def list_ratings(provider_id: str, db: Session = Depends(get_db)):
+    provider = crud_provider.get_provider(db, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    return crud_provider.list_provider_ratings(db, provider_id)
 
 # -----------------------
 # Provider Templates

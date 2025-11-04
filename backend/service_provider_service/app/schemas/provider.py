@@ -190,3 +190,28 @@ class ServiceTemplateRead(ServiceTemplateBase):
         from_attributes = True
         from_attributes = True
 
+
+# -----------------------
+# Provider Ratings
+# -----------------------
+class ProviderRatingCreate(BaseModel):
+    rating: int  # 1-5
+    comment: Optional[str] = None
+    user_id: int
+    booking_id: Optional[str] = None
+    log_id: Optional[str] = None  # Service log ID this rating is for
+
+class ProviderRatingOut(BaseModel):
+    id: str
+    provider_id: str
+    user_id: int
+    booking_id: Optional[str] = None
+    log_id: Optional[str] = None
+    rating: int
+    comment: Optional[str] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+

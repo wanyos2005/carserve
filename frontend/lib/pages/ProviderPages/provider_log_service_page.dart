@@ -265,6 +265,10 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
       }).toList();
 
       final response = await BookingService.createBulkServiceLogs(logsPayload);
+      // Note: Rating prompt should only appear for the vehicle owner (guest user),
+      // NOT for the provider. The backend will send a push/in-app notification to
+      // the guest user instead. Providers should not rate themselves.
+      // Rating alerts are triggered automatically by the backend after bulk logs.
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Logged ${response.length} services for $plate")),
@@ -343,6 +347,7 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
             ),
     );
   }
+
 
   // --- Helper UI Builders ---
 

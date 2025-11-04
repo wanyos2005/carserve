@@ -72,6 +72,27 @@ class ProviderService {
     
     return result;
   }
+
+  // 🔹 Ratings
+  static Future<Map<String, dynamic>?> rateProvider({
+    required String providerId,
+    required int rating,
+    String? comment,
+    required int userId,
+    String? bookingId,
+    String? logId,
+  }) async {
+    final body = {
+      "rating": rating,
+      if (comment != null && comment.isNotEmpty) "comment": comment,
+      "user_id": userId,
+      if (bookingId != null) "booking_id": bookingId,
+      if (logId != null) "log_id": logId,
+    };
+    final res = await ApiService.post("/service-providers/$providerId/ratings", body);
+    if (res is Map) return Map<String, dynamic>.from(res);
+    return null;
+  }
   // 🔹 Categories
   static Future<List<dynamic>> getProviderCategories() async {
     final res = await ApiService.get("/service-providers/categories/provider-categories");

@@ -29,6 +29,9 @@ class ApiService {
     final token = await _getToken();
     Uri uri = Uri.parse("$baseGatewayUrl$path").replace(queryParameters: query);
 
+    print('🌐 API GET: $uri'); // Debug
+    print('🌐 Headers: Authorization=${token != null ? "Bearer ***" : "null"}'); // Debug
+
     final response = await http.get(
       uri,
       headers: {
@@ -36,6 +39,12 @@ class ApiService {
         if (token != null) "Authorization": "Bearer $token",
       },
     );
+
+    print('🌐 Response status: ${response.statusCode}'); // Debug
+    print('🌐 Response body length: ${response.body.length}'); // Debug
+    if (response.statusCode >= 400) {
+      print('❌ API Error: ${response.statusCode} - ${response.body}'); // Debug
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.body.isNotEmpty ? jsonDecode(response.body) : null;

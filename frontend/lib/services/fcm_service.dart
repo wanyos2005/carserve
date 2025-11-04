@@ -1,11 +1,14 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:driveon_car_platform/services/api_service.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/components/rating_dialog.dart';
 import 'package:flutter/foundation.dart';
 
 class FCMService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static String? _fcmToken;
+  // Optional navigation hook for deep links from notifications
+  static Future<void> Function(String actionUrl)? onNavigate;
 
   /// Initialize Firebase Cloud Messaging
   static Future<bool> initialize() async {
@@ -114,13 +117,42 @@ class FCMService {
   }
 
   /// Handle notification taps
-  static void _handleNotificationTap(RemoteMessage message) {
+  static Future<void> _handleNotificationTap(RemoteMessage message) async {
     final data = message.data;
     final actionUrl = data['action_url'];
     
     if (actionUrl != null && actionUrl.isNotEmpty) {
-      // Navigate to the action URL
-      // You can use your navigation service here
+      // Check if this is a rating request and handle it directly
+      final ratingParams = parseRatingActionUrl(actionUrl);
+      if (ratingParams != null) {
+        final userIdStr = UserContextService.currentContext?.id;
+        if (userIdStr != null) {
+          final userId = int.tryParse(userIdStr);
+          if (userId != null) {
+            // Use the navigation handler if available (which should have BuildContext)
+            if (onNavigate != null) {
+              try {
+                await onNavigate!(actionUrl);
+                return;
+              } catch (_) {}
+            }
+            // Fallback: try to use navigator key if available
+            if (kDebugMode) {
+              print('Rating action URL detected: $actionUrl');
+              print('Note: onNavigate callback should be set up to show rating dialog');
+            }
+            return;
+          }
+        }
+      }
+      
+      // For other action URLs, use the navigation handler if provided
+      if (onNavigate != null) {
+        try {
+          await onNavigate!(actionUrl);
+          return;
+        } catch (_) {}
+      }
       if (kDebugMode) {
         print('Navigate to: $actionUrl');
       }

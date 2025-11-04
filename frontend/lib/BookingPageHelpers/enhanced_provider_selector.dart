@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:driveon_car_platform/components/modal_bottom_sheet.dart';
+import 'package:driveon_car_platform/services/provider_service.dart';
 
 
 class EnhancedProviderSelector extends StatefulWidget {
@@ -198,10 +199,45 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
               // Provider list
               Expanded(
                 child: ListView.builder(
-                  itemCount: filteredAndSorted.length,
+                  itemCount: filteredAndSorted.length + 1, // +1 for "Other" option
                   itemBuilder: (context, index) {
+                    // "Other" option at the end
+                    if (index == filteredAndSorted.length) {
+                      final isOtherSelected = widget.selectedProvider?['is_manual'] == true;
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        color: isOtherSelected ? Colors.blue[50] : null,
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.grey[600],
+                            child: const Icon(Icons.add, color: Colors.white),
+                          ),
+                          title: Text(
+                            'Other / Not Listed',
+                            style: TextStyle(
+                              fontWeight: isOtherSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Text(
+                            widget.selectedProvider != null && widget.selectedProvider!['is_manual'] == true
+                                ? widget.selectedProvider!['provider_name'] ?? 'Enter provider name'
+                                : 'Add a provider not in the list',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontStyle: widget.selectedProvider != null && widget.selectedProvider!['is_manual'] == true
+                                  ? FontStyle.normal
+                                  : FontStyle.italic,
+                            ),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _showManualProviderDialog(),
+                        ),
+                      );
+                    }
+                    
                     final provider = filteredAndSorted[index];
-                    final isSelected = widget.selectedProvider?['provider_id'] == provider['provider_id'];
+                    final isSelected = widget.selectedProvider?['provider_id'] == provider['provider_id'] &&
+                                       widget.selectedProvider?['is_manual'] != true;
                     
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -311,7 +347,7 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
                 : null,
             child: Text(
               widget.selectedProvider != null
-                  ? 'Confirm ${widget.selectedProvider!['provider_name']}'
+                  ? 'Confirm ${widget.selectedProvider!['provider_name'] ?? widget.selectedProvider!['name'] ?? 'Provider'}'
                   : 'Select a Provider',
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -443,5 +479,97 @@ class _EnhancedProviderSelectorState extends State<EnhancedProviderSelector> {
       _selectedArea = 'all';
     });
     _searchController.clear();
+  }
+
+  Future<void> _showManualProviderDialog() async {
+    final TextEditingController nameController = TextEditingController();
+    bool isLoading = false;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add New Provider'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Enter the name of the provider'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Provider Name',
+                  hintText: 'e.g., ABC Auto Shop',
+                  border: OutlineInputBorder(),
+                ),
+                enabled: !isLoading,
+                autofocus: true,
+              ),
+              if (isLoading) ...[
+                const SizedBox(height: 16),
+                const CircularProgressIndicator(),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a provider name')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isLoading = true);
+
+                      try {
+                        final newProvider = await ProviderService.quickCreateProvider(name);
+                        if (newProvider != null) {
+                          // Ensure consistent field names and mark as manual entry
+                          final providerData = {
+                            'id': newProvider['id'],
+                            'provider_id': newProvider['id'],
+                            'name': newProvider['name'],
+                            'provider_name': newProvider['name'],
+                            'is_manual': true,
+                            'is_registered': false,
+                          };
+                          Navigator.pop(context, providerData);
+                        } else {
+                          setDialogState(() => isLoading = false);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Failed to create provider')),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        setDialogState(() => isLoading = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: ${e.toString()}')),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      widget.onSelect(result);
+      Navigator.pop(context); // Close the provider selector
+    }
   }
 }

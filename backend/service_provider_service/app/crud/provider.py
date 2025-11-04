@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session, joinedload
-from app.models.provider import Provider, ServiceTemplate, ServiceTemplateItem, ProviderService, ProviderServiceView
-from app.schemas.provider import ProviderCreate, ProviderUpdate, ServiceTemplateCreate
+from app.models.provider import Provider, ServiceTemplate, ServiceTemplateItem, ProviderService, ProviderServiceView, ProviderRating
+from app.schemas.provider import ProviderCreate, ProviderUpdate, ServiceTemplateCreate, ProviderRatingCreate
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import func, distinct
+from datetime import datetime
 
 
 def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
@@ -135,3 +136,111 @@ def search_provider_view(
     if none_count > 0:
         print(f"WARNING: Found {none_count} None rows in results")
     return results
+
+
+# -----------------------
+# Ratings
+# -----------------------
+def create_provider_rating(db: Session, provider_id: str, payload: ProviderRatingCreate):
+    # Clamp rating between 1 and 5
+    r_value = max(1, min(5, payload.rating))
+    
+    # Check for existing rating to prevent duplicates
+    # Priority: log_id > booking_id > user+provider (general rating)
+    existing_rating = None
+    if payload.log_id:
+        # Check for rating on this specific service log
+        existing_rating = db.query(ProviderRating).filter(
+            ProviderRating.provider_id == provider_id,
+            ProviderRating.user_id == payload.user_id,
+            ProviderRating.log_id == payload.log_id
+        ).first()
+    elif payload.booking_id:
+        # Check for rating on this specific booking
+        existing_rating = db.query(ProviderRating).filter(
+            ProviderRating.provider_id == provider_id,
+            ProviderRating.user_id == payload.user_id,
+            ProviderRating.booking_id == payload.booking_id
+        ).first()
+    else:
+        # For general ratings without log_id/booking_id, check if rated recently (within 24 hours)
+        # This prevents spam but allows re-rating after some time
+        from datetime import datetime, timedelta
+        recent_threshold = datetime.utcnow() - timedelta(hours=24)
+        existing_rating = db.query(ProviderRating).filter(
+            ProviderRating.provider_id == provider_id,
+            ProviderRating.user_id == payload.user_id,
+            ProviderRating.log_id.is_(None),
+            ProviderRating.booking_id.is_(None),
+            ProviderRating.created_at >= recent_threshold
+        ).first()
+    
+    if existing_rating:
+        # Update existing rating instead of creating duplicate
+        existing_rating.rating = r_value
+        existing_rating.comment = payload.comment
+        existing_rating.updated_at = datetime.utcnow()
+        r = existing_rating
+    else:
+        # Create new rating
+        r = ProviderRating(
+            provider_id=provider_id,
+            user_id=payload.user_id,
+            booking_id=payload.booking_id,
+            log_id=payload.log_id,
+            rating=r_value,
+            comment=payload.comment,
+        )
+        db.add(r)
+    
+    db.flush()
+
+    # Recompute provider average rating from ratings table
+    avg = db.query(func.avg(ProviderRating.rating)).filter(ProviderRating.provider_id == provider_id).scalar()
+    p = db.query(Provider).filter(Provider.id == provider_id).first()
+    if p:
+        try:
+            p.rating = round(float(avg or 0.0), 1)
+        except Exception:
+            p.rating = 0.0
+    
+    # Optionally notify alert service that rating was submitted (fire-and-forget)
+    # This allows the alert service to track completion but doesn't block the rating submission
+    try:
+        import os
+        import httpx
+        alert_service_url = os.getenv("ALERT_SERVICE_URL", "http://alert-service:8006")
+        # If we have log_id or booking_id, we can find and mark the related alert as acted upon
+        # For now, just log that rating was submitted
+        with httpx.Client(timeout=2.0) as client:
+            # This is a fire-and-forget notification - we don't wait for response
+            try:
+                client.post(
+                    f"{alert_service_url}/alerts/rating-submitted",
+                    json={
+                        "user_id": payload.user_id,
+                        "provider_id": provider_id,
+                        "log_id": payload.log_id,
+                        "booking_id": payload.booking_id,
+                        "rating": r_value,
+                    },
+                    timeout=1.0
+                )
+            except Exception:
+                # Silently fail - this is just for tracking, not critical
+                pass
+    except Exception:
+        # If alert service is unavailable, just continue - rating submission should succeed
+        pass
+    
+    db.commit()
+    db.refresh(r)
+    return r
+
+def list_provider_ratings(db: Session, provider_id: str):
+    return (
+        db.query(ProviderRating)
+        .filter(ProviderRating.provider_id == provider_id)
+        .order_by(ProviderRating.created_at.desc())
+        .all()
+    )

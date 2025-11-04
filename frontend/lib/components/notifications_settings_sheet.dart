@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:driveon_car_platform/services/alerts_service.dart';
 import 'package:driveon_car_platform/services/auth_service.dart';
+import 'package:driveon_car_platform/components/rating_dialog.dart';
 
 class NotificationsSettingsSheet extends StatefulWidget {
   final int? unreadAlertCount;
@@ -386,8 +387,27 @@ class _NotificationsSettingsSheetState extends State<NotificationsSettingsSheet>
             widget.onRefreshNotifications?.call();
           }
           
-          if (alert.actionUrl != null) {
-            // Handle action URL if needed
+          if (alert.actionUrl != null && alert.actionUrl!.isNotEmpty) {
+            // Check if this is a rating request
+            final ratingParams = parseRatingActionUrl(alert.actionUrl!);
+            if (ratingParams != null) {
+              final userIdStr = UserContextService.currentContext?.id;
+              if (userIdStr != null) {
+                final userId = int.tryParse(userIdStr);
+                if (userId != null) {
+                  await showRatingDialog(
+                    context: context,
+                    userId: userId,
+                    providerId: ratingParams['provider_id']!,
+                    bookingId: ratingParams['booking_id'],
+                    logId: ratingParams['log_id'],
+                  );
+                  return;
+                }
+              }
+            }
+            
+            // For other action URLs, show snackbar for now
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Action: ${alert.actionText ?? "View Details"}')),
             );
@@ -406,6 +426,7 @@ class _NotificationsSettingsSheetState extends State<NotificationsSettingsSheet>
       case 'maintenance_reminder': return Colors.green;
       case 'booking_confirmation': return Colors.purple;
       case 'payment_reminder': return Colors.amber;
+      case 'rating_request': return Colors.amber;
       default: return Colors.grey;
     }
   }
@@ -419,6 +440,7 @@ class _NotificationsSettingsSheetState extends State<NotificationsSettingsSheet>
       case 'maintenance_reminder': return Icons.schedule;
       case 'booking_confirmation': return Icons.check_circle;
       case 'payment_reminder': return Icons.payment;
+      case 'rating_request': return Icons.star;
       default: return Icons.notifications;
     }
   }

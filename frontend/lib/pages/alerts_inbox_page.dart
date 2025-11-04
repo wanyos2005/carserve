@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:driveon_car_platform/services/alerts_service.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/components/rating_dialog.dart';
 
 class AlertsInboxPage extends StatefulWidget {
   const AlertsInboxPage({super.key});
@@ -17,7 +18,7 @@ class _AlertsInboxPageState extends State<AlertsInboxPage> {
   int _offset = 0;
   final int _limit = 50;
   String? _filterType; // 'insurance_expiry', 'service_due'
-  String? _filterStatus; // 'delivered', 'pending'
+  String? _filterStatus; // 'delivered', 'pending' - NOTE: null means all statuses
 
   @override
   void initState() {
@@ -35,22 +36,30 @@ class _AlertsInboxPageState extends State<AlertsInboxPage> {
 
   Future<void> _load({bool refresh = false}) async {
     final userIdStr = UserContextService.currentContext?.id;
+    print('🔍 AlertsInbox: Current user ID from context: $userIdStr'); // Debug
     if (userIdStr == null) {
+      print('⚠️ AlertsInbox: No user ID in context'); // Debug
       setState(() {
         _loading = false;
       });
       return;
     }
     final userId = int.tryParse(userIdStr);
-    if (userId == null) return;
+    if (userId == null) {
+      print('⚠️ AlertsInbox: Failed to parse user ID: $userIdStr'); // Debug
+      return;
+    }
+    print('🔍 AlertsInbox: Fetching alerts for user_id=$userId'); // Debug
 
     setState(() => _loading = true);
     final items = await AlertsService.getAlerts(
+      userId: userId,
       alertType: _filterType,
       status: _filterStatus,
       limit: _limit,
       offset: refresh ? 0 : _offset,
     );
+    print('🔍 AlertsInbox: Received ${items.length} alerts'); // Debug
     setState(() {
       if (refresh) {
         _alerts = items;
@@ -105,9 +114,29 @@ class _AlertsInboxPageState extends State<AlertsInboxPage> {
     }
   }
 
-  void _openAction(Alert alert) {
+  void _openAction(Alert alert) async {
     if (alert.actionUrl == null || alert.actionUrl!.isEmpty) return;
-    // For MVP: show snackbar; future: deep-link
+    
+    // Check if this is a rating request
+    final ratingParams = parseRatingActionUrl(alert.actionUrl!);
+    if (ratingParams != null) {
+      final userIdStr = UserContextService.currentContext?.id;
+      if (userIdStr != null) {
+        final userId = int.tryParse(userIdStr);
+        if (userId != null) {
+          await showRatingDialog(
+            context: context,
+            userId: userId,
+            providerId: ratingParams['provider_id']!,
+            bookingId: ratingParams['booking_id'],
+            logId: ratingParams['log_id'],
+          );
+          return;
+        }
+      }
+    }
+    
+    // For other action URLs, show snackbar for now
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Open action: ${alert.actionUrl}')),
     );
@@ -184,6 +213,10 @@ class _AlertTile extends StatelessWidget {
       case 'service_due':
         icon = Icons.build_circle;
         color = Colors.blue;
+        break;
+      case 'rating_request':
+        icon = Icons.star;
+        color = Colors.amber;
         break;
       default:
         icon = Icons.notifications;

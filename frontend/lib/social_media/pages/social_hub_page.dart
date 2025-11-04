@@ -12,6 +12,7 @@ import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:driveon_car_platform/services/alerts_service.dart';
 import 'package:driveon_car_platform/services/fcm_service.dart';
 import 'package:driveon_car_platform/components/notifications_settings_sheet.dart';
+import 'package:driveon_car_platform/components/rating_dialog.dart';
 import 'dart:async';
 
 class SocialHubPage extends StatefulWidget {
@@ -257,7 +258,7 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
 
       // Load unread count and recent alerts
       final unreadCount = await AlertsService.getUnreadCount();
-      final recentAlerts = await AlertsService.getAlerts(limit: 10);
+      final recentAlerts = await AlertsService.getAlerts(userId: userId, limit: 10);
 
       setState(() {
         _unreadAlertCount = unreadCount;
@@ -296,6 +297,7 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
       // Check if FCM is already initialized
       if (FCMService.fcmToken != null) {
         print('✅ FCM already initialized with token: ${FCMService.fcmToken}');
+        _setupFCMNavigation();
         return;
       }
       
@@ -303,12 +305,42 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
       final success = await FCMService.initialize();
       if (success) {
         print('✅ FCM initialized successfully in Social Hub');
+        _setupFCMNavigation();
       } else {
         print('❌ FCM initialization failed in Social Hub');
       }
     } catch (e) {
       print('❌ Error initializing FCM in Social Hub: $e');
     }
+  }
+
+  /// Set up FCM navigation handler to show rating dialog when rating URLs are tapped
+  void _setupFCMNavigation() {
+    FCMService.onNavigate = (String actionUrl) async {
+      // Parse rating URL
+      final ratingParams = parseRatingActionUrl(actionUrl);
+      if (ratingParams != null) {
+        final userId = await _getCurrentUserId();
+        if (userId != null && mounted) {
+          // Show rating dialog
+          showRatingDialog(
+            context: context,
+            userId: userId,
+            providerId: ratingParams['provider_id']!,
+            bookingId: ratingParams['booking_id'],
+            logId: ratingParams['log_id'],
+          );
+          return;
+        }
+      }
+      // For other URLs, could navigate to specific pages
+      // For now, just show snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Action: $actionUrl')),
+        );
+      }
+    };
   }
 
   /// Get current user ID from user context service
@@ -538,6 +570,8 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
 
   @override
   void dispose() {
+    // Clear the navigation handler when this widget is disposed
+    FCMService.onNavigate = null;
     _tabController.dispose();
     _scrollController.dispose();
     _realtimeSubscription?.cancel();

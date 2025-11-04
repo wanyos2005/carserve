@@ -42,6 +42,7 @@ class Provider(Base):
 
     category = relationship("ProviderCategory", back_populates="providers")
     provider_services = relationship("ProviderService", back_populates="provider")
+    # No explicit relationship to ratings to avoid heavy lazy loads
 
 class Service(Base):
     __tablename__ = "services"
@@ -147,4 +148,20 @@ class ProviderServiceView(Base):
     service_category_name = Column(String)
 
 
+
+
+# New table to store individual provider ratings
+class ProviderRating(Base):
+    __tablename__ = "provider_ratings"
+    __table_args__ = {"schema": "service_providers"}
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    provider_id = Column(String, ForeignKey("service_providers.providers.id"), index=True, nullable=False)
+    user_id = Column(Integer, index=True, nullable=False)
+    booking_id = Column(String, index=True, nullable=True)
+    log_id = Column(String, index=True, nullable=True)  # Service log ID this rating is for
+    rating = Column(Integer, nullable=False)  # 1-5
+    comment = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 

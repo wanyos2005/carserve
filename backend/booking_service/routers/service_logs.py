@@ -85,6 +85,12 @@ def create_bulk_logs(payloads: List[ServiceLogCreate], db: Session = Depends(get
         _award_loyalty_points_for_logs(logs)
     except Exception as e:
         print(f"Warning: Failed to award loyalty points for bulk logs: {e}")
+
+    # 🔥 NEW: Trigger rating request alerts for users after provider bulk logs
+    try:
+        _trigger_rating_requests_for_logs(logs)
+    except Exception as e:
+        print(f"Warning: Failed to trigger rating requests for bulk logs: {e}")
     
     return logs
 
@@ -256,3 +262,36 @@ def _award_loyalty_points_for_logs(logs: List[ServiceLog]):
                     
     except Exception as e:
         print(f"❌ Error in _award_loyalty_points_for_logs: {e}")
+
+
+def _trigger_rating_requests_for_logs(logs: List[ServiceLog]):
+    """Create rating request alerts for each user involved in bulk logs.
+    Group by (user_id, provider_id) to avoid spamming multiple alerts per submission.
+    """
+    try:
+        alert_service_url = os.getenv("ALERT_SERVICE_URL", "http://alert-service:8006")
+        # Build unique pairs
+        pairs = {}
+        for log in logs:
+            if not log.user_id or not log.provider_id:
+                continue
+            key = (log.user_id, log.provider_id)
+            if key not in pairs:
+                pairs[key] = log
+
+        for (user_id, provider_id), sample_log in pairs.items():
+            payload = {
+                "user_id": user_id,
+                "provider_id": provider_id,
+                "log_id": sample_log.id,  # Include log_id so rating can be tied to specific service log
+                "title": "Rate your service provider",
+                "message": "How was your recent service? Please rate your provider.",
+            }
+            try:
+                with httpx.Client(timeout=3.0) as client:
+                    client.post(f"{alert_service_url}/alerts/trigger/rating-request", json=payload)
+            except Exception:
+                # Continue other alerts if one fails
+                pass
+    except Exception as e:
+        print(f"❌ Error in _trigger_rating_requests_for_logs: {e}")

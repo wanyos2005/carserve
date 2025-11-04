@@ -99,6 +99,7 @@ class Alert {
       case 'maintenance_reminder': return 'Maintenance';
       case 'booking_confirmation': return 'Booking';
       case 'payment_reminder': return 'Payment';
+      case 'rating_request': return 'Rating Request';
       default: return type.replaceAll('_', ' ').toUpperCase();
     }
   }
@@ -137,6 +138,7 @@ class AlertsService {
 
   /// Get alerts for current user
   static Future<List<Alert>> getAlerts({
+    int? userId,
     String? alertType,
     String? status,
     int limit = 50,
@@ -148,42 +150,55 @@ class AlertsService {
         'offset': offset.toString(),
       };
       
+      if (userId != null) queryParams['user_id'] = userId.toString();
       if (alertType != null) queryParams['alert_type'] = alertType;
       if (status != null) queryParams['status'] = status;
 
       final queryString = queryParams.entries
-          .map((e) => '${e.key}=${e.value}')
+          .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
           .join('&');
       final url = queryString.isNotEmpty ? '$_baseUrl?$queryString' : _baseUrl;
+      print('🔍 Fetching alerts from: $url'); // Debug
+      print('🔍 Query params: userId=$userId, alertType=$alertType, status=$status'); // Debug
       final response = await ApiService.get(url);
+      
+      print('🔍 API Response type: ${response.runtimeType}'); // Debug
+      print('🔍 API Response: $response'); // Debug
       
       if (response != null) {
         // Handle both direct list and wrapped response
         List<dynamic> alertsList;
         if (response is List) {
           alertsList = response;
+          print('✅ Got ${alertsList.length} alerts from API (direct list)'); // Debug
         } else if (response is Map<String, dynamic>) {
           // Check if response is wrapped in a 'data' field or similar
           if (response.containsKey('data') && response['data'] is List) {
             alertsList = response['data'];
+            print('✅ Got ${alertsList.length} alerts from API (wrapped in data)'); // Debug
           } else if (response.containsKey('alerts') && response['alerts'] is List) {
             alertsList = response['alerts'];
+            print('✅ Got ${alertsList.length} alerts from API (wrapped in alerts)'); // Debug
           } else {
             // If it's a single alert object, wrap it in a list
             alertsList = [response];
+            print('✅ Got 1 alert from API (single object)'); // Debug
           }
         } else {
-          print('Unexpected response format: ${response.runtimeType}');
+          print('❌ Unexpected response format: ${response.runtimeType}'); // Debug
           return [];
         }
         
-        return alertsList
+        final alerts = alertsList
             .map((json) => Alert.fromJson(json))
             .toList();
+        print('✅ Parsed ${alerts.length} alerts'); // Debug
+        return alerts;
       }
+      print('⚠️ No response from API'); // Debug
       return [];
     } catch (e) {
-      print('Error fetching alerts: $e');
+      print('❌ Error fetching alerts: $e'); // Debug
       return [];
     }
   }
@@ -214,9 +229,9 @@ class AlertsService {
   }
 
   /// Mark all alerts as read
-  static Future<bool> markAllAsRead() async {
+  static Future<bool> markAllAsRead({int? userId}) async {
     try {
-      final alerts = await getAlerts(status: 'pending');
+      final alerts = await getAlerts(userId: userId, status: 'pending');
       bool allSuccess = true;
       
       for (final alert in alerts) {

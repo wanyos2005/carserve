@@ -52,7 +52,7 @@ class _EnhancedBookingPageState extends State<EnhancedBookingPage> {
   Map<String, dynamic>? _selectedProvider;
 
   // Recommendation toggle (matches backend "match_all")
-  bool _recommendedOnly = false;
+  bool _recommendedOnly = true;
   
   // Mode toggle: Services vs Spare Parts
   final bool _isSparePartsMode = false;

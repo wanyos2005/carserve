@@ -37,10 +37,10 @@ class EnhancedServiceSelector extends StatefulWidget {
 
 class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
   List<Map<String, dynamic>> _selectedServices = [];
-  String _selectedCategory = '';
   String _searchQuery = '';
   bool _showOnlySelected = false;
   String? _selectedRecommendedService; // Track which recommended service is selected
+  List<String>? _recommendedKeywords; // Track keywords from selected recommended service
   
   // Enhanced configuration state
   final Map<String, Map<String, dynamic>> _pricingData = {};
@@ -49,6 +49,13 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
   final Map<String, dynamic> _serviceDetails = {};
   
   // Recommended services data
+  // Check if any filter/search is active
+  bool get _hasActiveFilters {
+    return _searchQuery.isNotEmpty || 
+           _showOnlySelected || 
+           _selectedRecommendedService != null;
+  }
+
   List<Map<String, dynamic>> get _recommendedServices {
     if (widget.isSparePartsMode) {
       return [
@@ -83,11 +90,23 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
           'keywords': ['ac', 'air conditioning', 'compressor', 'condenser', 'filter'],
         },
         {
+          'name': 'Fuel',
+          'icon': Icons.local_gas_station,
+          'color': Colors.amber,
+          'keywords': ['fuel', 'gas', 'petrol', 'diesel', 'gasoline', 'refuel'],
+        },
+        {
           'name': 'Insurance',
           'icon': Icons.security,
           'color': Colors.green,
           'keywords': ['insurance', 'policy', 'coverage', 'premium', 'claim'],
           'isSpecial': true, // Flag for special handling
+        },
+        {
+          'name': 'Breakdown Assistance',
+          'icon': Icons.emergency,
+          'color': Colors.red,
+          'keywords': ['breakdown', 'assistance', 'roadside', 'towing', 'emergency', 'rescue', 'tow', 'recovery'],
         },
       ];
     } else {
@@ -123,11 +142,23 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
           'keywords': ['ac', 'air conditioning', 'cooling', 'refrigerant', 'climate'],
         },
         {
+          'name': 'Fuel',
+          'icon': Icons.local_gas_station,
+          'color': Colors.amber,
+          'keywords': ['fuel', 'gas', 'petrol', 'diesel', 'gasoline', 'refuel'],
+        },
+        {
           'name': 'Insurance',
           'icon': Icons.security,
           'color': Colors.green,
           'keywords': ['insurance', 'policy', 'coverage', 'premium', 'claim'],
           'isSpecial': true, // Flag for special handling
+        },
+        {
+          'name': 'Breakdown Assistance',
+          'icon': Icons.emergency,
+          'color': Colors.red,
+          'keywords': ['breakdown', 'assistance', 'roadside', 'towing', 'emergency', 'rescue', 'tow', 'recovery'],
         },
       ];
     }
@@ -174,14 +205,6 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
 
   @override
   Widget build(BuildContext context) {
-    // Get unique categories
-    final categories = widget.allServices
-        .map((s) => _extractCategoryName(s))
-        .where((cat) => cat != null)
-        .toSet()
-        .toList()
-      ..sort();
-
     // Filter services
     final filteredServices = _getFilteredServices();
 
@@ -222,34 +245,19 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
                       // Clear recommended service selection when manually searching
                       if (value.isNotEmpty) {
                         _selectedRecommendedService = null;
+                        _recommendedKeywords = null;
                       }
                     });
                   },
                 ),
                 const SizedBox(height: 12),
                 
-                // Category filter chips, cart, and toggle in same row
+                // Cart and toggle in same row
                 Row(
                   children: [
-                    // Category filter chips
-                    Expanded(
-                      child: SizedBox(
-                        height: 40,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: [
-                            ...categories.map((category) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _buildCategoryChip(category!, category),
-                            )),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     // Cart icon with count
                     _buildCartSubtitle(),
-                    const SizedBox(width: 8),
+                    const Spacer(),
                     // Toggle for showing only selected
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -271,20 +279,87 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
             ),
           ),
 
-          // Services list
+          // Services list - only show when filters are active
           Expanded(
-            child: filteredServices.isEmpty
+            child: !_hasActiveFilters
                 ? Center(
-                    child: Text(
-                      widget.isPurchaseMode 
-                          ? 'No spare parts found'
-                          : (widget.isSparePartsMode 
-                              ? 'No spare parts found' 
-                              : 'No services found'),
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.touch_app,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Select a service category above',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.isPurchaseMode 
+                                ? 'Choose from popular parts or search to find what you need'
+                                : (widget.isSparePartsMode 
+                                    ? 'Choose from popular parts or search to find what you need'
+                                    : 'Choose from popular services or search to find what you need'),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
                   )
-                : ListView.builder(
+                : filteredServices.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                widget.isPurchaseMode 
+                                    ? 'No spare parts found'
+                                    : (widget.isSparePartsMode 
+                                        ? 'No spare parts found' 
+                                        : 'No services found'),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Try adjusting your search or filters',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
                     itemCount: filteredServices.length,
                     itemBuilder: (context, index) {
                       final service = _normalizeServiceMap(filteredServices[index]);
@@ -499,34 +574,10 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
     );
   }
 
-  Widget _buildCategoryChip(String value, String label) {
-    final isSelected = _selectedCategory == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _selectedCategory = value;
-          // Clear recommended service selection when using category filter
-          _selectedRecommendedService = null;
-        });
-      },
-      selectedColor: Colors.blue[100],
-      checkmarkColor: Colors.blue[800],
-    );
-  }
-
   List<Map<String, dynamic>> _getFilteredServices() {
     var services = widget.allServices
         .map((s) => _normalizeServiceMap(Map<String, dynamic>.from(s)))
         .toList();
-
-    // Filter by category (only if a specific category is selected)
-    if (_selectedCategory.isNotEmpty) {
-      services = services
-          .where((s) => _extractCategoryName(s) == _selectedCategory)
-          .toList();
-    }
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
@@ -534,12 +585,23 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
         final name = (s['name'] ?? '').toString().toLowerCase();
         final description = (s['description'] ?? '').toString().toLowerCase();
         final category = (_extractCategoryName(s) ?? '').toLowerCase();
-        final query = _searchQuery.toLowerCase();
         
-        // Check basic fields
-        bool basicMatch = name.contains(query) || 
-                         description.contains(query) || 
-                         category.contains(query);
+        // If we have recommended keywords, check against all of them
+        // Otherwise, use the single search query
+        final keywordsToCheck = _recommendedKeywords != null && _recommendedKeywords!.isNotEmpty
+            ? _recommendedKeywords!.map((k) => k.toLowerCase()).toList()
+            : [_searchQuery.toLowerCase()];
+        
+        // Check if any keyword matches in basic fields
+        bool basicMatch = false;
+        for (final keyword in keywordsToCheck) {
+          if (name.contains(keyword) || 
+              description.contains(keyword) || 
+              category.contains(keyword)) {
+            basicMatch = true;
+            break;
+          }
+        }
         
         // Check requirements fields for additional matches
         bool requirementsMatch = false;
@@ -549,29 +611,38 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
           if (fields != null) {
             for (var field in fields) {
               if (field is Map<String, dynamic>) {
-                // Check field name
+                // Check field name against all keywords
                 final fieldName = (field['name'] ?? '').toString().toLowerCase();
-                if (fieldName.contains(query)) {
-                  requirementsMatch = true;
-                  break;
+                for (final keyword in keywordsToCheck) {
+                  if (fieldName.contains(keyword)) {
+                    requirementsMatch = true;
+                    break;
+                  }
                 }
+                if (requirementsMatch) break;
                 
-                // Check field label
+                // Check field label against all keywords
                 final fieldLabel = (field['label'] ?? '').toString().toLowerCase();
-                if (fieldLabel.contains(query)) {
-                  requirementsMatch = true;
-                  break;
+                for (final keyword in keywordsToCheck) {
+                  if (fieldLabel.contains(keyword)) {
+                    requirementsMatch = true;
+                    break;
+                  }
                 }
+                if (requirementsMatch) break;
                 
-                // Check field options
+                // Check field options against all keywords
                 final options = field['options'] as List<dynamic>?;
                 if (options != null) {
                   for (var option in options) {
                     final optionStr = option.toString().toLowerCase();
-                    if (optionStr.contains(query)) {
-                      requirementsMatch = true;
-                      break;
+                    for (final keyword in keywordsToCheck) {
+                      if (optionStr.contains(keyword)) {
+                        requirementsMatch = true;
+                        break;
+                      }
                     }
+                    if (requirementsMatch) break;
                   }
                 }
               }
@@ -755,7 +826,7 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                // Third row - 2 services
+                // Third row - 2 services (AC and Fuel)
                 Row(
                   children: [
                     Expanded(
@@ -767,6 +838,21 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
                     ),
                   ],
                 ),
+                if (_recommendedServices.length > 6) ...[
+                  const SizedBox(height: 8),
+                  // Fourth row - Insurance and Breakdown Assistance side by side
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildRecommendedPill(_recommendedServices[6]),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildRecommendedPill(_recommendedServices[7]),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -836,9 +922,11 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
     }
     
     setState(() {
-      // Set search query to the first keyword of the recommended service
-      _searchQuery = recommended['keywords'][0];
-      _selectedCategory = ''; // Reset category filter
+      // Store all keywords for matching
+      final keywords = List<String>.from(recommended['keywords'] ?? []);
+      _recommendedKeywords = keywords.isNotEmpty ? keywords : null;
+      // Set search query to the first keyword for display purposes
+      _searchQuery = keywords.isNotEmpty ? keywords[0] : '';
       _showOnlySelected = false; // Reset selected filter
       _selectedRecommendedService = recommended['name']; // Track selected recommended service
     });

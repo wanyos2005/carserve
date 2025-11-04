@@ -64,6 +64,25 @@ def update(booking_id: str, updates: BookingUpdate, db: Session = Depends(get_db
                 pass
     except Exception:
         pass
+
+    # Trigger a rating request alert when booking transitions to completed
+    try:
+        if (b.status or "").lower() == "completed" and b.user_id and b.provider_id:
+            alert_service_url = os.getenv("ALERT_SERVICE_URL", "http://alert-service:8006")
+            payload = {
+                "user_id": b.user_id,
+                "provider_id": b.provider_id,
+                "booking_id": b.id,
+                "title": "Rate your service provider",
+                "message": "How was your recent service? Please rate your provider.",
+            }
+            try:
+                with httpx.Client(timeout=3.0) as client:
+                    client.post(f"{alert_service_url}/alerts/trigger/rating-request", json=payload)
+            except Exception:
+                pass
+    except Exception:
+        pass
     return b
 
 @router.delete("/{booking_id}", status_code=204)

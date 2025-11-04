@@ -6,6 +6,9 @@ import 'user_loyalty_page.dart';
 import '../social_media/pages/social_hub_page.dart';
 import '../components/notifications_settings_sheet.dart';
 import '../services/alerts_service.dart';
+import '../services/user_context_service.dart';
+import '../services/fcm_service.dart';
+import '../components/rating_dialog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,6 +26,46 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _loadNotifications();
+    _setupFCMNavigation();
+  }
+
+  /// Set up FCM navigation handler to show rating dialog when rating URLs are tapped
+  void _setupFCMNavigation() {
+    FCMService.onNavigate = (String actionUrl) async {
+      // Parse rating URL
+      final ratingParams = parseRatingActionUrl(actionUrl);
+      if (ratingParams != null) {
+        final userIdStr = UserContextService.currentContext?.id;
+        if (userIdStr != null) {
+          final userId = int.tryParse(userIdStr);
+          if (userId != null && mounted) {
+            // Show rating dialog
+            showRatingDialog(
+              context: context,
+              userId: userId,
+              providerId: ratingParams['provider_id']!,
+              bookingId: ratingParams['booking_id'],
+              logId: ratingParams['log_id'],
+            );
+            return;
+          }
+        }
+      }
+      // For other URLs, could navigate to specific pages
+      // For now, just show snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Action: $actionUrl')),
+        );
+      }
+    };
+  }
+
+  @override
+  void dispose() {
+    // Clear the navigation handler when this widget is disposed
+    FCMService.onNavigate = null;
+    super.dispose();
   }
 
   void _togglePrivileges() {
@@ -33,8 +76,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> _loadNotifications() async {
     try {
+      final userIdStr = UserContextService.currentContext?.id;
+      if (userIdStr == null) return;
+      final userId = int.tryParse(userIdStr);
+      if (userId == null) return;
+
       final unreadCount = await AlertsService.getUnreadCount();
-      final recentAlerts = await AlertsService.getAlerts(limit: 10);
+      final recentAlerts = await AlertsService.getAlerts(userId: userId, limit: 10);
       
       setState(() {
         _unreadAlertCount = unreadCount;
