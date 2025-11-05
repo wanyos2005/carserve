@@ -130,6 +130,15 @@ def award_points(
     
     points_to_award = calculation_result["points"]
     
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(
+        f"Points calculation for user {request.user_id}, provider {request.provider_id}, "
+        f"amount {request.amount_spent}: {points_to_award} points "
+        f"(rule: {calculation_result.get('rule_name', 'N/A')})"
+    )
+    
     if points_to_award <= 0:
         return PointsAwardResponse(
             success=False,
@@ -153,11 +162,17 @@ def award_points(
         db.refresh(account)
     
     # Check provider participation and budget limits
-    if request.provider_id:
+    # Only apply budget check if provider is participating AND using a provider-specific rule
+    # Platform-funded points (default rule) should not be subject to provider budgets
+    rule_id = calculation_result.get("rule_id")
+    rule_name = calculation_result.get("rule_name", "")
+    is_platform_rule = rule_id is None or rule_name == "Default Rule"
+    
+    if request.provider_id and not is_platform_rule:
         provider_config = crud.get_provider_config(db, request.provider_id)
         
-        # Check if provider has monthly budget and if exceeded
-        if provider_config:
+        # Only check budget if provider is actively participating
+        if provider_config and provider_config.is_participating:
             if provider_config.monthly_point_budget:
                 if provider_config.points_awarded_this_month + points_to_award > provider_config.monthly_point_budget:
                     # Budget exceeded, award only remaining points
@@ -191,8 +206,11 @@ def award_points(
         )
         
         # Track points awarded to provider for billing
-        if request.provider_id and points_to_award > 0:
-            crud.increment_provider_points_awarded(db, request.provider_id, points_to_award)
+        # Only track if provider is participating (not platform-funded default rules)
+        if request.provider_id and points_to_award > 0 and not is_platform_rule:
+            provider_config = crud.get_provider_config(db, request.provider_id)
+            if provider_config and provider_config.is_participating:
+                crud.increment_provider_points_awarded(db, request.provider_id, points_to_award)
         
         # Refresh account to get updated balance
         db.refresh(account)

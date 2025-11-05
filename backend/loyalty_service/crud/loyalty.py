@@ -173,7 +173,13 @@ def get_active_rules(
         provider_config = get_provider_config(db, provider_id)
         if provider_config and not provider_config.is_participating:
             # Provider opted out, exclude their provider-specific rules
-            query = query.filter(LoyaltyRule.provider_id != provider_id)
+            # But still include platform rules (provider_id IS NULL)
+            query = query.filter(
+                or_(
+                    LoyaltyRule.provider_id.is_(None),
+                    LoyaltyRule.provider_id != provider_id
+                )
+            )
         else:
             # Provider is participating or no config exists, include their rules
             query = query.filter(

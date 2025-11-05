@@ -359,6 +359,9 @@ def _get_garage_stats(provider_id: str, today) -> dict:
         print(f"Fetching garage stats for provider {provider_id} from {booking_service_url}")
         
         with httpx.Client(timeout=5.0) as client:
+            # Initialize earnings counter
+            bookings_earnings_today = 0
+            
             # Get provider's bookings
             bookings_response = client.get(f"{booking_service_url}/bookings/provider/{provider_id}")
             if bookings_response.status_code == 200:
@@ -367,7 +370,6 @@ def _get_garage_stats(provider_id: str, today) -> dict:
                 stats["active_bookings"] = len(active_bookings)
                 
                 # Calculate today's earnings from bookings (use agreed_price fallback to base_price)
-                bookings_earnings_today = 0
                 from datetime import datetime
                 for b in bookings:
                     status = (b.get('status') or '').lower()
@@ -426,8 +428,6 @@ def _get_garage_stats(provider_id: str, today) -> dict:
                         if should_count:
                             print(f"Adding {price} to today's earnings from booking {booking_id} (status: {status})")
                             bookings_earnings_today += int(price)
-                # Set today's earnings from bookings prices
-                stats["todays_earnings"] = bookings_earnings_today
             
             # Get service logs for this provider
             service_logs_response = client.get(f"{booking_service_url}/service-logs/provider/{provider_id}")
@@ -446,7 +446,20 @@ def _get_garage_stats(provider_id: str, today) -> dict:
                 stats["total_services_today"] = len(today_logs)
                 stats["completed_services_today"] = len(today_logs)
                 
-                # Earnings are computed from bookings' prices above; do not double count with service_log costs
+                # Calculate today's earnings from service logs
+                # Service logs represent actual completed work with actual costs
+                service_logs_earnings_today = 0
+                for log in today_logs:
+                    if log.get('cost'):
+                        service_logs_earnings_today += int(log['cost'])
+                
+                # Sum both bookings and service logs earnings for total earnings
+                # Service logs are independent (no booking_id field), so they may represent
+                # direct service logging separate from bookings, or services from completed bookings
+                # Since we can't link them directly, we sum both to get total earnings
+                total_earnings = bookings_earnings_today + service_logs_earnings_today
+                stats["todays_earnings"] = total_earnings
+                print(f"Total earnings: bookings={bookings_earnings_today}, service_logs={service_logs_earnings_today}, total={total_earnings}")
                 
                 # Calculate pending tasks: use active_bookings only
                 # Service logs without performed_at might already be represented by active bookings,

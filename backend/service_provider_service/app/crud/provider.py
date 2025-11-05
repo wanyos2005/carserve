@@ -4,7 +4,7 @@ from app.schemas.provider import ProviderCreate, ProviderUpdate, ServiceTemplate
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import func, distinct
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def create_provider(db: Session, provider_in: ProviderCreate) -> Provider:
@@ -165,7 +165,6 @@ def create_provider_rating(db: Session, provider_id: str, payload: ProviderRatin
     else:
         # For general ratings without log_id/booking_id, check if rated recently (within 24 hours)
         # This prevents spam but allows re-rating after some time
-        from datetime import datetime, timedelta
         recent_threshold = datetime.utcnow() - timedelta(hours=24)
         existing_rating = db.query(ProviderRating).filter(
             ProviderRating.provider_id == provider_id,

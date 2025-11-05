@@ -1,7 +1,6 @@
 from celery_app import celery_app
 from core.db import SessionLocal
-from crud.alert import get_alert as crud_get_alert
-from models.alert import AlertStatus
+from models.alert import Alert, AlertStatus
 from services.notification_service import NotificationService
 from services.rule_engine import RuleEngine
 from datetime import datetime
@@ -15,7 +14,8 @@ def deliver_alert_task(alert_id: str) -> None:
     logger = logging.getLogger("uvicorn")
     db = SessionLocal()
     try:
-        alert = crud_get_alert(db, alert_id)
+        # Fetch alert directly via ORM (CRUD module removed)
+        alert = db.query(Alert).filter(Alert.id == alert_id).first()
         if not alert:
             logger.error(f"deliver_alert_task: alert not found id={alert_id}")
             return
