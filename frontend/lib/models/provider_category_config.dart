@@ -85,6 +85,8 @@ class ProviderCategoryConfigs {
         StatCard(title: 'Active Bookings', value: '8', icon: Icons.calendar_today, color: Colors.blue),
         StatCard(title: "Today's Earnings", value: 'KES 12,400', icon: Icons.trending_up, color: Colors.green),
         StatCard(title: 'Pending Tasks', value: '3', icon: Icons.list_alt, color: Colors.orange),
+        StatCard(title: 'Total Services Today', value: '0', icon: Icons.build, color: Colors.purple),
+        StatCard(title: 'Completed Services Today', value: '0', icon: Icons.check_circle, color: Colors.teal),
         StatCard(title: 'Rating', value: '4.8 ★', icon: Icons.star, color: Colors.amber),
       ],
       quickActions: [
@@ -598,6 +600,18 @@ class ProviderCategoryConfigs {
         color: Colors.orange,
       ),
       StatCard(
+        title: 'Total Services Today',
+        value: '${stats['total_services_today'] ?? 0}',
+        icon: Icons.build,
+        color: Colors.purple,
+      ),
+      StatCard(
+        title: 'Completed Services Today',
+        value: '${stats['completed_services_today'] ?? 0}',
+        icon: Icons.check_circle,
+        color: Colors.teal,
+      ),
+      StatCard(
         title: 'Rating',
         value: '${stats['rating']?.toStringAsFixed(1) ?? '0.0'} ★',
         icon: Icons.star,
@@ -625,6 +639,8 @@ class ProviderCategoryConfigs {
           StatCard(title: 'Active Bookings', value: '0', icon: Icons.calendar_today, color: Colors.blue),
           StatCard(title: "Today's Earnings", value: 'KES 0', icon: Icons.trending_up, color: Colors.green),
           StatCard(title: 'Pending Tasks', value: '0', icon: Icons.list_alt, color: Colors.orange),
+          StatCard(title: 'Total Services Today', value: '0', icon: Icons.build, color: Colors.purple),
+          StatCard(title: 'Completed Services Today', value: '0', icon: Icons.check_circle, color: Colors.teal),
           StatCard(title: 'Rating', value: '0.0 ★', icon: Icons.star, color: Colors.amber),
         ];
       case 'insurance agency':

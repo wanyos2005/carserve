@@ -448,9 +448,10 @@ def _get_garage_stats(provider_id: str, today) -> dict:
                 
                 # Earnings are computed from bookings' prices above; do not double count with service_log costs
                 
-                # Calculate pending tasks (bookings + incomplete service logs)
-                pending_tasks = stats["active_bookings"] + len([log for log in service_logs if not log.get('performed_at')])
-                stats["pending_tasks"] = pending_tasks
+                # Calculate pending tasks: use active_bookings only
+                # Service logs without performed_at might already be represented by active bookings,
+                # so counting both would cause double counting
+                stats["pending_tasks"] = stats["active_bookings"]
                 
     except Exception as e:
         print(f"Error fetching garage stats: {e}")

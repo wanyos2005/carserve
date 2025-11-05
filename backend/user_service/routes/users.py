@@ -222,6 +222,9 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
         "email": user.email,
         "name": user.name,
         "phone": user.phone,
+        "verified": user.verified,
+        "is_guest": user.is_guest,
+        "fcm_token": user.fcm_token,
     }
 
 @router.get("/users/{user_id}/fcm-token", response_model=FCMTokenResponse)
