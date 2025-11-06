@@ -172,6 +172,7 @@ async def trigger_app_download_prompt(
         if alert:
             # Enqueue delivery to Celery (fire-and-forget)
             celery_app.send_task("deliver_alert", args=[alert.id])
+            logger.info(f"Alert created and queued: alert_id={alert.id}, user_id={request_data.user_id}")
             return AppDownloadPromptResponse(
                 message="App download prompt triggered successfully",
                 alert_id=alert.id,
@@ -180,6 +181,7 @@ async def trigger_app_download_prompt(
                 success=True
             )
         else:
+            logger.info(f"Alert skipped for user_id={request_data.user_id} - user already has app or not eligible")
             return AppDownloadPromptResponse(
                 message="App download prompt skipped - user already has app or prompt not needed",
                 alert_id=None,

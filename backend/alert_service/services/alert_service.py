@@ -234,6 +234,7 @@ class AlertService:
             #should_send_prompt = True
             
             if not should_send_prompt:
+                logging.getLogger("uvicorn").info(f"App download prompt skipped for user {user_id} - detection service returned False")
                 return None
             
             # Enhance vehicle and provider information by querying other services
