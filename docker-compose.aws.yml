@@ -261,7 +261,7 @@ services:
       - redis
     restart: unless-stopped
     
-    command: bash -lc "python -m celery -A celery_app.celery_app worker --loglevel=INFO --concurrency=1"
+    command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
     deploy:
       resources:
         limits:
@@ -296,7 +296,7 @@ services:
       - booking-service
       - insurance-service
     restart: unless-stopped
-    command: bash -lc "python -m celery -A celery_app.celery_app beat --loglevel=INFO"
+    command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "beat", "--loglevel=INFO"]
     deploy:
       resources:
         limits:
