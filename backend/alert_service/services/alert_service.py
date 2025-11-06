@@ -234,16 +234,11 @@ class AlertService:
             #should_send_prompt = True
             
             if not should_send_prompt:
-                logging.getLogger("uvicorn").info(f"App download prompt skipped for user {user_id} - user already has app or prompt not needed")
                 return None
             
             # Enhance vehicle and provider information by querying other services
             enhanced_vehicle_info = await self._get_enhanced_vehicle_info(vehicle_info)
             enhanced_provider_name = await self._get_enhanced_provider_name(service_provider_name)
-            
-            # Debug logging
-            logging.getLogger("uvicorn").info(f"Enhanced vehicle info: {enhanced_vehicle_info}")
-            logging.getLogger("uvicorn").info(f"Enhanced provider name: {enhanced_provider_name}")
             
             # Create the app download prompt alert
             alert_data = AlertCreate(
