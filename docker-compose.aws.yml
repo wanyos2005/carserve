@@ -227,9 +227,38 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/alert-worker:latest
     env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME}
+      - SMTP_TLS=${SMTP_TLS}
+      - SMTP_SSL=${SMTP_SSL}
+      - SMS_PROVIDER=${SMS_PROVIDER}
+      - AT_USERNAME=${AT_USERNAME}
+      - AT_API_KEY=${AT_API_KEY}
+      - AT_SENDER_ID=${AT_SENDER_ID}
+      - FCM_PROJECT_ID=${FCM_PROJECT_ID}
+      - FCM_PRIVATE_KEY=${FCM_PRIVATE_KEY}
+      - FCM_CLIENT_EMAIL=${FCM_CLIENT_EMAIL}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
     depends_on:
+      - postgres
       - redis
     restart: unless-stopped
+    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
     deploy:
       resources:
         limits:
@@ -250,9 +279,21 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/alert-beat:latest
     env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - USER_SERVICE_URL=http://user-service:8001
+      - BOOKING_SERVICE_URL=http://booking-service:8004
+      - INSURANCE_SERVICE_URL=http://insurance-service:8005
     depends_on:
       - redis
+      - user-service
+      - booking-service
+      - insurance-service
     restart: unless-stopped
+    command: bash -lc "celery -A celery_app.celery_app beat --loglevel=INFO"
     deploy:
       resources:
         limits:

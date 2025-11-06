@@ -127,34 +127,40 @@ class AppDetectionService:
 
     async def should_send_app_prompt(self, customer_id: int) -> bool:
         """Check if we should send app download prompt (comprehensive evaluation)"""
+        logger = logging.getLogger(__name__)
         try:
+            logger.info(f"Checking app download prompt eligibility for user {customer_id}")
+            
             # Collect all detection results for comprehensive evaluation
             detection_results = await self._collect_all_detection_results(customer_id)
+            logger.info(f"Detection results for user {customer_id}: {detection_results}")
             
             # Check rate limiting first
             if detection_results.get('recent_prompt_sent', False):
-                logging.getLogger(__name__).info(f"Prompt already sent to user {customer_id} within 7 days")
+                logger.info(f"Prompt already sent to user {customer_id} within 30 days - skipping")
                 return False
             
             # Check if customer has app using comprehensive evaluation
             has_app = self._evaluate_app_installation(detection_results)
             if has_app:
-                logging.getLogger(__name__).info(f"User {customer_id} already has app installed")
+                logger.info(f"User {customer_id} already has app installed - skipping prompt")
                 return False
             
             # Additional checks for prompt eligibility
             is_guest = await self._check_is_guest_user(customer_id)
+            logger.info(f"User {customer_id} is_guest check result: {is_guest}")
             if not is_guest:
-                logging.getLogger(__name__).info(f"User {customer_id} is not a guest, may already have app")
+                logger.info(f"User {customer_id} is not a guest user - skipping prompt")
                 return False
             
             # Log the decision with all collected evidence
             self._log_detection_decision(customer_id, detection_results, has_app)
             
+            logger.info(f"✅ App download prompt WILL BE SENT for user {customer_id}")
             return True
             
         except Exception as e:
-            logging.getLogger(__name__).error(f"Error checking prompt eligibility: {e}")
+            logger.error(f"Error checking prompt eligibility for user {customer_id}: {e}", exc_info=True)
             return False
 
     def _log_detection_decision(self, customer_id: int, results: Dict[str, Any], has_app: bool):
@@ -170,13 +176,20 @@ class AppDetectionService:
 
     async def _check_is_guest_user(self, customer_id: int) -> bool:
         """Check if user is a guest user (more likely to need app download prompt)"""
+        logger = logging.getLogger(__name__)
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.user_service_url}/users/{customer_id}")
+                url = f"{self.user_service_url}/users/{customer_id}"
+                logger.info(f"Checking if user {customer_id} is guest via {url}")
+                response = await client.get(url, timeout=5.0)
                 if response.status_code == 200:
                     user_data = response.json()
-                    return user_data.get('is_guest', False)
-                return False
+                    is_guest = user_data.get('is_guest', False)
+                    logger.info(f"User {customer_id} data: is_guest={is_guest}, verified={user_data.get('verified')}, fcm_token={'present' if user_data.get('fcm_token') else 'missing'}")
+                    return is_guest
+                else:
+                    logger.warning(f"User service returned {response.status_code} for user {customer_id}")
+                    return False
         except Exception as e:
-            logging.getLogger(__name__).error(f"Error checking if user is guest: {e}")
+            logger.error(f"Error checking if user {customer_id} is guest: {e}", exc_info=True)
             return False

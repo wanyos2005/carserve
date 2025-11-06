@@ -36,7 +36,7 @@ class Alert(Base):
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(Integer, index=True, nullable=False)
-    
+     
     # Alert details
     type = Column(Enum(AlertType), index=True, nullable=False)
     title = Column(String(255), nullable=False)

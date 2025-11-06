@@ -234,6 +234,7 @@ class AlertService:
             #should_send_prompt = True
             
             if not should_send_prompt:
+                logging.getLogger(__name__).info(f"App download prompt skipped for user {user_id} - user already has app or prompt not needed")
                 return None
             
             # Enhance vehicle and provider information by querying other services

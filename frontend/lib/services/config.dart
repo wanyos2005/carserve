@@ -6,11 +6,11 @@ class ApiConfig {
   // Examples:
   //  - Local gateway on same machine: http://localhost:8000
   //  - LAN gateway from phone:       http://192.168.X.X:8000
-  //  - Production public IP:         'http://16.16.94.222'
+  //  - Production public IP:         'http://16.16.143.243'
 
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-     defaultValue: 'http://192.168.0.105:8000' , // ✅ Public AWS VM IP //if local machine :'http://192.168.0.103:8000', //if oracle: 'http://152.70.28.112', 
+     defaultValue: 'http://16.16.143.243', // ✅ Public AWS VM IP //if local machine :'http://192.168.0.103:8000', //if oracle: 'http://152.70.28.112', 
   );
 }
 //

@@ -142,7 +142,28 @@ df -h
 check images currently used, docker images and docker ps
 reduce system logs: sudo journalctl --vacuum-size=50M
 
-ssh into ec2.  ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.196.139
+ssh into ec2.  ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.143.243
+
+# EC2 Instance Management (when console actions are greyed out due to IAM permissions)
+# Start stopped EC2 instance via CLI (instance ID: i-0ec6c2b1be34e3c5f, region: eu-north-1)
+aws ec2 start-instances --instance-ids i-0ec6c2b1be34e3c5f --region eu-north-1
+
+# Check instance status
+aws ec2 describe-instances --instance-ids i-0ec6c2b1be34e3c5f --region eu-north-1 --query 'Reservations[].Instances[].[InstanceId,State.Name,PublicIpAddress]' --output table
+
+# Stop instance
+aws ec2 stop-instances --instance-ids i-0ec6c2b1be34e3c5f --region eu-north-1
+
+# Reboot instance
+aws ec2 reboot-instances --instance-ids i-0ec6c2b1be34e3c5f --region eu-north-1
+
+# Check your IAM permissions (what you can do with EC2)
+aws iam get-user
+aws iam list-attached-user-policies --user-name YOUR_USERNAME
+aws iam get-policy-version --policy-arn arn:aws:iam::ACCOUNT_ID:policy/POLICY_NAME --version-id v1
+
+# To fix IAM permissions, you need an admin to attach this policy (or create a custom one):
+# AmazonEC2FullAccess (or create custom policy with ec2:StartInstances, ec2:StopInstances, etc.)
 
 Run STATUS="Pending"
 ⏳ Waiting for SSM command to finish...
@@ -239,3 +260,66 @@ building the apk and bundle:
 flutter build apk --release //for unoffficial apk you can send to people inboxes to download
 
 flutter build appbundle --release // for playstore
+
+```alembic table migrations to production```
+
+use this to check the migration versions of the vm container:
+ docker compose -f docker-compose.aws.yml exec service-provider sh -lc "ls -1 alembic/versions"
+e.g, it will list:
+3167810ba581_tables_initialization.py
+__pycache__
+
+1. Align the DB to the migration that actually exists in the container:
+
+docker compose -f docker-compose.aws.yml exec service-provider alembic stamp 3167810ba581
+2. If you already committed/pushed a new migration for “a few table adjustments and a new table,” rebuild/restart service-provider so the container has it:
+
+docker compose -f docker-compose.aws.yml build service-provider
+docker compose -f docker-compose.aws.yml up -d service-provider
+3.  If you can’t change code immediately, re-stamp the DB to a revision that exists
+First confirm current DB version:
+docker compose -f docker-compose.aws.yml exec postgres psql -U AdminDb -d car_platform -c "SELECT version_num FROM service_providers.alembic_version;"
+
+If it returns c7cce0950acf which you dont have, set it to the initial revision you actually have:
+docker compose -f docker-compose.aws.yml exec postgres psql -U AdminDb -d car_platform -c "UPDATE service_providers.alembic_version SET version_num='3167810ba581';"
+
+then :
+check the current state: docker compose -f docker-compose.aws.yml exec service-provider alembic current
+then :
+docker compose -f docker-compose.aws.yml exec service-provider alembic upgrade head
+
+```example if the version is non existend```:
+ubuntu@ip-172-31-15-187:~/carserve$ docker compose -f docker-compose.aws.yml exec postgres psql -U AdminDb -d car_platform -c "UPDATE alerts.alembic_version SET version_num='37f1fda05547';"
+WARN[0000] /home/ubuntu/carserve/docker-compose.aws.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+UPDATE 1
+ubuntu@ip-172-31-15-187:~/carserve$ docker compose -f docker-compose.aws.yml exec alert-service alembic current
+WARN[0000] /home/ubuntu/carserve/docker-compose.aws.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+37f1fda05547
+ubuntu@ip-172-31-15-187:~/carserve$ docker compose -f docker-compose.aws.yml exec alert-service alembic upgrade head
+WARN[0000] /home/ubuntu/carserve/docker-compose.aws.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 8a8549c1b995, initial tables
+INFO  [alembic.runtime.migration] Running upgrade 37f1fda05547, 8a8549c1b995 -> ef5c394342e2, merge_initial_migrations
+INFO  [alembic.runtime.migration] Running upgrade ef5c394342e2 -> 48d05b247c5c, add_rating_request_and_app_download_alert_types
+ubuntu@ip-172-31-15-187:~/carserve$
+
+```app download prompts email deleivery issues```
+
+To see email delivery attempts for app-download prompts
+SELECT nl.alert_id, a.user_id, a.type, nl.channel, nl.status, nl.error_message, nl.sent_at
+FROM alerts.notification_logs nl
+JOIN alerts.alerts a ON a.id = nl.alert_id
+WHERE a.type = 'APP_DOWNLOAD_PROMPT' AND nl.channel = 'EMAIL'
+ORDER BY nl.sent_at DESC
+LIMIT 50;
+
+or 
+
+SELECT id, user_id, type, status, channels, created_at, sent_at, delivered_at, error_message
+FROM alerts.alerts
+WHERE type = 'APP_DOWNLOAD_PROMPT'
+ORDER BY created_at DESC
+LIMIT 20;
