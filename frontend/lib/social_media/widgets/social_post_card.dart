@@ -9,6 +9,8 @@ class SocialPostCard extends StatelessWidget {
   final VoidCallback? onComment;
   final VoidCallback? onShare;
   final VoidCallback? onBookmark;
+  final VoidCallback? onDelete;
+  final bool isOwnPost;
 
   const SocialPostCard({
     super.key,
@@ -17,6 +19,8 @@ class SocialPostCard extends StatelessWidget {
     this.onComment,
     this.onShare,
     this.onBookmark,
+    this.onDelete,
+    this.isOwnPost = false,
   });
 
   @override
@@ -96,7 +100,10 @@ class SocialPostCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.more_vert, color: Colors.grey[600], size: 20),
+                  GestureDetector(
+                    onTap: () => _showPostMenu(context),
+                    child: Icon(Icons.more_vert, color: Colors.grey[600], size: 20),
+                  ),
                 ],
               ),
             ),
@@ -280,5 +287,75 @@ class SocialPostCard extends StatelessWidget {
     } else {
       return 'Just now';
     }
+  }
+
+  /// Show post menu (three dots menu)
+  void _showPostMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isOwnPost && onDelete != null) ...[
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('Delete', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmDelete(context);
+                  },
+                ),
+                const Divider(),
+              ],
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Share'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onShare?.call();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Confirm delete action
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text('Are you sure you want to delete this post? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onDelete?.call();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 }

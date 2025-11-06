@@ -94,10 +94,21 @@ class SocialService {
   /// Share a post
   static Future<bool> sharePost(String postId) async {
     try {
-      final data = await ApiService.post('/social/interactions/shares', {'post_id': postId});
+      final data = await ApiService.post('/social/posts/$postId/share', {});
       return data != null;
     } catch (e) {
       print('Error sharing post: $e');
+      return false;
+    }
+  }
+
+  /// Delete a post
+  static Future<bool> deletePost(String postId) async {
+    try {
+      final ok = await ApiService.delete('/social/posts/$postId');
+      return ok;
+    } catch (e) {
+      print('Error deleting post: $e');
       return false;
     }
   }

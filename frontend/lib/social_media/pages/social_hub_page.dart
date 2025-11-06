@@ -364,6 +364,20 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
     }
   }
 
+  /// Check if a post belongs to the current user
+  bool _isOwnPost(SocialPost post) {
+    try {
+      final currentContext = UserContextService.currentContext;
+      if (currentContext?.id != null) {
+        final currentUserId = int.tryParse(currentContext!.id!);
+        return currentUserId != null && currentUserId == post.userId;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Setup real-time listeners for live updates
   void _setupRealtimeListeners() {
     // Listen for all real-time messages with null safety
@@ -863,6 +877,7 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
           
           if (postIndex >= 0 && postIndex < _feedPosts.length) {
             final post = _feedPosts[postIndex];
+            final isOwnPost = _isOwnPost(post);
           return RepaintBoundary(
             key: ValueKey(post.id),
               child: SocialPostCard(
@@ -870,6 +885,8 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
                 onLike: () => _toggleLike(post),
                 onComment: () => _showComments(post),
                 onShare: () => _sharePost(post),
+                onDelete: () => _deletePost(post),
+                isOwnPost: isOwnPost,
               ),
             );
           }
@@ -1377,6 +1394,28 @@ class _SocialHubPageState extends State<SocialHubPage> with TickerProviderStateM
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Post shared successfully!')),
+      );
+    }
+  }
+
+  Future<void> _deletePost(SocialPost post) async {
+    final success = await SocialService.deletePost(post.id);
+    if (success) {
+      setState(() {
+        // Remove the post from the feed
+        _feedPosts.removeWhere((p) => p.id == post.id);
+        // Also remove from featured post if it's the featured one
+        if (_featuredPost?.id == post.id) {
+          _featuredPost = null;
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Post deleted successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete post. Please try again.')),
       );
     }
   }
