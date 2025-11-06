@@ -80,17 +80,22 @@ class AppDetectionService:
 
     async def _check_fcm_token(self, customer_id: int) -> bool:
         """Check if customer has FCM token (Primary app detection method)"""
+        logger = logging.getLogger("uvicorn")
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.user_service_url}/users/{customer_id}")
+                response = await client.get(f"{self.user_service_url}/users/{customer_id}", timeout=5.0)
                 if response.status_code == 200:
                     user_data = response.json()
                     # Check if user has FCM token (indicates app installation)
                     fcm_token = user_data.get('fcm_token')
-                    return fcm_token is not None and fcm_token.strip() != ""
-                return False
+                    has_token = fcm_token is not None and str(fcm_token).strip() != ""
+                    logger.info(f"FCM token check for user {customer_id}: token={'present' if has_token else 'missing'}")
+                    return has_token
+                else:
+                    logger.warning(f"User service returned {response.status_code} for FCM token check for user {customer_id}")
+                    return False
         except Exception as e:
-            logging.getLogger("uvicorn").error(f"Error checking FCM token: {e}")
+            logger.error(f"Error checking FCM token for user {customer_id}: {e}", exc_info=True)
             return False
 
     async def _check_user_verification(self, customer_id: int) -> bool:
@@ -126,7 +131,11 @@ class AppDetectionService:
         return recent_prompt is not None
 
     async def should_send_app_prompt(self, customer_id: int) -> bool:
-        """Check if we should send app download prompt (comprehensive evaluation)"""
+        """Check if we should send app download prompt with priority:
+        1. Guest users (highest priority)
+        2. Unverified users (medium priority)
+        3. Users without FCM token (lowest priority)
+        """
         logger = logging.getLogger("uvicorn")
         try:
             logger.info(f"Checking app download prompt eligibility for user {customer_id}")
@@ -146,15 +155,37 @@ class AppDetectionService:
                 logger.info(f"User {customer_id} already has app installed - skipping prompt")
                 return False
             
-            # Check guest status for logging/analytics (but don't block prompt)
+            # Get user details for priority-based eligibility check
             is_guest = await self._check_is_guest_user(customer_id)
-            logger.info(f"User {customer_id} is_guest check result: {is_guest}")
+            has_fcm_token = detection_results.get('has_fcm_token', False)
             
-            # Log the decision with all collected evidence
-            self._log_detection_decision(customer_id, detection_results, has_app)
+            # Get verified status directly from user service (not from detection results which combines verified and guest)
+            is_verified = await self._get_user_verified_status(customer_id)
             
-            logger.info(f"✅ App download prompt WILL BE SENT for user {customer_id} (is_guest={is_guest}, has_app={has_app})")
-            return True
+            logger.info(f"User {customer_id} eligibility check: is_guest={is_guest}, is_verified={is_verified}, has_fcm_token={has_fcm_token}")
+            
+            # Priority-based eligibility: Only send to users who meet at least one priority criterion
+            # Priority 1: Guest users
+            if is_guest:
+                logger.info(f"✅ User {customer_id} qualifies (Priority 1: Guest user)")
+                self._log_detection_decision(customer_id, detection_results, has_app)
+                return True
+            
+            # Priority 2: Unverified users
+            if not is_verified:
+                logger.info(f"✅ User {customer_id} qualifies (Priority 2: Unverified user)")
+                self._log_detection_decision(customer_id, detection_results, has_app)
+                return True
+            
+            # Priority 3: Users without FCM token
+            if not has_fcm_token:
+                logger.info(f"✅ User {customer_id} qualifies (Priority 3: No FCM token)")
+                self._log_detection_decision(customer_id, detection_results, has_app)
+                return True
+            
+            # User doesn't meet any priority criteria
+            logger.info(f"❌ User {customer_id} does NOT qualify - user is verified, not a guest, and has FCM token")
+            return False
             
         except Exception as e:
             logger.error(f"Error checking prompt eligibility for user {customer_id}: {e}", exc_info=True)
@@ -171,6 +202,23 @@ class AppDetectionService:
         logger.info(f"  - Final Decision: {'HAS APP' if has_app else 'NO APP'}")
         logger.info(f"  - Should Send Prompt: {'NO' if has_app else 'YES'}")
 
+    async def _get_user_verified_status(self, customer_id: int) -> bool:
+        """Get user's verified status directly from user service"""
+        logger = logging.getLogger("uvicorn")
+        try:
+            async with httpx.AsyncClient() as client:
+                url = f"{self.user_service_url}/users/{customer_id}"
+                response = await client.get(url, timeout=5.0)
+                if response.status_code == 200:
+                    user_data = response.json()
+                    verified_raw = user_data.get('verified')
+                    verified = bool(verified_raw) if isinstance(verified_raw, bool) else (str(verified_raw).lower() in ('true', 't', '1') if verified_raw is not None else False)
+                    return verified
+                return False
+        except Exception as e:
+            logger.error(f"Error getting verified status for user {customer_id}: {e}", exc_info=True)
+            return False
+    
     async def _check_is_guest_user(self, customer_id: int) -> bool:
         """Check if user is a guest user (more likely to need app download prompt)"""
         logger = logging.getLogger("uvicorn")
@@ -181,8 +229,13 @@ class AppDetectionService:
                 response = await client.get(url, timeout=5.0)
                 if response.status_code == 200:
                     user_data = response.json()
-                    is_guest = user_data.get('is_guest', False)
-                    logger.info(f"User {customer_id} data: is_guest={is_guest}, verified={user_data.get('verified')}, fcm_token={'present' if user_data.get('fcm_token') else 'missing'}")
+                    # Handle both boolean and string values (e.g., "true"/"false" or True/False)
+                    is_guest_raw = user_data.get('is_guest', False)
+                    is_guest = bool(is_guest_raw) if isinstance(is_guest_raw, bool) else str(is_guest_raw).lower() in ('true', 't', '1')
+                    verified_raw = user_data.get('verified')
+                    verified = bool(verified_raw) if isinstance(verified_raw, bool) else (str(verified_raw).lower() in ('true', 't', '1') if verified_raw is not None else False)
+                    fcm_token = user_data.get('fcm_token')
+                    logger.info(f"User {customer_id} data: is_guest={is_guest} (raw: {is_guest_raw}), verified={verified} (raw: {verified_raw}), fcm_token={'present' if fcm_token else 'missing'}")
                     return is_guest
                 else:
                     logger.warning(f"User service returned {response.status_code} for user {customer_id}")
