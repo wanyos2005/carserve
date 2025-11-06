@@ -212,7 +212,14 @@ def _call_alert_service_for_app_prompt(
             )
             
             if response.status_code == 200:
-                print(f"✅ App download prompt triggered for user {user_id}")
+                try:
+                    result = response.json()
+                    if result.get('success'):
+                        print(f"✅ App download prompt triggered successfully for user {user_id}, alert_id={result.get('alert_id')}")
+                    else:
+                        print(f"⚠️ App download prompt skipped for user {user_id}: {result.get('message')}")
+                except:
+                    print(f"✅ App download prompt triggered for user {user_id} (response: {response.status_code})")
             else:
                 print(f"⚠️ Alert service returned {response.status_code} for user {user_id}")
                 

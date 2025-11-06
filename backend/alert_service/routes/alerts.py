@@ -156,7 +156,10 @@ async def trigger_app_download_prompt(
     db: Session = Depends(get_db)
 ):
     """Trigger app download prompt when a service is logged for a user without the app"""
+    logger = logging.getLogger("uvicorn")
     try:
+        logger.info(f"🔔 App download prompt request for user_id={request_data.user_id}, vehicle={request_data.vehicle_info}, provider={request_data.service_provider_name}")
+        
         from services.alert_service import AlertService
         alert_service = AlertService(db)
         
@@ -169,8 +172,10 @@ async def trigger_app_download_prompt(
         )
         
         if alert:
+            logger.info(f"✅ Alert created successfully: {alert.id} for user {request_data.user_id}")
             # Enqueue delivery to Celery (fire-and-forget)
             celery_app.send_task("deliver_alert", args=[alert.id])
+            logger.info(f"📤 Alert {alert.id} queued for Celery delivery")
             return AppDownloadPromptResponse(
                 message="App download prompt triggered successfully",
                 alert_id=alert.id,
@@ -179,6 +184,7 @@ async def trigger_app_download_prompt(
                 success=True
             )
         else:
+            logger.warning(f"⚠️ Alert NOT created for user {request_data.user_id} - prompt was skipped (user may already have app or not eligible)")
             return AppDownloadPromptResponse(
                 message="App download prompt skipped - user already has app or prompt not needed",
                 alert_id=None,
@@ -188,7 +194,7 @@ async def trigger_app_download_prompt(
             )
             
     except Exception as e:
-        logging.getLogger("uvicorn").error(f"Failed to trigger app download prompt: {e}")
+        logger.error(f"❌ Failed to trigger app download prompt for user {request_data.user_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to trigger app download prompt: {str(e)}")
 
 # ================================
