@@ -20,7 +20,7 @@ class AppDetectionService:
             return self._evaluate_app_installation(detection_results)
 
         except Exception as e:
-            logging.getLogger(__name__).error(f"Error checking app installation: {e}")
+            logging.getLogger("uvicorn").error(f"Error checking app installation: {e}")
             return False  # Default to no app to avoid missing opportunities
 
     async def _collect_all_detection_results(self, customer_id: int) -> Dict[str, Any]:
@@ -46,25 +46,25 @@ class AppDetectionService:
         
         # Primary indicators (strong evidence of app installation)
         if results.get('has_fcm_token', False):
-            logging.getLogger(__name__).info("FCM token found - user has app")
+            logging.getLogger("uvicorn").info("FCM token found - user has app")
             return True
             
         if results.get('is_verified_user', False):
-            logging.getLogger(__name__).info("Verified user - likely has app")
+            logging.getLogger("uvicorn").info("Verified user - likely has app")
             return True
         
         # Negative indicators (evidence against app installation)
         if results.get('recent_prompt_sent', False):
-            logging.getLogger(__name__).info("Recent prompt sent - user likely doesn't have app")
+            logging.getLogger("uvicorn").info("Recent prompt sent - user likely doesn't have app")
             return False
             
         # Engagement patterns
         if results.get('user_engagement', False):
-            logging.getLogger(__name__).info("High engagement - likely has app")
+            logging.getLogger("uvicorn").info("High engagement - likely has app")
             return True
             
         # Default to no app if no clear indicators
-        logging.getLogger(__name__).info("No clear indicators - assuming no app")
+        logging.getLogger("uvicorn").info("No clear indicators - assuming no app")
         return False
 
     async def _check_user_engagement(self, customer_id: int) -> bool:
@@ -75,7 +75,7 @@ class AppDetectionService:
             # For now, return False as a placeholder
             return False
         except Exception as e:
-            logging.getLogger(__name__).error(f"Error checking user engagement: {e}")
+            logging.getLogger("uvicorn").error(f"Error checking user engagement: {e}")
             return False
 
     async def _check_fcm_token(self, customer_id: int) -> bool:
@@ -90,7 +90,7 @@ class AppDetectionService:
                     return fcm_token is not None and fcm_token.strip() != ""
                 return False
         except Exception as e:
-            logging.getLogger(__name__).error(f"Error checking FCM token: {e}")
+            logging.getLogger("uvicorn").error(f"Error checking FCM token: {e}")
             return False
 
     async def _check_user_verification(self, customer_id: int) -> bool:
@@ -106,7 +106,7 @@ class AppDetectionService:
                     return is_verified and not is_guest
                 return False
         except Exception as e:
-            logging.getLogger(__name__).error(f"Error checking user verification: {e}")
+            logging.getLogger("uvicorn").error(f"Error checking user verification: {e}")
             return False
 
     async def _check_recent_prompts(self, customer_id: int) -> bool:
@@ -127,7 +127,7 @@ class AppDetectionService:
 
     async def should_send_app_prompt(self, customer_id: int) -> bool:
         """Check if we should send app download prompt (comprehensive evaluation)"""
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger("uvicorn")
         try:
             logger.info(f"Checking app download prompt eligibility for user {customer_id}")
             
@@ -165,7 +165,7 @@ class AppDetectionService:
 
     def _log_detection_decision(self, customer_id: int, results: Dict[str, Any], has_app: bool):
         """Log the detection decision with all collected evidence"""
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger("uvicorn")
         logger.info(f"App detection for user {customer_id}:")
         logger.info(f"  - FCM Token: {results.get('has_fcm_token', False)}")
         logger.info(f"  - Verified User: {results.get('is_verified_user', False)}")
@@ -176,7 +176,7 @@ class AppDetectionService:
 
     async def _check_is_guest_user(self, customer_id: int) -> bool:
         """Check if user is a guest user (more likely to need app download prompt)"""
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger("uvicorn")
         try:
             async with httpx.AsyncClient() as client:
                 url = f"{self.user_service_url}/users/{customer_id}"
