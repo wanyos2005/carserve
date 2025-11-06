@@ -217,14 +217,19 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Ensure boolean values are properly converted (handle None as False)
+    verified = bool(user.verified) if user.verified is not None else False
+    is_guest = bool(user.is_guest) if user.is_guest is not None else False
+    fcm_token = user.fcm_token if user.fcm_token else None
+
     return {
         "id": user.id,
         "email": user.email,
         "name": user.name,
         "phone": user.phone,
-        "verified": user.verified,
-        "is_guest": user.is_guest,
-        "fcm_token": user.fcm_token,
+        "verified": verified,
+        "is_guest": is_guest,
+        "fcm_token": fcm_token,
     }
 
 @router.get("/users/{user_id}/fcm-token", response_model=FCMTokenResponse)

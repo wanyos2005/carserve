@@ -164,20 +164,25 @@ class AppDetectionService:
             
             logger.info(f"User {customer_id} eligibility check: is_guest={is_guest}, is_verified={is_verified}, has_fcm_token={has_fcm_token}")
             
+            # Safety check: If user has FCM token, they have the app - don't send prompt
+            if has_fcm_token:
+                logger.info(f"❌ User {customer_id} has FCM token - they have the app, skipping prompt")
+                return False
+            
             # Priority-based eligibility: Only send to users who meet at least one priority criterion
-            # Priority 1: Guest users
+            # Priority 1: Guest users (highest priority)
             if is_guest:
                 logger.info(f"✅ User {customer_id} qualifies (Priority 1: Guest user)")
                 self._log_detection_decision(customer_id, detection_results, has_app)
                 return True
             
-            # Priority 2: Unverified users
+            # Priority 2: Unverified users (medium priority)
             if not is_verified:
                 logger.info(f"✅ User {customer_id} qualifies (Priority 2: Unverified user)")
                 self._log_detection_decision(customer_id, detection_results, has_app)
                 return True
             
-            # Priority 3: Users without FCM token
+            # Priority 3: Users without FCM token (lowest priority - already checked above, but kept for completeness)
             if not has_fcm_token:
                 logger.info(f"✅ User {customer_id} qualifies (Priority 3: No FCM token)")
                 self._log_detection_decision(customer_id, detection_results, has_app)
