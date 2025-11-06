@@ -12,6 +12,7 @@ from services.metrics import inc, mark_rule_run
 @celery_app.task(name="deliver_alert")
 def deliver_alert_task(alert_id: str) -> None:
     logger = logging.getLogger("uvicorn")
+    logger.info(f"deliver_alert_task: received task for alert_id={alert_id}")
     db = SessionLocal()
     try:
         # Fetch alert directly via ORM (CRUD module removed)
@@ -19,6 +20,7 @@ def deliver_alert_task(alert_id: str) -> None:
         if not alert:
             logger.error(f"deliver_alert_task: alert not found id={alert_id}")
             return
+        logger.info(f"deliver_alert_task: processing alert {alert_id} for user {alert.user_id}, type={alert.type}")
         service = NotificationService(db)
         try:
             inc("deliveries_attempted")

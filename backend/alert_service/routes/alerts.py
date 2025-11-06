@@ -912,6 +912,42 @@ async def send_new_comment_notification(
             detail=f"Failed to send new comment notification: {str(e)}"
         )
 
+@router.post("/retry-pending")
+async def retry_pending_alerts(
+    alert_type: Optional[AlertType] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Manually retry delivery of pending alerts (useful when worker was down)"""
+    try:
+        query = db.query(Alert).filter(Alert.status == AlertStatus.PENDING)
+        if alert_type:
+            query = query.filter(Alert.type == alert_type)
+        
+        pending_alerts = query.limit(limit).all()
+        
+        logger = logging.getLogger("uvicorn")
+        logger.info(f"Found {len(pending_alerts)} pending alerts to retry")
+        
+        retried = 0
+        for alert in pending_alerts:
+            try:
+                result = celery_app.send_task("deliver_alert", args=[alert.id])
+                logger.info(f"Queued alert {alert.id} for delivery, task_id={result.id}")
+                retried += 1
+            except Exception as e:
+                logger.error(f"Failed to queue alert {alert.id}: {e}", exc_info=True)
+        
+        return {
+            "message": f"Queued {retried} pending alerts for delivery",
+            "retried": retried,
+            "total_pending": len(pending_alerts)
+        }
+    except Exception as e:
+        logger = logging.getLogger("uvicorn")
+        logger.error(f"Failed to retry pending alerts: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to retry pending alerts: {str(e)}")
+
 """this file deals with HTTP concerns
 Parse multipart/form-data (Form fields + File/UploadFile).
 If a file is included, upload it to storage (e.g., R2/S3), get an image_url.
