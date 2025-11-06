@@ -146,17 +146,14 @@ class AppDetectionService:
                 logger.info(f"User {customer_id} already has app installed - skipping prompt")
                 return False
             
-            # Additional checks for prompt eligibility
+            # Check guest status for logging/analytics (but don't block prompt)
             is_guest = await self._check_is_guest_user(customer_id)
             logger.info(f"User {customer_id} is_guest check result: {is_guest}")
-            if not is_guest:
-                logger.info(f"User {customer_id} is not a guest user - skipping prompt")
-                return False
             
             # Log the decision with all collected evidence
             self._log_detection_decision(customer_id, detection_results, has_app)
             
-            logger.info(f"✅ App download prompt WILL BE SENT for user {customer_id}")
+            logger.info(f"✅ App download prompt WILL BE SENT for user {customer_id} (is_guest={is_guest}, has_app={has_app})")
             return True
             
         except Exception as e:
