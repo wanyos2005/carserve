@@ -202,6 +202,8 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/alert-service:latest
     env_file: .env
+    ports:
+      - "8006:8006"
     depends_on:
       - postgres
       - redis
