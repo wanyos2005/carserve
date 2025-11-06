@@ -259,15 +259,15 @@ services:
       - redis
     restart: unless-stopped
     
-    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
+    command: bash -lc "python -m celery -A celery_app.celery_app worker --loglevel=INFO --concurrency=1"
     deploy:
       resources:
         limits:
-          memory: 128M
-          cpus: '0.3'
+          memory: 512M
+          cpus: '0.5'
         reservations:
-          memory: 64M
-          cpus: '0.15'
+          memory: 256M
+          cpus: '0.25'
     logging:
       driver: json-file
       options:
