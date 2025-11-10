@@ -124,13 +124,108 @@ def send_code(
 
 
 # --------------------------
+# Test accounts for Google Play Store review
+# --------------------------
+# These accounts bypass OTP verification for review purposes
+# Format: (email, provider_id or None)
+# - None = normal user (car owner)
+# - provider_id = provider-linked user
+TEST_ACCOUNTS = {
+    "playstore.review@driveon.com": None,  # Normal user (car owner)
+    "provider.review@driveon.com": "test-provider-id",  # Provider-linked user
+    "test.review@driveon.com": None,  # Normal user
+    "google.review@driveon.com": None,  # Normal user
+    "review@driveon.com": None,  # Normal user
+}
+
+def is_test_account(email: str) -> bool:
+    """Check if email is a test account for Google Play review"""
+    if not email:
+        return False
+    email_normalized = email.lower().strip()
+    test_emails_normalized = [acc.lower().strip() for acc in TEST_ACCOUNTS.keys()]
+    is_test = email_normalized in test_emails_normalized
+    if is_test:
+        print(f"DEBUG: Test account detected: {email} (normalized: {email_normalized})")
+    else:
+        print(f"DEBUG: Not a test account: {email} (normalized: {email_normalized})")
+        print(f"DEBUG: Available test accounts: {test_emails_normalized}")
+    return is_test
+
+def get_test_account_provider_id(email: str) -> str | None:
+    """Get provider_id for test account, or None for normal user"""
+    if not email:
+        return None
+    email_lower = email.lower().strip()
+    for test_email, provider_id in TEST_ACCOUNTS.items():
+        if test_email.lower().strip() == email_lower:
+            print(f"DEBUG: Found provider_id for test account {email}: {provider_id}")
+            return provider_id
+    return None
+
+
+# --------------------------
 # Verify OTP
 # --------------------------
 @router.post("/verify-code", response_model=Token)
 def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
+    email_lower = req.email.lower().strip()
+    print(f"DEBUG: verify_code called with email: {req.email} (normalized: {email_lower})")
+    print(f"DEBUG: OTP code provided: {req.code}")
+    
+    # Check if this is a test account (accept any OTP code)
+    is_test = is_test_account(req.email)
+    print(f"DEBUG: is_test_account result: {is_test}")
+    
+    if is_test:
+        print(f"DEBUG: Processing test account verification for {req.email}")
+        # For test accounts, accept any OTP code (for Google Play review)
+        # Still require a code to be entered, but any code will work
+        db_user = db.query(User).filter(User.email == email_lower).first()
+        print(f"DEBUG: Test account user lookup result: {db_user.id if db_user else 'User not found, will create'}")
+        if not db_user:
+            # Create test user if doesn't exist
+            db_user = User(email=req.email, verified=True)
+            db.add(db_user)
+            db.commit()
+            db.refresh(db_user)
+        else:
+            # Mark existing user as verified
+            db_user.verified = True
+            db.commit()
+
+        # Clean up any existing OTP entries for test account (optional)
+        existing_otps = db.query(OTP).filter(OTP.email == email_lower).all()
+        for otp in existing_otps:
+            db.delete(otp)
+        db.commit()
+
+        # ✅ Handle provider linking for test accounts
+        # Priority: 1) req.provider_id (if provided), 2) test account config, 3) None
+        provider_id_to_link = req.provider_id or get_test_account_provider_id(req.email)
+        
+        if provider_id_to_link:
+            existing_link = (
+                db.query(ProviderUserLink)
+                .filter(
+                    ProviderUserLink.user_id == db_user.id,
+                    ProviderUserLink.provider_id == provider_id_to_link,
+                )
+                .first()
+            )
+            if not existing_link:
+                link = ProviderUserLink(user_id=db_user.id, provider_id=provider_id_to_link)
+                db.add(link)
+                db.commit()
+
+        # Issue token for test account (any OTP code accepted)
+        token = create_access_token({"sub": str(db_user.id)})
+        return {"access_token": token, "token_type": "bearer"}
+
+    # Normal OTP verification for real users
     otp_entry = (
         db.query(OTP)
-        .filter(OTP.email == req.email, OTP.code == req.code)
+        .filter(OTP.email == email_lower, OTP.code == req.code)
         .order_by(OTP.created_at.desc())
         .first()
     )
@@ -145,7 +240,7 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
     db.delete(otp_entry)
 
     # mark user as verified
-    db_user = db.query(User).filter(User.email == req.email).first()
+    db_user = db.query(User).filter(User.email == email_lower).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 

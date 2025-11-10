@@ -15,4 +15,5 @@ class ApiConfig {
 }
 //
 
-//ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.124.14
+//ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.143.243
+// finding my current public ip: curl -s ifconfig.me or in windows powershell:    (Invoke-WebRequest -Uri "https://api.ipify.org").Content
