@@ -64,13 +64,23 @@ def resize_icon(source_path, output_dir="frontend/android/app/src/main/res"):
             file_size = os.path.getsize(target_file)
             print(f"   Created: {target_file} ({file_size} bytes)")
         
+        # Also create Play Store 512x512 icon
+        print("\n🎯 Creating Play Store 512x512 app icon...")
+        playstore_dir = os.path.join("playstore-assets")
+        os.makedirs(playstore_dir, exist_ok=True)
+        app_icon_512 = os.path.join(playstore_dir, "app_icon_512.png")
+        icon_512 = source_image.resize((512, 512), Image.Resampling.LANCZOS)
+        icon_512.save(app_icon_512, "PNG")
+        file_size_512 = os.path.getsize(app_icon_512)
+        print(f"   Created: {app_icon_512} ({file_size_512} bytes)")
+        
         print()
         print("✅ Icon resize complete!")
         print()
         print("Next steps:")
-        print("1. Test the icons: cd frontend; flutter build apk --debug")
-        print("2. Install on device/emulator to verify")
-        print("3. Check icon appears correctly on home screen")
+        print("1. Upload playstore-assets/app_icon_512.png as the Play Console App icon (512×512)")
+        print("2. Test launcher icons: cd frontend; flutter build apk --debug")
+        print("3. Install on device/emulator to verify launcher icon looks correct")
         
         return True
         
