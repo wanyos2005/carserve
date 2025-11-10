@@ -212,23 +212,32 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
         
         if provider_id_to_link:
             print(f"DEBUG: Attempting to link user {db_user.id} to provider {provider_id_to_link}")
+            
+            # Check for any existing link for this user (not just the specific provider)
             existing_link = (
                 db.query(ProviderUserLink)
-                .filter(
-                    ProviderUserLink.user_id == db_user.id,
-                    ProviderUserLink.provider_id == provider_id_to_link,
-                )
+                .filter(ProviderUserLink.user_id == db_user.id)
                 .first()
             )
-            if not existing_link:
+            
+            if existing_link:
+                if existing_link.provider_id != provider_id_to_link:
+                    # Update existing link to new provider_id
+                    print(f"DEBUG: Updating existing provider link from {existing_link.provider_id} to {provider_id_to_link}")
+                    existing_link.provider_id = provider_id_to_link
+                    db.commit()
+                    db.refresh(existing_link)
+                    print(f"DEBUG: Provider link updated successfully - user_id: {existing_link.user_id}, provider_id: {existing_link.provider_id}")
+                else:
+                    print(f"DEBUG: Provider link already exists with correct provider_id - user_id: {existing_link.user_id}, provider_id: {existing_link.provider_id}")
+            else:
+                # Create new link
                 print(f"DEBUG: Creating new provider link for user {db_user.id} to provider {provider_id_to_link}")
                 link = ProviderUserLink(user_id=db_user.id, provider_id=provider_id_to_link)
                 db.add(link)
                 db.commit()
                 db.refresh(link)
                 print(f"DEBUG: Provider link created successfully - user_id: {link.user_id}, provider_id: {link.provider_id}")
-            else:
-                print(f"DEBUG: Provider link already exists - user_id: {existing_link.user_id}, provider_id: {existing_link.provider_id}")
 
         # ✅ Handle admin role assignment for admin test accounts
         if req.email.lower().strip() in [acc.lower() for acc in ADMIN_TEST_ACCOUNTS]:
