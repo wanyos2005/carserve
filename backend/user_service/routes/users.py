@@ -132,7 +132,7 @@ def send_code(
 # - provider_id = provider-linked user
 TEST_ACCOUNTS = {
     "playstore.review@driveon.com": None,  # Normal user (car owner)
-    "provider.review@driveon.com": "test-provider-id",  # Provider-linked user
+    "provider.review@driveon.com": "d1ae41d3-cd0b-4b18-bc46-66b31508da2d",  # Provider-linked user (Premium Auto Services - Karen - Test Provider)
     "test.review@driveon.com": None,  # Normal user
     "google.review@driveon.com": None,  # Normal user
     "review@driveon.com": None,  # Normal user

@@ -339,3 +339,5 @@ SELECT * FROM users.tbl_auth WHERE id = 6 OR email = 'kwkitui@gmail.com';
 
 ```how to build the frontend apk```
 cd frontend && flutter build apk --release
+
+// finding my current public ip: curl -s ifconfig.me or in windows powershell:    (Invoke-WebRequest -Uri "https://api.ipify.org").Content
