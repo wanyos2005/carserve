@@ -2,7 +2,7 @@
 
 ## Overview
 
-Your app has **two distinct user types** with different features:
+Your app has **three distinct user types** with different features:
 
 1. **Normal Users (Car Owners)** - No provider link
    - Service booking
@@ -18,7 +18,15 @@ Your app has **two distinct user types** with different features:
    - Provider loyalty settings
    - **Plus** all normal user features
 
-**Google Play reviewers should test BOTH account types** to review all functionality.
+3. **Admin Users** - System administrators
+   - Admin dashboard
+   - User management
+   - Provider management
+   - Service management
+   - Loyalty program management
+   - **Plus** all provider and normal user features
+
+**Google Play reviewers should test ALL THREE account types** to review all functionality.
 
 ---
 
@@ -33,6 +41,11 @@ Your app has **two distinct user types** with different features:
 - **Email**: `provider.review@driveon.com`
 - **Type**: Provider (linked to provider)
 - **Features**: Provider dashboard + all customer features
+
+### Account 3: Admin User
+- **Email**: `admin.review@driveon.com`
+- **Type**: Administrator
+- **Features**: Admin dashboard + all provider features + all customer features
 
 ---
 

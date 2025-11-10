@@ -168,9 +168,10 @@ APP ACCESS INSTRUCTIONS FOR GOOGLE PLAY REVIEW
 
 Authentication Method: Email + OTP (One-Time Password)
 
-Our app supports two user types with different features:
+Our app supports three user types with different features:
 1. Normal Users (Car Owners) - Book services, manage insurance, track expenses
 2. Provider Users - Provider dashboard, manage bookings, provider-specific features
+3. Admin Users - Admin dashboard, user management, system administration
 
 TEST ACCOUNTS:
 
@@ -183,6 +184,11 @@ Account 2 - Provider User:
 Email: provider.review@driveon.com
 User Type: Provider (linked to a service provider)
 Features: Provider dashboard, booking management, provider analytics, all car owner features
+
+Account 3 - Admin User:
+Email: admin.review@driveon.com
+User Type: Administrator
+Features: Admin dashboard, user management, provider management, service management, loyalty program management, all provider and car owner features
 
 STEP-BY-STEP ACCESS INSTRUCTIONS:
 
@@ -212,13 +218,28 @@ For Provider User (provider.review@driveon.com):
    - Provider loyalty settings
    - All normal user features (service booking, insurance, etc.)
 
+For Admin User (admin.review@driveon.com):
+1. Launch the DriveOn app
+2. On the login screen, enter: admin.review@driveon.com
+3. Tap "Send OTP" or "Get Verification Code"
+4. Enter any 6-digit code (e.g., 000000, 123456, or any numbers)
+5. Tap "Verify" or "Submit"
+6. You will have access to:
+   - Admin dashboard
+   - User management
+   - Provider management
+   - Service management
+   - Loyalty program management
+   - All provider features (dashboard, bookings, analytics)
+   - All normal user features (service booking, insurance, etc.)
+
 IMPORTANT NOTES:
-- Both test accounts accept any OTP code for verification
+- All test accounts accept any OTP code for verification
 - These accounts are configured specifically for Google Play review
 - All app features are accessible after authentication
 - No payment or subscription required for testing
 - The app does not require any external devices or services
-- Please test both account types to review all app functionality
+- Please test all three account types (normal user, provider, admin) to review all app functionality
 
 If you encounter any issues accessing the app, please contact us at: support@driveon.com
 ```

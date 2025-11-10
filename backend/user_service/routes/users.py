@@ -133,10 +133,16 @@ def send_code(
 TEST_ACCOUNTS = {
     "playstore.review@driveon.com": None,  # Normal user (car owner)
     "provider.review@driveon.com": "d1ae41d3-cd0b-4b18-bc46-66b31508da2d",  # Provider-linked user (Premium Auto Services - Karen - Test Provider)
+    "admin.review@driveon.com": None,  # Admin user (will be assigned admin role)
     "test.review@driveon.com": None,  # Normal user
     "google.review@driveon.com": None,  # Normal user
     "review@driveon.com": None,  # Normal user
 }
+
+# Admin test accounts - these will be automatically assigned admin role
+ADMIN_TEST_ACCOUNTS = [
+    "admin.review@driveon.com",
+]
 
 def is_test_account(email: str) -> bool:
     """Check if email is a test account for Google Play review"""
@@ -205,6 +211,7 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
         provider_id_to_link = req.provider_id or get_test_account_provider_id(req.email)
         
         if provider_id_to_link:
+            print(f"DEBUG: Attempting to link user {db_user.id} to provider {provider_id_to_link}")
             existing_link = (
                 db.query(ProviderUserLink)
                 .filter(
@@ -214,9 +221,36 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
                 .first()
             )
             if not existing_link:
+                print(f"DEBUG: Creating new provider link for user {db_user.id} to provider {provider_id_to_link}")
                 link = ProviderUserLink(user_id=db_user.id, provider_id=provider_id_to_link)
                 db.add(link)
                 db.commit()
+                db.refresh(link)
+                print(f"DEBUG: Provider link created successfully - user_id: {link.user_id}, provider_id: {link.provider_id}")
+            else:
+                print(f"DEBUG: Provider link already exists - user_id: {existing_link.user_id}, provider_id: {existing_link.provider_id}")
+
+        # ✅ Handle admin role assignment for admin test accounts
+        if req.email.lower().strip() in [acc.lower() for acc in ADMIN_TEST_ACCOUNTS]:
+            admin_role = db.query(Roles).filter(Roles.name == "admin").first()
+            if admin_role:
+                existing_admin_role = db.query(User_Roles).filter(
+                    User_Roles.user_id == db_user.id,
+                    User_Roles.role_id == str(admin_role.id),
+                    User_Roles.active == True
+                ).first()
+                
+                if not existing_admin_role:
+                    user_role = User_Roles(
+                        user_id=db_user.id,
+                        role_id=str(admin_role.id),
+                        active=True
+                    )
+                    db.add(user_role)
+                    db.commit()
+                    print(f"DEBUG: Admin role assigned to test account {req.email}")
+                else:
+                    print(f"DEBUG: Test account {req.email} already has admin role")
 
         # Issue token for test account (any OTP code accepted)
         token = create_access_token({"sub": str(db_user.id)})
@@ -277,6 +311,19 @@ def read_users_me(current_user: User = Depends(get_current_user), db: Session = 
     provider_link = db.query(ProviderUserLink).filter(
         ProviderUserLink.user_id == current_user.id
     ).first()
+    
+    print(f"DEBUG /me: User {current_user.email} (ID: {current_user.id})")
+    print(f"DEBUG /me: Provider link found: {provider_link is not None}")
+    if provider_link:
+        print(f"DEBUG /me: Provider ID: {provider_link.provider_id}")
+    else:
+        # Check if there are any links for this user at all
+        all_links = db.query(ProviderUserLink).filter(
+            ProviderUserLink.user_id == current_user.id
+        ).all()
+        print(f"DEBUG /me: Total provider links for user: {len(all_links)}")
+        for link in all_links:
+            print(f"DEBUG /me: Found link - provider_id: {link.provider_id}, user_id: {link.user_id}")
 
     # Check if user is admin
     admin_role = db.query(Roles).filter(Roles.name == "admin").first()
@@ -299,6 +346,8 @@ def read_users_me(current_user: User = Depends(get_current_user), db: Session = 
         "is_admin": is_admin,
         "role": "admin" if is_admin else ("provider" if provider_link else "user")
     }
+    
+    print(f"DEBUG /me: Returning user_data with provider_id: {user_data['provider_id']}")
 
     return user_data
 
