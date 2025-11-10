@@ -323,3 +323,19 @@ FROM alerts.alerts
 WHERE type = 'APP_DOWNLOAD_PROMPT'
 ORDER BY created_at DESC
 LIMIT 20;
+
+Command sequence to delete a user:
+-- 1. Check the user first
+SELECT * FROM users.tbl_auth WHERE id = 6 OR email = 'kwkitui@gmail.com';
+
+-- 2. Delete the user
+DELETE FROM users.tbl_auth WHERE id = 6;
+
+-- Or by email:
+-- DELETE FROM users.tbl_auth WHERE email = 'kwkitui@gmail.com';
+
+-- 3. Verify deletion
+SELECT * FROM users.tbl_auth WHERE id = 6 OR email = 'kwkitui@gmail.com';
+
+```how to build the frontend apk```
+cd frontend && flutter build apk --release
