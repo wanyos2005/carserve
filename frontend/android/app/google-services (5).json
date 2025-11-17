@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "205376878863",
+    "project_id": "driveon-car-platform",
+    "storage_bucket": "driveon-car-platform.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:205376878863:android:acda5969a820bc2d3ae67a",
+        "android_client_info": {
+          "package_name": "com.driveon.carplatform"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsqVDiErXRATufdNbGXigYu_O3TjyCG08"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:205376878863:android:f459be56c33491033ae67a",
+        "android_client_info": {
+          "package_name": "com.driveon.carplatform.v2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsqVDiErXRATufdNbGXigYu_O3TjyCG08"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
