@@ -184,7 +184,7 @@ Provider: Premium tier (1.5x multiplier) ← From opt-in
 User: Gold tier (2.0x multiplier) ← From lifetime points
 
 Calculation:
-1. Base: 10,000 × 0.01 = 100 points
+1. Base: 10,000 × 0.01 = 100 points 
 2. Provider tier: 100 × 1.5 = 150 points
 3. User tier: 150 × 2.0 = 300 points FINAL ✅
 ```
