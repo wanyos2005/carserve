@@ -143,6 +143,9 @@ check images currently used, docker images and docker ps
 reduce system logs: sudo journalctl --vacuum-size=50M
 
 ssh into ec2.   
+ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.143.243
+
+
 Run STATUS="Pending"
 ⏳ Waiting for SSM command to finish...
 Current SSM status: Failed

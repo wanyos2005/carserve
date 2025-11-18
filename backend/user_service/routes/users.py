@@ -93,20 +93,30 @@ def send_code(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    # Normalize email (consistent with verification)
+    email_lower = req.email.lower().strip()
+    
     # ensure user exists
-    db_user = db.query(User).filter(User.email == req.email).first()
+    db_user = db.query(User).filter(User.email == email_lower).first()
     if not db_user:
-        db_user = User(email=req.email, verified=False)
+        db_user = User(email=email_lower, verified=False)
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+
+    # ✅ CRITICAL FIX: Delete old OTPs for this email to prevent race conditions
+    # This ensures only one valid OTP exists at a time
+    old_otps = db.query(OTP).filter(OTP.email == email_lower).all()
+    for otp in old_otps:
+        db.delete(otp)
+    db.commit()
 
     # generate OTP
     code = generate_otp(4)
     expires_at = datetime.utcnow() + timedelta(minutes=5)
 
-    # save OTP in DB
-    otp_entry = OTP(email=req.email, code=code, expires_at=expires_at)
+    # save OTP in DB (using normalized email)
+    otp_entry = OTP(email=email_lower, code=code, expires_at=expires_at)
     db.add(otp_entry)
     db.commit()
 
@@ -241,15 +251,29 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
         return {"access_token": token, "token_type": "bearer"}
 
     # Normal OTP verification for real users
+    # ✅ CRITICAL FIX: Normalize code input to handle whitespace issues
+    code_normalized = req.code.strip()
+    
     otp_entry = (
         db.query(OTP)
-        .filter(OTP.email == email_lower, OTP.code == req.code)
+        .filter(OTP.email == email_lower, OTP.code == code_normalized)
         .order_by(OTP.created_at.desc())
         .first()
     )
 
     if not otp_entry:
-        raise HTTPException(status_code=401, detail="Invalid code")
+        # Check if any OTP exists for this email (better error message)
+        existing_otps = db.query(OTP).filter(OTP.email == email_lower).all()
+        if existing_otps:
+            raise HTTPException(
+                status_code=401, 
+                detail="Invalid code. The code you entered doesn't match. Please request a new code."
+            )
+        else:
+            raise HTTPException(
+                status_code=401, 
+                detail="No verification code found. Please request a new code."
+            )
 
     if otp_entry.expires_at < datetime.utcnow():
         raise HTTPException(status_code=401, detail="Code expired")

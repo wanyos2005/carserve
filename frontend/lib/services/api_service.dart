@@ -46,6 +46,14 @@ class ApiService {
       print('❌ API Error: ${response.statusCode} - ${response.body}'); // Debug
     }
 
+    // Clear invalid tokens on 401 (unauthorized)
+    if (response.statusCode == 401) {
+      print('⚠️ 401 Unauthorized - clearing stored token');
+      await StorageService.clearToken();
+      await StorageService.clearUser();
+      return null;
+    }
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.body.isNotEmpty ? jsonDecode(response.body) : null;
     }
@@ -65,6 +73,14 @@ class ApiService {
     );
 
     // (debug logs removed)
+
+    // Clear invalid tokens on 401 (unauthorized)
+    if (response.statusCode == 401) {
+      print('⚠️ 401 Unauthorized - clearing stored token');
+      await StorageService.clearToken();
+      await StorageService.clearUser();
+      return null;
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response.body.isNotEmpty ? jsonDecode(response.body) : null;

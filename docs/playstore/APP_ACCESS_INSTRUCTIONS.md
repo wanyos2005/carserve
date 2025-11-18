@@ -354,3 +354,34 @@ Make sure to provide a support email in your Play Console:
 
 **Once you've set up the test account, use the instructions above in the Play Console App Access section!**
 
+in playstore:
+Fill out the form as follows:
+Instruction name (60 chars max)
+DriveOn App Access - Email + OTP Authentication
+Username, email address or phone number (100 chars max)
+playstore.review@driveon.com
+Password (100 chars max)
+N/A - Uses OTP verification. See instructions below.
+Any other information required to access your app (500 chars max)
+AUTHENTICATION: Email + OTP (One-Time Password)STEP-BY-STEP:1. Launch app2. Enter email: playstore.review@driveon.com3. Tap "Send OTP"4. Enter any 6-digit code (e.g., 000000 or 123456)5. Tap "Verify" - test account auto-verifies with any OTP6. Access all featuresADDITIONAL TEST ACCOUNTS:- provider.review@driveon.com (Provider features)- admin.review@driveon.com (Admin features)Same OTP process - any 6-digit code works.NOTE: Test accounts accept any OTP code for review purposes.
+Do not check
+"No other information is required to access my app" — leave unchecked since OTP is required.
+Alternative (if you want to provide all 3 accounts separately)
+You can create 3 separate instruction entries:
+Entry 1: Normal User
+Name: Normal User Access
+Email: playstore.review@driveon.com
+Password: N/A - OTP required
+Instructions: Enter email, tap Send OTP, enter any 6-digit code (e.g., 000000), verify. Test account accepts any OTP.
+Entry 2: Provider User
+Name: Provider User Access
+Email: provider.review@driveon.com
+Password: N/A - OTP required
+Instructions: Enter email, tap Send OTP, enter any 6-digit code (e.g., 000000), verify. Access provider dashboard and all features.
+Entry 3: Admin User
+Name: Admin User Access
+Email: admin.review@driveon.com
+Password: N/A - OTP required
+Instructions: Enter email, tap Send OTP, enter any 6-digit code (e.g., 000000), verify. Access admin dashboard and all features.
+Recommendation
+Start with one entry (Normal User) using the first set of instructions. If reviewers need more, they can ask. Ensure your backend accepts any OTP for those test emails before submitting.
