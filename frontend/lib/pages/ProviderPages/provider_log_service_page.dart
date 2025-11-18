@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:driveon_car_platform/services/provider_service.dart';
 import 'package:driveon_car_platform/services/booking_service.dart';
@@ -33,6 +35,10 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   // Cost tracking for each service
   final Map<int, TextEditingController> _serviceCostControllers = {};
 
+  // Car data for autocomplete (make -> list of models)
+  Map<String, List<String>> carData = {};
+  String _selectedMake = "";
+
   DateTime? _performedAt;
   DateTime? _nextServiceDate;
   List<Map<String, dynamic>> _services = [];
@@ -41,11 +47,30 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
   bool _loading = false;
   Timer? _debounce;
 
+  // Hold references to autocomplete controllers
+  TextEditingController? _makeAutocompleteController;
+  TextEditingController? _modelAutocompleteController;
+
   @override
   void initState() {
     super.initState();
+    _loadCarData();
     _fetchTemplates();
     _vehiclePlateController.addListener(_onPlateChanged);
+  }
+
+  // Load car models data from JSON
+  Future<void> _loadCarData() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/car_models.json');
+      final data = json.decode(jsonString) as Map<String, dynamic>;
+      setState(() {
+        carData = data.map((key, value) => MapEntry(key, List<String>.from(value)));
+      });
+    } catch (e) {
+      debugPrint('Could not load car_models.json: $e');
+      // App still works — Autocomplete will just have no suggestions
+    }
   }
 
   @override
@@ -151,16 +176,26 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
           setState(() {
             _vehicleMakeController.text = vehicle['make'] ?? '';
             _vehicleModelController.text = vehicle['model'] ?? '';
+            _selectedMake = vehicle['make'] ?? '';
             _fuelTypeController.text = vehicle['fuel_type'] ?? '';
             _yomController.text = vehicle['yom']?.toString() ?? '';
             _mileageController.text = vehicle['mileage']?.toString() ?? '';
+            // Update autocomplete controllers if they exist
+            _makeAutocompleteController?.text = vehicle['make'] ?? '';
+            _modelAutocompleteController?.text = vehicle['model'] ?? '';
           });
         } else {
-          _vehicleMakeController.clear();
-          _vehicleModelController.clear();
-          _fuelTypeController.clear();
-          _yomController.clear();
-          _mileageController.clear();
+          setState(() {
+            _vehicleMakeController.clear();
+            _vehicleModelController.clear();
+            _selectedMake = '';
+            _fuelTypeController.clear();
+            _yomController.clear();
+            _mileageController.clear();
+            // Clear autocomplete controllers
+            _makeAutocompleteController?.clear();
+            _modelAutocompleteController?.clear();
+          });
         }
       } catch (e) {
         debugPrint("Vehicle search error: $e");
@@ -490,11 +525,109 @@ class _ProviderLogServicePageState extends State<ProviderLogServicePage> {
             const SizedBox(height: 8),
             _compactInputField(_vehiclePlateController, "Vehicle Plate (type to autofill)", required: true),
             const SizedBox(height: 8),
+            // Make Autocomplete
             Row(
               children: [
-                Expanded(child: _compactInputField(_vehicleMakeController, "Make")),
+                Expanded(
+                  child: Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (textEditingValue.text.isEmpty) {
+                        // Show all makes as suggestions when typing, else empty
+                        return carData.keys;
+                      }
+                      final lower = textEditingValue.text.toLowerCase();
+                      return carData.keys.where((k) => k.toLowerCase().contains(lower));
+                    },
+                    onSelected: (selection) {
+                      setState(() {
+                        _selectedMake = selection;
+                        _vehicleMakeController.text = selection;
+                        // Clear model when make changes
+                        _vehicleModelController.clear();
+                        _modelAutocompleteController?.clear();
+                      });
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                      // Keep controller reference so we can clear it when make changes
+                      _makeAutocompleteController = controller;
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: "Make",
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onChanged: (val) {
+                          // While typing a make, update _selectedMake and clear model
+                          setState(() {
+                            _selectedMake = val;
+                            _vehicleMakeController.text = val;
+                            if (_vehicleModelController.text.isNotEmpty) {
+                              _vehicleModelController.clear();
+                              _modelAutocompleteController?.clear();
+                            }
+                          });
+                        },
+                        onFieldSubmitted: (_) => onFieldSubmitted(),
+                      );
+                    },
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: _compactInputField(_vehicleModelController, "Model")),
+                // Model Autocomplete
+                Expanded(
+                  child: Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      final query = textEditingValue.text;
+                      if (query.isEmpty) return const Iterable<String>.empty();
+
+                      // Find models for exact make key if available, otherwise try fuzzy match of makes
+                      List<String> candidates = [];
+                      if (carData.containsKey(_selectedMake)) {
+                        candidates = carData[_selectedMake]!;
+                      } else {
+                        final matches = carData.keys
+                            .where((k) => k.toLowerCase().contains(_selectedMake.toLowerCase()))
+                            .toList();
+                        for (var k in matches) {
+                          candidates.addAll(carData[k]!);
+                        }
+                      }
+
+                      // If still empty (no make match), fallback to all models (optional)
+                      if (candidates.isEmpty) {
+                        candidates = carData.values.expand((v) => v).toList();
+                      }
+
+                      final lower = query.toLowerCase();
+                      return candidates.where((m) => m.toLowerCase().contains(lower));
+                    },
+                    onSelected: (selection) {
+                      setState(() {
+                        _vehicleModelController.text = selection;
+                      });
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                      _modelAutocompleteController = controller;
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: "Model",
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onChanged: (val) {
+                          _vehicleModelController.text = val;
+                        },
+                        onFieldSubmitted: (_) => onFieldSubmitted(),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),

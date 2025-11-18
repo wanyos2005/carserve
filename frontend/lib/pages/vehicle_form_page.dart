@@ -32,7 +32,10 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
   final List<String> _fuelTypes = ["Petrol", "Diesel", "Hybrid", "Electric"];
   final List<String> _transmissions = ["Automatic", "Manual"];
   final List<String> _colors = [
-    "Black", "White", "Silver", "Blue", "Red", "Grey", "Green", "Other"
+    "Black", "White", "Silver", "Blue", "Red", "Grey",
+     "Green", "Yellow", "Orange", "Brown", "Pink", "Purple","Gold",
+     "Maroon", "Beige", "Navy Blue", "Teal", "Indigo", 
+     "Violet", "Turquoise", "Coral", "Lavender", "Coral", "Other"
   ];
 
   // Hold references to the underlying controllers created by Autocomplete so we can clear them
