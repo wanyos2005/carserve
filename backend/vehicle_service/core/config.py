@@ -16,10 +16,10 @@ if not DATABASE_URL:
     DB_PORT = os.getenv("DB_PORT", "5432")
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-
-
-
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+# JWT Configuration (align with user_service)
+# Accept either SECRET_KEY or JWT_SECRET_KEY - must match user_service
+SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET_KEY", "supersecret")
+JWT_SECRET_KEY = SECRET_KEY  # Keep for backward compatibility if needed
 ALGORITHM = "HS256"
 
 # CORS
