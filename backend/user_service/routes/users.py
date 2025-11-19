@@ -311,6 +311,39 @@ def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
 
 
 # --------------------------
+# Service-to-service token validation
+# --------------------------
+@router.get("/validate-token")
+def validate_token(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Validate JWT token and return user_id.
+    This endpoint is used by other microservices to validate tokens without needing JWT secrets.
+    Returns minimal user info: {user_id, email, name}
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        
+        # Verify user exists
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {
+            "user_id": str(user_id),
+            "email": user.email,
+            "name": user.name,
+            "valid": True
+        }
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+# --------------------------
 # Get current user
 # --------------------------
 @router.get("/me", response_model=UserRead)

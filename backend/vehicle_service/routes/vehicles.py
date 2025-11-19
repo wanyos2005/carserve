@@ -3,7 +3,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
-import httpx
 
 from core.db import get_db
 from core.security import get_current_user_id

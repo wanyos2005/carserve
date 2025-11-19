@@ -1,58 +1,71 @@
 #Vehicle_Service/core/security.py
-# This module handles JWT token decoding and user authentication.
-# Delegates to user_service JWT validation - uses same library and secret as user_service
+# This module delegates authentication to user_service via HTTP.
+# vehicle_service does NOT validate JWT tokens itself - it calls user_service.
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError  # Use python-jose like user_service
-from core.config import SECRET_KEY, ALGORITHM
+import httpx
+import logging
+
+from core.config import USER_SERVICE_URL
+
+logger = logging.getLogger(__name__)
 
 # Adjust tokenUrl if your gateway exposes it under a different path
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
-def decode_access_token(token: str) -> dict:
+async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
     """
-    Decode JWT token using python-jose (same library as user_service).
-    Uses SECRET_KEY which matches user_service token creation.
+    Get current user ID by validating token with user_service.
+    vehicle_service delegates all authentication to user_service.
+    No JWT secrets needed in vehicle_service!
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
+        # Call user_service to validate the token
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(
+                f"{USER_SERVICE_URL}/validate-token",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                user_id = user_data.get("user_id")
+                if not user_id:
+                    logger.error(f"user_service returned invalid response: {user_data}")
+                    raise HTTPException(status_code=401, detail="Invalid user data from auth service")
+                return str(user_id)
+            elif response.status_code == 401:
+                logger.warning(f"Token validation failed: {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired token",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            elif response.status_code == 404:
+                logger.warning(f"User not found in user_service: {response.text}")
+                raise HTTPException(status_code=404, detail="User not found")
+            else:
+                logger.error(f"user_service returned error: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=502,
+                    detail="Authentication service unavailable"
+                )
+    except httpx.TimeoutException:
+        logger.error(f"Timeout calling user_service at {USER_SERVICE_URL}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=503,
+            detail="Authentication service timeout"
         )
-
-def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
-    """
-    Extract user ID from JWT token (validated by user_service).
-    Returns the user ID as a string from the 'sub' claim.
-    """
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        sub = payload.get("sub")
-        if not sub:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
-        return str(sub)  # Ensure it's a string
-    except JWTError:
+    except httpx.ConnectError as e:
+        logger.error(f"Cannot connect to user_service at {USER_SERVICE_URL}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=503,
+            detail="Authentication service unavailable"
         )
-
-def get_current_user_role(token: str = Depends(oauth2_scheme)) -> str:
-    """
-    Extract user role from JWT token (validated by user_service).
-    Returns the role from token payload, defaulting to 'user'.
-    """
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("role", "user")
-    except JWTError:
+    except Exception as e:
+        logger.error(f"Unexpected error validating token: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail="Token validation failed",
             headers={"WWW-Authenticate": "Bearer"},
         )
