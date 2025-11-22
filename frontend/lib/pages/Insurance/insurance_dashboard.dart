@@ -90,11 +90,27 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final scaffoldBg = theme.scaffoldBackgroundColor;
+
+    // Theme-aware gradient that adapts to dark mode
+    final gradientColors = isDark
+        ? [
+            const Color(0xFF1A1A2E),
+            const Color(0xFF16213E),
+            const Color(0xFF0F3460),
+          ]
+        : [
+            Colors.purple[50]!,
+            Colors.blue[50]!,
+            Colors.cyan[50]!,
+          ];
+
     return Scaffold(
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
         title: const Text('Insurance Dashboard'),
-        backgroundColor: Colors.grey[100],
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -102,24 +118,34 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _buildErrorState()
-              : _buildDashboard(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
+          ),
+        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? _buildErrorState()
+                : _buildDashboard(),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.pushNamed(context, '/insurance/marketplace');
         },
         icon: const Icon(Icons.search),
         label: const Text('Get Quotes'),
-        backgroundColor: Colors.red[600],
-        foregroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
     );
   }
 
   Widget _buildErrorState() {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -127,19 +153,17 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
           Icon(
             Icons.error_outline,
             size: 64,
-            color: Colors.red[300],
+            color: theme.colorScheme.error,
           ),
           const SizedBox(height: 16),
           Text(
             'Error loading insurance data',
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
           Text(
             _error ?? 'Unknown error',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+            style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -174,6 +198,9 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
   }
 
   Widget _buildRiskScoreCard() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Card(
       elevation: 4,
       child: Padding(
@@ -185,13 +212,13 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
               children: [
                 Icon(
                   Icons.security,
-                  color: Colors.blue[600],
+                  color: isDark ? Colors.blue[300] : Colors.blue[600],
                   size: 24,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Risk Score',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -207,21 +234,19 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
                       children: [
                         Text(
                           'Combined Risk Score',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          style: theme.textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${_riskScore!.combinedRiskScore ?? 0}/100',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          style: theme.textTheme.headlineMedium?.copyWith(
                             color: _getRiskColor(_riskScore!.combinedRiskScore ?? 0),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
                           _riskScore!.riskLevel,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             color: _getRiskColor(_riskScore!.combinedRiskScore ?? 0),
                             fontWeight: FontWeight.w600,
                           ),
@@ -241,9 +266,7 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
             ] else ...[
               Text(
                 'No risk score available',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),
               ElevatedButton(
@@ -263,27 +286,31 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
   }
 
   Widget _buildRiskScoreItem(String label, int score) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final riskColor = _getRiskColor(score);
+    final opacity = isDark ? 0.2 : 0.1;
+    final borderOpacity = isDark ? 0.4 : 0.3;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _getRiskColor(score).withOpacity(0.1),
+        color: riskColor.withOpacity(opacity),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _getRiskColor(score).withOpacity(0.3),
+          color: riskColor.withOpacity(borderOpacity),
         ),
       ),
       child: Column(
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
-            ),
+            style: theme.textTheme.bodySmall,
           ),
           Text(
             '$score',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: _getRiskColor(score),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: riskColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -436,21 +463,29 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
   }
 
   Widget _buildInfoChip(String label, String value) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final dividerColor = theme.dividerColor;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: isDark 
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(
+          color: dividerColor.withOpacity(0.5),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             '$label: ',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
-          Text(value, style: Theme.of(context).textTheme.bodySmall),
+          Text(value, style: theme.textTheme.bodySmall),
         ],
       ),
     );
@@ -481,7 +516,9 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
               Text(
                 'Expires: ${_formatDate(policy.expiryDate!)}',
                 style: TextStyle(
-                  color: policy.isExpiringSoon ? Colors.red : Colors.grey[600],
+                  color: policy.isExpiringSoon 
+                      ? Theme.of(context).colorScheme.error
+                      : Theme.of(context).textTheme.bodyMedium?.color,
                   fontWeight: policy.isExpiringSoon ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
@@ -502,6 +539,8 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
   }
 
   Widget _buildPolicyStatusChip(String status) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     Color color;
     switch (status.toLowerCase()) {
       case 'active':
@@ -517,12 +556,15 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
         color = Colors.orange;
     }
 
+    final opacity = isDark ? 0.2 : 0.1;
+    final borderOpacity = isDark ? 0.4 : 0.3;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withOpacity(opacity),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(borderOpacity)),
       ),
       child: Text(
         status.toUpperCase(),
@@ -626,6 +668,8 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
   }
 
   Widget _buildClaimStatusChip(String status) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     Color color;
     switch (status.toLowerCase()) {
       case 'approved':
@@ -644,12 +688,15 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
         color = Colors.grey;
     }
 
+    final opacity = isDark ? 0.2 : 0.1;
+    final borderOpacity = isDark ? 0.4 : 0.3;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withOpacity(opacity),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(borderOpacity)),
       ),
       child: Text(
         status.toUpperCase(),
@@ -777,6 +824,7 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       child: InkWell(
@@ -794,7 +842,7 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
               const SizedBox(height: 8),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -802,9 +850,7 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: theme.textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
             ],
@@ -821,6 +867,7 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
     required String actionText,
     required VoidCallback onAction,
   }) {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -829,21 +876,19 @@ class _InsuranceDashboardState extends State<InsuranceDashboard> {
             Icon(
               icon,
               size: 48,
-              color: Colors.grey[400],
+              color: theme.iconTheme.color?.withOpacity(0.4),
             ),
             const SizedBox(height: 16),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),

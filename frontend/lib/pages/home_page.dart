@@ -124,18 +124,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = theme.cardTheme.color ?? (isDark ? const Color(0xFF1E1E1E) : Colors.white);
+    final scaffoldBg = theme.scaffoldBackgroundColor;
+
+    // Theme-aware gradient that adapts to dark mode
+    final gradientColors = isDark
+        ? [
+            const Color(0xFF1A1A2E),
+            const Color(0xFF16213E),
+            const Color(0xFF0F3460),
+          ]
+        : [
+            Colors.purple[50]!,
+            Colors.blue[50]!,
+            Colors.cyan[50]!,
+          ];
 
     return Scaffold(
+      backgroundColor: scaffoldBg,
       body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-              Colors.purple[50]!,
-              Colors.blue[50]!,
-              Colors.cyan[50]!,
-                ],
+                colors: gradientColors,
               ),
             ),
         child: SafeArea(
@@ -152,16 +165,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             children: [
                 Text(
                   "Welcome Back!",
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.grey[800],
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                          "Your mobility hub awaits",
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                  "Your mobility hub awaits",
+                  style: theme.textTheme.bodyMedium,
                 ),
                       ],
                     ),
@@ -169,28 +179,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       onTap: _togglePrivileges,
                       child: Container(
                         padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
+                          boxShadow: [
+                            BoxShadow(
                               blurRadius: 8,
-                              color: Colors.black.withOpacity(0.1),
+                              color: isDark 
+                                  ? Colors.black.withOpacity(0.3)
+                                  : Colors.black.withOpacity(0.1),
                               offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+                            ),
+                          ],
+                        ),
                         child: AnimatedRotation(
                           turns: _isPrivilegesExpanded ? 0.5 : 0,
                           duration: const Duration(milliseconds: 300),
                           child: Icon(
                             Icons.menu,
-                            color: Colors.grey[800],
+                            color: theme.iconTheme.color,
                             size: 24,
                           ),
                         ),
-                                  ),
-                                ),
+                      ),
+                    ),
                               ],
                             ),
               ),
@@ -202,12 +214,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
                           blurRadius: 20,
-                          color: Colors.black.withOpacity(0.1),
+                          color: isDark
+                              ? Colors.black.withOpacity(0.5)
+                              : Colors.black.withOpacity(0.1),
                           offset: const Offset(0, 4),
                         ),
                       ],
@@ -301,20 +315,35 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               margin: const EdgeInsets.only(bottom: 16),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: _unreadAlertCount > 0 ? Colors.orange[50] : Colors.blue[50],
+                                color: isDark
+                                    ? (_unreadAlertCount > 0 
+                                        ? Colors.orange.withOpacity(0.2)
+                                        : Colors.blue.withOpacity(0.2))
+                                    : (_unreadAlertCount > 0 
+                                        ? Colors.orange[50] 
+                                        : Colors.blue[50]),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: _unreadAlertCount > 0 ? Colors.orange[200]! : Colors.blue[200]!,
+                                  color: isDark
+                                      ? (_unreadAlertCount > 0 
+                                          ? Colors.orange.withOpacity(0.4)
+                                          : Colors.blue.withOpacity(0.4))
+                                      : (_unreadAlertCount > 0 
+                                          ? Colors.orange[200]! 
+                                          : Colors.blue[200]!),
                                   width: 1.5,
                                 ),
                               ),
                               child: InkWell(
                                 onTap: () => Navigator.pushNamed(context, '/alerts'),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Row(
                                   children: [
                                     Icon(
                                       Icons.notifications_active,
-                                      color: _unreadAlertCount > 0 ? Colors.orange[700] : Colors.blue[700],
+                                      color: _unreadAlertCount > 0 
+                                          ? Colors.orange[isDark ? 400 : 700] 
+                                          : Colors.blue[isDark ? 400 : 700],
                                       size: 28,
                                     ),
                                     const SizedBox(width: 12),
@@ -326,19 +355,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                             _unreadAlertCount > 0
                                                 ? '$_unreadAlertCount unread alert${_unreadAlertCount > 1 ? 's' : ''}'
                                                 : 'All caught up!',
-                                            style: TextStyle(
+                                            style: theme.textTheme.titleMedium?.copyWith(
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: _unreadAlertCount > 0 ? Colors.orange[900] : Colors.blue[900],
+                                              color: _unreadAlertCount > 0 
+                                                  ? Colors.orange[isDark ? 300 : 900] 
+                                                  : Colors.blue[isDark ? 300 : 900],
                                             ),
                                           ),
                                           if (_recentAlerts.isNotEmpty)
                                             Text(
                                               _recentAlerts.first.title,
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.grey[700],
-                                              ),
+                                              style: theme.textTheme.bodySmall,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -348,7 +375,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     Icon(
                                       Icons.arrow_forward_ios,
                                       size: 16,
-                                      color: Colors.grey[600],
+                                      color: theme.iconTheme.color?.withOpacity(0.6),
                                     ),
                                   ],
                                 ),
@@ -364,7 +391,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 'My Vehicles',
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
                                 ),
                               ),
                               TextButton.icon(
@@ -389,30 +415,30 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             Container(
                               padding: const EdgeInsets.all(32),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: cardColor,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey[300]!),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.1)
+                                      : Colors.grey[300]!,
+                                ),
                               ),
                               child: Column(
                                 children: [
                                   Icon(
                                     Icons.directions_car_outlined,
                                     size: 64,
-                                    color: Colors.grey[400],
+                                    color: theme.iconTheme.color?.withOpacity(0.4),
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
                                     'No vehicles yet',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
+                                    style: theme.textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Add your first vehicle to get started',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: Colors.grey[500],
-                                    ),
+                                    style: theme.textTheme.bodySmall,
                                   ),
                                   const SizedBox(height: 20),
                                   ElevatedButton.icon(
@@ -426,8 +452,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     icon: const Icon(Icons.add),
                                     label: const Text('Add Vehicle'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue[600],
-                                      foregroundColor: Colors.white,
+                                      backgroundColor: theme.colorScheme.primary,
+                                      foregroundColor: theme.colorScheme.onPrimary,
                                     ),
                                   ),
                                 ],
@@ -437,55 +463,64 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ..._vehicles.take(3).map((vehicle) => Container(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: cardColor,
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
+                                        color: isDark
+                                            ? Colors.black.withOpacity(0.3)
+                                            : Colors.black.withOpacity(0.05),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
                                     ],
                                   ),
-                                  child: ListTile(
-                                    leading: Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue[50],
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        Icons.directions_car,
-                                        color: Colors.blue[700],
-                                        size: 28,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      "${vehicle['make'] ?? 'Unknown'} ${vehicle['model'] ?? ''}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          "Plate: ${vehicle['plate'] ?? 'N/A'}",
-                                          style: TextStyle(color: Colors.grey[600]),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: ListTile(
+                                      leading: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? Colors.blue.withOpacity(0.2)
+                                              : Colors.blue[50],
+                                          borderRadius: BorderRadius.circular(10),
                                         ),
-                                        if (vehicle['mileage'] != null)
+                                        child: Icon(
+                                          Icons.directions_car,
+                                          color: isDark ? Colors.blue[300] : Colors.blue[700],
+                                          size: 28,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        "${vehicle['make'] ?? 'Unknown'} ${vehicle['model'] ?? ''}",
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      subtitle: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const SizedBox(height: 4),
                                           Text(
-                                            "Mileage: ${vehicle['mileage']} km",
-                                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                            "Plate: ${vehicle['plate'] ?? 'N/A'}",
+                                            style: theme.textTheme.bodySmall,
                                           ),
-                                      ],
-                                    ),
-                                    trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const VehicleListPage()),
+                                          if (vehicle['mileage'] != null)
+                                            Text(
+                                              "Mileage: ${vehicle['mileage']} km",
+                                              style: theme.textTheme.bodySmall,
+                                            ),
+                                        ],
+                                      ),
+                                      trailing: Icon(
+                                        Icons.chevron_right,
+                                        color: theme.iconTheme.color?.withOpacity(0.5),
+                                      ),
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const VehicleListPage()),
+                                      ),
                                     ),
                                   ),
                                 )),
@@ -511,7 +546,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             'Quick Actions',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey[800],
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -569,57 +603,68 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             margin: const EdgeInsets.only(bottom: 20),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Colors.purple[50]!, Colors.pink[50]!],
+                                colors: isDark
+                                    ? [
+                                        Colors.purple.withOpacity(0.2),
+                                        Colors.pink.withOpacity(0.2),
+                                      ]
+                                    : [
+                                        Colors.purple[50]!,
+                                        Colors.pink[50]!,
+                                      ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.purple[200]!),
-                            ),
-                            child: InkWell(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => SocialHubPage()),
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.purple.withOpacity(0.4)
+                                    : Colors.purple[200]!,
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.auto_awesome,
-                                      color: Colors.purple[700],
-                                      size: 32,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Social Hub',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: Colors.purple[900],
-                                            ),
-                                          ),
-                                          Text(
-                                            'Connect with the community',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[700],
-                                            ),
-                                          ),
-                                        ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => SocialHubPage()),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        color: Colors.purple[isDark ? 400 : 700],
+                                        size: 32,
                                       ),
-                                    ),
-                                    Icon(
-                                      Icons.arrow_forward_ios,
-                                      size: 16,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ],
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Social Hub',
+                                              style: theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.purple[isDark ? 300 : 900],
+                                              ),
+                                            ),
+                                            Text(
+                                              'Connect with the community',
+                                              style: theme.textTheme.bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: theme.iconTheme.color?.withOpacity(0.6),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -638,6 +683,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildPrivilegeItem(String title, IconData icon, Color color, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -647,7 +695,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(isDark ? 0.2 : 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -655,18 +703,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             const SizedBox(width: 16),
             Expanded(
               child: Text(
-              title,
-                style: const TextStyle(
-                  fontSize: 16,
-                fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                title,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Colors.grey[400],
+              color: theme.iconTheme.color?.withOpacity(0.5),
             ),
           ],
         ),
@@ -680,16 +726,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = theme.cardTheme.color ?? (isDark ? const Color(0xFF1E1E1E) : Colors.white);
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: isDark
+                  ? Colors.black.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -700,7 +752,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(isDark ? 0.2 : 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 28),
@@ -708,10 +760,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             const SizedBox(height: 8),
             Text(
               title,
-              style: TextStyle(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: Colors.grey[800],
               ),
               textAlign: TextAlign.center,
             ),

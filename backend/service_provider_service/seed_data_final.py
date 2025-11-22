@@ -208,11 +208,48 @@ def create_services(conn):
         ("Polishing & Buffing", "Vehicle polishing and buffing service", "Body & Paint"),
         
         # Car Wash & Detailing
-        ("Exterior Wash", "Complete exterior car wash", "Car Wash & Detailing"),
-        ("Interior Deep Clean", "Interior deep cleaning service", "Car Wash & Detailing"),
-        ("Engine Bay Cleaning", "Engine bay cleaning service", "Car Wash & Detailing"),
-        ("Ceramic Coating / Waxing", "Ceramic coating and waxing service", "Car Wash & Detailing"),
         
+       # Added from Peter's data
+        ("Body Wash", "Standard exterior body wash", "Car Wash & Detailing"),
+        ("Engine Wash", "General cleaning of engine surfaces", "Car Wash & Detailing"),
+        ("Vacuum Cleaning", "Interior vacuuming of carpets and seats", "Car Wash & Detailing"),
+        ("Under Wash", "Cleaning of the vehicle’s underside", "Car Wash & Detailing"),
+        ("Interior Polish", "Dashboard and trims polishing for refreshed interior look", "Car Wash & Detailing"),
+        ("Exterior Polish", "Polishing of exterior body to restore shine", "Car Wash & Detailing"),
+        ("Leather Care", "Cleaning and conditioning of leather surfaces", "Car Wash & Detailing"),
+        ("Water Mark Removal", "Removal of stubborn water spots on paint and windows", "Car Wash & Detailing"),
+        ("Rim Cleaning", "Detailed rim and tire cleaning", "Car Wash & Detailing"),
+        ("Light Restoration", "Restoring clarity of foggy or yellow headlights", "Car Wash & Detailing"),
+        ("Air Freshener / Perfume", "Applying car air freshener or perfume", "Car Wash & Detailing"),
+        ("Royal Wash", "Premium full-service wash package", "Car Wash & Detailing"),
+        ("Executive Wash", "High-end wash and detailing package", "Car Wash & Detailing"),
+        ("Detailing Package", "Combined detailing services at a bundled rate", "Car Wash & Detailing"),
+        ("Shampoo Wash", "High-foam shampoo wash for body and mats", "Car Wash & Detailing"),
+        ("Roof Cleaning", "Detailed cleaning of car roof exterior", "Car Wash & Detailing"),
+        ("Floor Cleaning", "Deep cleaning of vehicle floor surfaces", "Car Wash & Detailing"),
+        ("Premium Package", "Premium detailing package with multiple services", "Car Wash & Detailing"),
+        ("Sanitization", "Interior disinfecting and sanitizing service", "Car Wash & Detailing"),
+        ("Superior Package", "Top-tier, full detailing service", "Car Wash & Detailing"),
+        ("Foam Wash", "Thick foam wash to loosen dirt safely", "Car Wash & Detailing"),
+        ("Steam Engine Cleaning", "Steam-based engine cleaning", "Car Wash & Detailing"),
+        ("Steam Interior Wash", "Deep interior steam cleaning for seats, mats, and AC vents", "Car Wash & Detailing"),
+        
+        # Carpet services grouped and renamed
+        ("Carpet Cleaning – Small", "Cleaning of small car carpets or mats", "Car Wash & Detailing"),
+        ("Carpet Cleaning – Medium", "Cleaning of medium-sized carpets", "Car Wash & Detailing"),
+        ("Carpet Cleaning – Large", "Cleaning of large vehicle carpets", "Car Wash & Detailing"),
+        ("Carpet Cleaning – XL", "Cleaning of extra-large vehicle carpets", "Car Wash & Detailing"),
+        ("Carpet Cleaning – XXL", "Cleaning of oversized carpets", "Car Wash & Detailing"),
+        ("Carpet Cleaning – Premium", "High-grade carpet wash service", "Car Wash & Detailing"),
+
+        ("Waxing", "Waxing", "Car Wash & Detailing"),
+        ("Machine polish", "Machine polish", "Car Wash & Detailing"),
+        ("Detailing", "Detailing", "Car Wash & Detailing"),
+        ("Buffing", "Buffing", "Car Wash & Detailing"),
+        ("Leather restoration", "Leather restoration", "Car Wash & Detailing"),      
+
+        ("Plastic restoration", "Plastic restoration", "Car Wash & Detailing"),
+
         # Refueling
         ("Petrol Refuel", "Petrol refueling service", "Refueling"),
         ("Diesel Refuel", "Diesel refueling service", "Refueling"),
