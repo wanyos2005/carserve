@@ -60,10 +60,11 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
     if (widget.isSparePartsMode) {
       return [
         {
-          'name': 'Oil & Filters',
+          'name': 'Oil & Engine',
           'icon': Icons.oil_barrel,
           'color': Colors.orange,
-          'keywords': ['oil', 'filter', 'lubrication', 'engine oil', 'motor oil'],
+          'keywords': ['oil', 'filter', 'lubrication', 'engine oil',
+                      'motor oil','engine', 'motor', 'spark plug', 'belt', 'gasket'],
         },
         {
           'name': 'Brake Parts',
@@ -78,11 +79,42 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
           'keywords': ['tire', 'tyre', 'wheel', 'rim', 'tire'],
         },
         {
-          'name': 'Engine Parts',
+          'name': 'Car wash',
           'icon': Icons.engineering,
           'color': Colors.green,
-          'keywords': ['engine', 'motor', 'spark plug', 'belt', 'gasket'],
+          'keywords': [
+            // General
+            'car wash', 'wash', 'clean', 'cleaning', 'detailing', 'detail', 'package', 
+            'full wash', 'premium', 'executive', 'superior',
+
+            // Exterior
+            'body wash', 'exterior', 'foam wash', 'shampoo', 'wax', 'waxing', 
+            'polish', 'buffing', 'machine polish', 'ceramic', 'coating',
+
+            // Interior
+            'interior', 'interior wash', 'deep clean', 'vacuum', 'dashboard', 
+            'interior polish', 'sanitization', 'sanitizer', 'steam interior',
+
+            // Engine
+            'engine', 'engine wash', 'engine cleaning', 'steam engine',
+
+            // Restoration
+            'light restoration', 'headlight', 'restoration', 'plastic restoration',
+            'leather', 'leather care', 'leather restoration',
+
+            // Rims / tires
+            'rim', 'rims', 'wheel', 'tire', 'tyre', 'wheel cleaning', 'rim cleaning',
+
+            // Special
+            'water marks', 'water spot', 'roof cleaning', 'floor cleaning',
+            'air freshener', 'perfume',
+
+            // Carpet
+            'carpet', 'small carpet', 'medium carpet', 'large carpet', 'xl carpet',
+            'xxl carpet', 'premium carpet', 'mat cleaning'
+          ],
         },
+
         {
           'name': 'AC Parts',
           'icon': Icons.ac_unit,
@@ -111,11 +143,12 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
       ];
     } else {
       return [
-        {
-          'name': 'Oil & Lubrication',
+         {
+          'name': 'Oil & Engine',
           'icon': Icons.oil_barrel,
           'color': Colors.orange,
-          'keywords': ['oil', 'lubrication', 'lube', 'engine oil', 'motor oil'],
+          'keywords': ['oil', 'filter', 'lubrication', 'engine oil',
+                      'motor oil','engine', 'motor', 'spark plug', 'belt', 'gasket'],
         },
         {
           'name': 'Brake Service',
@@ -130,11 +163,42 @@ class _EnhancedServiceSelectorState extends State<EnhancedServiceSelector> {
           'keywords': ['tire', 'tyre', 'wheel', 'alignment', 'balancing'],
         },
         {
-          'name': 'Engine Service',
+          'name': 'Car wash',
           'icon': Icons.engineering,
           'color': Colors.green,
-          'keywords': ['engine', 'motor', 'tune', 'diagnostic', 'repair'],
+          'keywords': [
+            // General
+            'car wash', 'wash', 'clean', 'cleaning', 'detailing', 'detail', 'package', 
+            'full wash', 'premium', 'executive', 'superior',
+
+            // Exterior
+            'body wash', 'exterior', 'foam wash', 'shampoo', 'wax', 'waxing', 
+            'polish', 'buffing', 'machine polish', 'ceramic', 'coating',
+
+            // Interior
+            'interior', 'interior wash', 'deep clean', 'vacuum', 'dashboard', 
+            'interior polish', 'sanitization', 'sanitizer', 'steam interior',
+
+            // Engine
+            'engine', 'engine wash', 'engine cleaning', 'steam engine',
+
+            // Restoration
+            'light restoration', 'headlight', 'restoration', 'plastic restoration',
+            'leather', 'leather care', 'leather restoration',
+
+            // Rims / tires
+            'rim', 'rims', 'wheel', 'tire', 'tyre', 'wheel cleaning', 'rim cleaning',
+
+            // Special
+            'water marks', 'water spot', 'roof cleaning', 'floor cleaning',
+            'air freshener', 'perfume',
+
+            // Carpet
+            'carpet', 'small carpet', 'medium carpet', 'large carpet', 'xl carpet',
+            'xxl carpet', 'premium carpet', 'mat cleaning'
+          ],
         },
+
         {
           'name': 'AC Service',
           'icon': Icons.ac_unit,

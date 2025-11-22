@@ -96,4 +96,6 @@ SELECT COUNT(*) as remaining_comments FROM social.comments;
 -- ALTER TABLE social.likes ENABLE TRIGGER ALL;
 -- 
 -- COMMIT;
+```providers```
+TRUNCATE TABLE service_providers.services RESTART IDENTITY CASCADE;
 

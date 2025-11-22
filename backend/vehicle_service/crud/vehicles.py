@@ -22,7 +22,7 @@ def create_vehicle(db: Session, user_id: str, payload: VehicleCreate) -> Vehicle
         raise HTTPException(status_code=400, detail="Plate already registered")
 
     vehicle = Vehicle(
-        owner_id=user_id,
+        owner_id=int(user_id),
         make=payload.make,
         model=payload.model,
         plate=plate,
@@ -47,7 +47,7 @@ def list_vehicles(
     skip: int = 0,
     limit: int = 50,
 ) -> List[Vehicle]:
-    q = db.query(Vehicle).filter(Vehicle.owner_id == user_id)
+    q = db.query(Vehicle).filter(Vehicle.owner_id == int(user_id))
     if plate:
         q = q.filter(Vehicle.plate == normalize_plate(plate))
     return q.offset(skip).limit(limit).all()
@@ -56,7 +56,7 @@ def list_vehicles(
 # --- READ (SINGLE) ---
 def get_vehicle(db: Session, user_id: str, vehicle_id: str) -> Vehicle:
     v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not v or v.owner_id != user_id:
+    if not v or v.owner_id != int(user_id):
         raise HTTPException(status_code=404, detail="Vehicle not found")
     return v
 
@@ -74,7 +74,7 @@ def update_vehicle(
     db: Session, user_id: str, vehicle_id: str, payload: VehicleUpdate
 ) -> Vehicle:
     v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not v or v.owner_id != user_id:
+    if not v or v.owner_id != int(user_id):
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
     if payload.plate is not None:
@@ -102,7 +102,7 @@ def update_vehicle(
 # --- DELETE ---
 def delete_vehicle(db: Session, user_id: str, vehicle_id: str):
     v = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not v or v.owner_id != user_id:
+    if not v or v.owner_id != int(user_id):
         raise HTTPException(status_code=404, detail="Vehicle not found")
     db.delete(v)
     db.commit()

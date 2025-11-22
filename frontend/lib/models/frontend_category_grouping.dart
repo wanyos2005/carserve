@@ -40,7 +40,7 @@ class FrontendCategoryGroups {
     ),
     FrontendCategoryGroup(
       name: 'Vehicle Care & Support',
-      description: 'Vehicle care, fuel, and support services',
+      description: 'Vehicle care, fuel, carwash and support services',
       icon: Icons.local_car_wash,
       color: Colors.orange,
       onboardingDescription: 'Ideal for fuel stations, car washes, and support services',
@@ -50,7 +50,7 @@ class FrontendCategoryGroups {
         'Roadside Assistance / Towing Service',
         'Vehicle Pickup & Delivery',
       ],
-    ),
+    ), 
     FrontendCategoryGroup(
       name: 'Parts & Accessories',
       description: 'Automotive parts, accessories, and customization',
