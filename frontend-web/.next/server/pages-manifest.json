@@ -4,7 +4,6 @@
   "/_document": "pages/_document.js",
   "/login": "pages/login.js",
   "/dashboard": "pages/dashboard.js",
-  "/api/users/verify-code": "pages/api/users/verify-code.js",
-  "/api/users/me": "pages/api/users/me.js",
-  "/api/users/send-code": "pages/api/users/send-code.js"
+  "/settings": "pages/settings.js",
+  "/api/users/me": "pages/api/users/me.js"
 }

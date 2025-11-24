@@ -14,6 +14,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    console.log(`[send-code] Attempting to fetch from: ${API_BASE_URL}/users/send-code`);
+    console.log(`[send-code] Request body:`, { email });
+    
     const response = await fetch(`${API_BASE_URL}/users/send-code`, {
       method: 'POST',
       headers: {
@@ -22,14 +25,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       body: JSON.stringify({ email }),
     });
 
+    console.log(`[send-code] Response status: ${response.status}`);
+    console.log(`[send-code] Response ok: ${response.ok}`);
+
     if (response.ok) {
       return res.status(200).json({ success: true });
     } else {
-      const errorData = await response.json();
-      return res.status(response.status).json({ error: errorData.detail || 'Failed to send code' });
+      let errorData;
+      try {
+        errorData = await response.json();
+        console.error(`[send-code] Error response:`, errorData);
+      } catch (e) {
+        const text = await response.text();
+        console.error(`[send-code] Non-JSON error response:`, text);
+        errorData = { detail: `Backend returned ${response.status}: ${text}` };
+      }
+      return res.status(response.status).json({ error: errorData.detail || errorData.message || 'Failed to send code' });
     }
   } catch (error) {
     console.error('Send code error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: errorStack,
+      apiBaseUrl: API_BASE_URL,
+    });
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+    });
   }
 }

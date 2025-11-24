@@ -12,8 +12,31 @@ class BookingService {
   }
 
   static Future<List<dynamic>> listBookingsForProvider(String providerId) async {
+    print('🔍 BookingService.listBookingsForProvider called with providerId: $providerId');
+    print('🔍 ProviderId type: ${providerId.runtimeType}, length: ${providerId.length}');
+    
     final data = await ApiService.get("/bookings/provider/$providerId");
-    return data ?? [];
+    
+    print('📥 API Response received: $data');
+    print('📥 Response type: ${data.runtimeType}');
+    
+    if (data == null) {
+      print('⚠️ API returned null - returning empty list');
+      return [];
+    }
+    
+    if (data is List) {
+      print('✅ API returned list with ${data.length} items');
+      if (data.isNotEmpty) {
+        print('📋 First booking: ${data.first}');
+        print('📋 First booking provider_id: ${data.first["provider_id"]}');
+        print('📋 First booking status: ${data.first["status"]}');
+      }
+      return data;
+    } else {
+      print('⚠️ API returned non-list data: $data');
+      return [];
+    }
   }
 
 

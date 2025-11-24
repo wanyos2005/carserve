@@ -38,19 +38,38 @@ class _HistoryPageState extends State<HistoryPage> {
     try {
       final me = await AuthService.getMe();
       if (me == null) {
+        debugPrint("⚠️ No user data returned from AuthService.getMe()");
         setState(() => _loading = false);
         return;
       }
 
+      debugPrint("👤 User data from getMe(): $me");
+      debugPrint("👤 User provider_id from getMe(): ${me["provider_id"]}");
+      
       final userContext = UserContext.fromUserData(me);
       setState(() => _userContext = userContext);
 
+      debugPrint("👤 UserContext created - Type: ${userContext.userType}, ProviderId: ${userContext.providerId}");
+
       // Load data based on user type
       if (userContext.isCarOwner) {
+        debugPrint("🚗 Loading car owner history");
         await _loadCarOwnerHistory(me["id"]);
       } else if (userContext.isProvider) {
+        if (userContext.providerId == null || userContext.providerId!.isEmpty) {
+          debugPrint("❌ Provider user but no provider_id found!");
+          debugPrint("❌ User data keys: ${me.keys.toList()}");
+          setState(() {
+            _bookings = [];
+            _serviceLogs = [];
+            _loading = false;
+          });
+          return;
+        }
+        debugPrint("🏢 Loading provider history for providerId: ${userContext.providerId}");
         await _loadProviderHistory(userContext.providerId!);
       } else if (userContext.isAdmin) {
+        debugPrint("👑 Loading admin history");
         await _loadAdminHistory();
       }
 
@@ -112,20 +131,73 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Future<void> _loadProviderHistory(String providerId) async {
     try {
-      debugPrint("Loading provider history for provider ID: $providerId");
+      debugPrint("🔍 Loading provider history for provider ID: $providerId");
+      debugPrint("🔍 Provider ID type: ${providerId.runtimeType}");
+      debugPrint("🔍 Provider ID length: ${providerId.length}");
       
       // Load provider-specific bookings and service logs
+      debugPrint("📞 Calling BookingService.listBookingsForProvider('$providerId')");
       final bookings = await BookingService.listBookingsForProvider(providerId);
-      final logs = await BookingService.listServiceLogsForProvider(providerId);
+      debugPrint("📥 Received ${bookings.length} bookings from API");
       
-      debugPrint("Loaded ${bookings.length} bookings and ${logs.length} service logs");
+      // Debug: Check dates and timezone
+      final now = DateTime.now();
+      final nowUtc = DateTime.now().toUtc();
+      debugPrint("🕐 Current local time: $now");
+      debugPrint("🕐 Current UTC time: $nowUtc");
+      debugPrint("🕐 Timezone offset: ${now.timeZoneOffset}");
+      
+      if (bookings.isNotEmpty) {
+        for (int i = 0; i < bookings.length && i < 5; i++) {
+          final booking = bookings[i];
+          final createdAtStr = booking["created_at"]?.toString();
+          if (createdAtStr != null) {
+            try {
+              final createdAt = DateTime.parse(createdAtStr);
+              final createdAtLocal = createdAt.toLocal();
+              final daysDiff = now.difference(createdAtLocal).inDays;
+              debugPrint("📅 Booking $i: created_at UTC: $createdAt, Local: $createdAtLocal, Days ago: $daysDiff");
+            } catch (e) {
+              debugPrint("⚠️ Could not parse booking date: $createdAtStr");
+            }
+          }
+        }
+      }
+      
+      debugPrint("📞 Calling BookingService.listServiceLogsForProvider('$providerId')");
+      final logs = await BookingService.listServiceLogsForProvider(providerId);
+      debugPrint("📥 Received ${logs.length} service logs from API");
+      
+      // Debug: Check service log dates
+      if (logs.isNotEmpty) {
+        for (int i = 0; i < logs.length && i < 5; i++) {
+          final log = logs[i];
+          final createdAtStr = log["created_at"]?.toString();
+          if (createdAtStr != null) {
+            try {
+              final createdAt = DateTime.parse(createdAtStr);
+              final createdAtLocal = createdAt.toLocal();
+              final daysDiff = now.difference(createdAtLocal).inDays;
+              debugPrint("📅 Service Log $i: created_at UTC: $createdAt, Local: $createdAtLocal, Days ago: $daysDiff");
+            } catch (e) {
+              debugPrint("⚠️ Could not parse service log date: $createdAtStr");
+            }
+          }
+        }
+      }
       
       // Debug: Log sample booking and log data
       if (bookings.isNotEmpty) {
-        debugPrint("Sample booking data: ${bookings.first}");
+        debugPrint("✅ Sample booking data: ${bookings.first}");
+        debugPrint("✅ Booking provider_id: ${bookings.first["provider_id"]}");
+        debugPrint("✅ Booking status: ${bookings.first["status"]}");
+      } else {
+        debugPrint("⚠️ No bookings returned - checking if API call succeeded");
+        // Try to verify the API endpoint is working
+        debugPrint("🔍 API endpoint should be: /bookings/provider/$providerId");
       }
       if (logs.isNotEmpty) {
-        debugPrint("Sample service log data: ${logs.first}");
+        debugPrint("✅ Sample service log data: ${logs.first}");
       }
       
       // Load lookup data for customers and vehicles
@@ -136,10 +208,12 @@ class _HistoryPageState extends State<HistoryPage> {
         _serviceLogs = logs;
       });
       
-      debugPrint("Provider history loading completed successfully");
-      debugPrint("Final state - Customers: ${_customers.length}, Vehicles: ${_vehicles.length}, Services: ${_services.length}");
-    } catch (e) {
-      debugPrint("Error loading provider history: $e");
+      debugPrint("✅ Provider history loading completed successfully");
+      debugPrint("📊 Final state - Bookings: ${_bookings.length}, Service Logs: ${_serviceLogs.length}");
+      debugPrint("📊 Final state - Customers: ${_customers.length}, Vehicles: ${_vehicles.length}, Services: ${_services.length}");
+    } catch (e, stackTrace) {
+      debugPrint("❌ Error loading provider history: $e");
+      debugPrint("❌ Stack trace: $stackTrace");
       setState(() {
         _bookings = [];
         _serviceLogs = [];

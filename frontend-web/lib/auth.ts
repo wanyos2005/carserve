@@ -127,6 +127,11 @@ export const useAuth = () => {
         body: JSON.stringify({ email }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Send code failed:', errorData);
+      }
+
       return response.ok;
     } catch (error) {
       console.error('Send code error:', error);

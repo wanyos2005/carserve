@@ -22,6 +22,8 @@ import {
   Home
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
+import { ProviderServiceAPI } from '../../lib/services/providerService';
+import { ProviderCategoryConfigs } from '../../lib/config/providerCategoryConfig';
 
 // Updated interfaces to match backend schemas
 interface ProviderStats {
@@ -107,52 +109,112 @@ interface Alert {
 
 const ProviderDashboard: React.FC = () => {
   const router = useRouter();
-  const [stats, setStats] = useState<ProviderStats | null>(null);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<ProviderService[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
+  const [providerDetails, setProviderDetails] = useState<any>(null);
+  const [categoryConfig, setCategoryConfig] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Get provider ID from router or localStorage (assuming it's stored there)
+  // Get provider ID from router or localStorage
   const [providerId, setProviderId] = useState<string>('');
 
   useEffect(() => {
-    // Get provider ID from localStorage or router query
     const storedProviderId = localStorage.getItem('providerId') || router.query.providerId as string;
     if (storedProviderId) {
       setProviderId(storedProviderId);
     }
   }, [router.query.providerId]);
 
-  // Updated API calls to match backend endpoints
-  const { data: statsData, loading: statsLoading } = useApi('/service-providers/stats');
-  const { data: bookingsData, loading: bookingsLoading } = useApi(providerId ? `/bookings/provider/${providerId}` : '');
-  const { data: servicesData, loading: servicesLoading } = useApi(providerId ? `/service-providers/${providerId}/services` : '');
-  const { data: alertsData, loading: alertsLoading } = useApi('/service-logs/due');
+  // Fetch provider details to get category
+  useEffect(() => {
+    if (providerId) {
+      ProviderServiceAPI.getProviderDetails(providerId).then((details) => {
+        if (details) {
+          setProviderDetails(details);
+          // Get category from provider details - check multiple possible fields
+          const categoryName = 
+            (details as any).category?.name || 
+            (details as any).provider_category?.name ||
+            (details as any).category_name ||
+            'garage / mechanic'; // default
+          const config = ProviderCategoryConfigs.getConfig(categoryName);
+          setCategoryConfig(config);
+        }
+      });
+    }
+  }, [providerId]);
+
+  // API calls - all routes must start with /api
+  const { data: bookingsData, loading: bookingsLoading } = useApi(providerId ? `/api/bookings/provider/${providerId}` : '');
+  const { data: servicesData, loading: servicesLoading } = useApi(providerId ? `/api/service-provider-service/providers/${providerId}/services` : '');
+  const { data: alertsData, loading: alertsLoading } = useApi('/api/service-logs/due');
+  const { data: serviceLogsData, loading: serviceLogsLoading } = useApi(providerId ? `/api/service-logs/provider/${providerId}` : '');
 
   useEffect(() => {
-    if (statsData && typeof statsData === 'object') setStats(statsData as ProviderStats);
     if (bookingsData && Array.isArray(bookingsData)) setRecentBookings(bookingsData);
     if (servicesData && Array.isArray(servicesData)) setServices(servicesData);
     if (alertsData && Array.isArray(alertsData)) setAlerts(alertsData);
-  }, [statsData, bookingsData, servicesData, alertsData]);
+    if (serviceLogsData && Array.isArray(serviceLogsData)) setServiceLogs(serviceLogsData);
+  }, [bookingsData, servicesData, alertsData, serviceLogsData]);
 
   useEffect(() => {
-    setIsLoading(statsLoading || bookingsLoading || servicesLoading || alertsLoading);
-  }, [statsLoading, bookingsLoading, servicesLoading, alertsLoading]);
+    setIsLoading(bookingsLoading || servicesLoading || alertsLoading || serviceLogsLoading);
+  }, [bookingsLoading, servicesLoading, alertsLoading, serviceLogsLoading]);
 
-  // Calculate derived stats for display
-  const displayStats = {
-    totalBookings: recentBookings.length,
-    completedBookings: recentBookings.filter(b => b.status === 'completed').length,
-    pendingBookings: recentBookings.filter(b => b.status === 'pending' || b.status === 'confirmed').length,
-    totalRevenue: recentBookings
-      .filter(b => b.status === 'completed')
-      .reduce((sum, b) => sum + (b.meta?.cost || 0), 0),
-    averageRating: 4.5, // This would need to be calculated from reviews
-    totalReviews: 0, // This would need to be fetched from reviews service
-    activeServices: services.length
+  // Calculate real stats from data
+  const calculateRealStats = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Today's service logs
+    const todayLogs = serviceLogs.filter(log => {
+      if (!log.performed_at) return false;
+      const logDate = new Date(log.performed_at);
+      logDate.setHours(0, 0, 0, 0);
+      return logDate.getTime() === today.getTime();
+    });
+
+    // Calculate revenue from bookings and service logs
+    const bookingsRevenue = recentBookings
+      .filter(b => b.status === 'completed' && b.meta?.cost)
+      .reduce((sum, b) => sum + (b.meta.cost || 0), 0);
+
+    const serviceLogsRevenue = serviceLogs
+      .filter(log => log.cost)
+      .reduce((sum, log) => sum + (log.cost || 0), 0);
+
+    const totalRevenue = bookingsRevenue + serviceLogsRevenue;
+
+    // Today's revenue from service logs
+    const todayRevenue = todayLogs
+      .filter(log => log.cost)
+      .reduce((sum, log) => sum + (log.cost || 0), 0);
+
+    return {
+      totalBookings: recentBookings.length,
+      completedBookings: recentBookings.filter(b => b.status === 'completed').length,
+      pendingBookings: recentBookings.filter(b => b.status === 'pending' || b.status === 'confirmed').length,
+      totalRevenue,
+      todayRevenue,
+      activeBookings: recentBookings.filter(b => b.status === 'pending' || b.status === 'confirmed' || b.status === 'in_progress').length,
+      totalServicesToday: todayLogs.length,
+      completedServicesToday: todayLogs.length,
+      activeServices: services.length,
+      rating: 0, // Would need to fetch from ratings service
+    };
   };
+
+  const realStats = calculateRealStats();
+
+  // Get dynamic stat cards based on category
+  const displayStatCards = categoryConfig 
+    ? ProviderCategoryConfigs.getDynamicStatCards(providerId, categoryConfig.name, realStats)
+    : [];
+
+  // Get quick actions from category config
+  const quickActions = categoryConfig?.quickActions || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -192,8 +254,8 @@ const ProviderDashboard: React.FC = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Provider Dashboard</h2>
           <p className="text-gray-600 mb-6">Please log in as a service provider to access your dashboard.</p>
-          <Link href="/provider/login">
-            <button className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors">
+          <Link href="/login">
+            <button className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
               Go to Login
             </button>
           </Link>
@@ -207,22 +269,26 @@ const ProviderDashboard: React.FC = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex justify-between items-center py-4 sm:py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Provider Dashboard</h1>
-              <p className="text-gray-600 mt-1">Manage your services and bookings</p>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+                {categoryConfig ? categoryConfig.name : 'Provider Dashboard'}
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
+                {categoryConfig ? categoryConfig.description : 'Manage your services and bookings'}
+              </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/provider/homepage">
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link href={`/provider/homepage${providerId ? `?providerId=${providerId}` : ''}`}>
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Home">
                   <Home className="h-5 w-5" />
                 </button>
               </Link>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Notifications">
                 <Bell className="h-5 w-5" />
               </button>
-              <Link href="/provider/settings">
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+              <Link href={`/provider/settings${providerId ? `?providerId=${providerId}` : ''}`}>
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Settings">
                   <Settings className="h-5 w-5" />
                 </button>
               </Link>
@@ -231,82 +297,110 @@ const ProviderDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Success Message */}
         {router.query.success && (
-          <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="mb-6 sm:mb-8 bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-green-800 font-medium">
+              <span className="text-green-800 font-medium text-sm sm:text-base">
                 Registration completed successfully! Welcome to DriveOn.
               </span>
             </div>
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                <p className="text-3xl font-bold text-gray-900">{displayStats.totalBookings}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm text-green-600">
-              <TrendingUp className="h-4 w-4 mr-1" />
-              <span>Recent bookings</span>
-            </div>
+        {/* Welcome Message */}
+        {categoryConfig && (
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+              {categoryConfig.welcomeMessage}
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600">{categoryConfig.description}</p>
           </div>
+        )}
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-3xl font-bold text-gray-900">{displayStats.completedBookings}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm text-gray-500">
-              <span>Successfully completed</span>
-            </div>
-          </div>
+        {/* Stats Grid - Dynamic based on category */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {displayStatCards.length > 0 ? (
+            displayStatCards.map((statCard, index) => {
+              const IconComponent = statCard.icon;
+              const colorClasses: Record<string, { bg: string; text: string }> = {
+                blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
+                green: { bg: 'bg-green-100', text: 'text-green-600' },
+                orange: { bg: 'bg-orange-100', text: 'text-orange-600' },
+                purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
+                teal: { bg: 'bg-teal-100', text: 'text-teal-600' },
+                amber: { bg: 'bg-amber-100', text: 'text-amber-600' },
+                red: { bg: 'bg-red-100', text: 'text-red-600' },
+                cyan: { bg: 'bg-cyan-100', text: 'text-cyan-600' },
+                grey: { bg: 'bg-gray-100', text: 'text-gray-600' },
+              };
+              const colors = colorClasses[statCard.color] || colorClasses.grey;
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-3xl font-bold text-gray-900">KSh {displayStats.totalRevenue.toLocaleString()}</p>
+              return (
+                <div key={index} className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{statCard.title}</p>
+                      <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">{statCard.value}</p>
+                    </div>
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 ${colors.bg} rounded-lg flex items-center justify-center flex-shrink-0 ml-2`}>
+                      <IconComponent className={`h-5 w-5 sm:h-6 sm:w-6 ${colors.text}`} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            // Fallback stats if no category config
+            <>
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Total Bookings</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{realStats.totalBookings}</p>
+                  </div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                  </div>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-green-600" />
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Completed</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{realStats.completedBookings}</p>
+                  </div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm text-green-600">
-              <TrendingUp className="h-4 w-4 mr-1" />
-              <span>From completed bookings</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Services</p>
-                <p className="text-3xl font-bold text-gray-900">{displayStats.activeServices}</p>
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Total Revenue</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">KES {realStats.totalRevenue.toLocaleString()}</p>
+                  </div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                  </div>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Settings className="h-6 w-6 text-yellow-600" />
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Active Services</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{realStats.activeServices}</p>
+                  </div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <Settings className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="mt-4 flex items-center text-sm text-gray-500">
-              <span>Services offered</span>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -462,93 +556,66 @@ const ProviderDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Link href="/provider/services">
-              <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Settings className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Manage Services</h3>
-                    <p className="text-sm text-gray-600">Add or edit services</p>
-                  </div>
-                </div>
-              </div>
-            </Link>
+        {/* Quick Actions - Dynamic based on category */}
+        <div className="mt-6 sm:mt-8">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {quickActions.map((action: any, index: number) => {
+              const IconComponent = action.icon;
+              const colorClasses: Record<string, { bg: string; text: string }> = {
+                green: { bg: 'bg-green-100', text: 'text-green-600' },
+                orange: { bg: 'bg-orange-100', text: 'text-orange-600' },
+                purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
+                blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
+                grey: { bg: 'bg-gray-100', text: 'text-gray-600' },
+                cyan: { bg: 'bg-cyan-100', text: 'text-cyan-600' },
+                yellow: { bg: 'bg-yellow-100', text: 'text-yellow-600' },
+                red: { bg: 'bg-red-100', text: 'text-red-600' },
+              };
+              const colors = colorClasses[action.color] || colorClasses.grey;
 
-            <Link href="/provider/bookings">
-              <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">View Bookings</h3>
-                    <p className="text-sm text-gray-600">Manage appointments</p>
-                  </div>
-                </div>
-              </div>
-            </Link>
+              const handleClick = () => {
+                if (action.isComingSoon) {
+                  alert(`${action.title} is coming soon!`);
+                  return;
+                }
+                if (action.route) {
+                  if (action.route === '/provider/log-service' || action.route === '/provider-settings') {
+                    // Routes that need providerId
+                    router.push({
+                      pathname: action.route,
+                      query: { providerId },
+                    });
+                  } else {
+                    router.push(action.route);
+                  }
+                }
+                if (action.onClick) {
+                  action.onClick();
+                }
+              };
 
-            <Link href="/provider/analytics">
-              <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Analytics</h3>
-                    <p className="text-sm text-gray-600">View performance</p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/provider/edit-provider">
-              <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <Edit className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Edit Services</h3>
-                    <p className="text-sm text-gray-600">Manage service offerings</p>
+              return (
+                <div
+                  key={index}
+                  onClick={handleClick}
+                  className="bg-white rounded-xl shadow-sm p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <IconComponent className={`h-5 w-5 ${colors.text}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">{action.title}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">{action.subtitle}</p>
+                      {action.isComingSoon && (
+                        <span className="text-xs text-orange-600 font-medium">Coming Soon</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-
-            <Link href="/provider/manage-templates">
-              <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <Settings className="h-5 w-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Manage Templates</h3>
-                    <p className="text-sm text-gray-600">Create service templates</p>
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            <Link href="/provider/profile">
-              <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Users className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Business Profile</h3>
-                    <p className="text-sm text-gray-600">Update business info</p>
-                  </div>
-                </div>
-              </div>
-            </Link>
+              );
+            })}
           </div>
         </div>
       </div>
