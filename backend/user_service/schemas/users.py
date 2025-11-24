@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
 class UserBase(BaseModel):
     email: Optional[EmailStr] = None
@@ -52,3 +53,23 @@ class FCMTokenRequest(BaseModel):
 class FCMTokenResponse(BaseModel):
     message: str
     fcm_token: Optional[str] = None
+
+class ProviderUserLinkResponse(BaseModel):
+    id: int
+    user_id: int
+    provider_id: str
+    created_at: Optional[datetime] = None
+    user_email: Optional[str] = None
+    user_name: Optional[str] = None
+    user_phone: Optional[str] = None
+    provider_name: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class PaginatedLinksResponse(BaseModel):
+    links: List[ProviderUserLinkResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

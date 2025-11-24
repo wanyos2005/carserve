@@ -1,6 +1,7 @@
 #backend/user_service/routes/users.py
 import random
 from datetime import datetime, timedelta
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
@@ -18,6 +19,8 @@ from schemas.users import (
     Token,
     EmailSchema,
     UserRead,Role, GuestUserRequest,
+    ProviderUserLinkResponse,
+    PaginatedLinksResponse,
     FCMTokenRequest,
     FCMTokenResponse
 )
@@ -589,6 +592,135 @@ def link_user_to_provider(req: LinkUserToProviderRequest, db: Session = Depends(
     db.refresh(link)
 
     return {"message": "User linked to provider successfully"}
+
+@router.delete("/unlink-user-provider")
+def unlink_user_from_provider(
+    user_id: int,
+    provider_id: str,
+    db: Session = Depends(get_db)
+):
+    existing_link = (
+        db.query(ProviderUserLink)
+        .filter(
+            ProviderUserLink.user_id == user_id,
+            ProviderUserLink.provider_id == provider_id
+        )
+        .first()
+    )
+
+    if not existing_link:
+        raise HTTPException(status_code=404, detail="Link not found")
+
+    db.delete(existing_link)
+    db.commit()
+
+    return {"message": "User unlinked from provider successfully"}
+
+@router.get("/provider-links/{provider_id}", response_model=PaginatedLinksResponse)
+def get_provider_links(
+    provider_id: str,
+    page: int = 1,
+    page_size: int = 20,
+    db: Session = Depends(get_db)
+):
+    """Get all user-provider links for a specific provider with pagination"""
+    offset = (page - 1) * page_size
+    
+    # Get total count
+    total = db.query(ProviderUserLink).filter(
+        ProviderUserLink.provider_id == provider_id
+    ).count()
+    
+    # Get paginated links
+    links = (
+        db.query(ProviderUserLink)
+        .filter(ProviderUserLink.provider_id == provider_id)
+        .order_by(ProviderUserLink.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+    
+    # Enrich with user and provider details
+    link_responses = []
+    for link in links:
+        user = db.query(User).filter(User.id == link.user_id).first()
+        link_responses.append(ProviderUserLinkResponse(
+            id=link.id,
+            user_id=link.user_id,
+            provider_id=link.provider_id,
+            created_at=link.created_at,
+            user_email=user.email if user else None,
+            user_name=user.name if user else None,
+            user_phone=user.phone if user else None,
+            provider_name=None  # Could fetch from service_provider_service if needed
+        ))
+    
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    
+    return PaginatedLinksResponse(
+        links=link_responses,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
+    )
+
+@router.get("/all-links", response_model=PaginatedLinksResponse)
+def get_all_links(
+    page: int = 1,
+    page_size: int = 20,
+    provider_id: Optional[str] = None,
+    user_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """Get all user-provider links with pagination and optional filters"""
+    offset = (page - 1) * page_size
+    
+    # Build query with filters
+    query = db.query(ProviderUserLink)
+    
+    if provider_id:
+        query = query.filter(ProviderUserLink.provider_id == provider_id)
+    if user_id:
+        query = query.filter(ProviderUserLink.user_id == user_id)
+    
+    # Get total count
+    total = query.count()
+    
+    # Get paginated links
+    links = (
+        query
+        .order_by(ProviderUserLink.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+    
+    # Enrich with user details
+    link_responses = []
+    for link in links:
+        user = db.query(User).filter(User.id == link.user_id).first()
+        link_responses.append(ProviderUserLinkResponse(
+            id=link.id,
+            user_id=link.user_id,
+            provider_id=link.provider_id,
+            created_at=link.created_at,
+            user_email=user.email if user else None,
+            user_name=user.name if user else None,
+            user_phone=user.phone if user else None,
+            provider_name=None  # Could fetch from service_provider_service if needed
+        ))
+    
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    
+    return PaginatedLinksResponse(
+        links=link_responses,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages
+    )
 
 @router.post("/guest", response_model=UserRead)
 def create_or_get_guest_user(

@@ -115,6 +115,23 @@ class AuthService {
     return result != null;
   }
 
+  // Unlink user from provider
+  static Future<bool> unlinkUserFromProvider(int userId, String providerId) async {
+    try {
+      final result = await ApiService.delete(
+        "/users/unlink-user-provider",
+        query: {
+          "user_id": userId,
+          "provider_id": providerId
+        }
+      );
+      return result != null;
+    } catch (e) {
+      print("Error unlinking user from provider: $e");
+      return false;
+    }
+  }
+
   // Create guest user
   static Future<Map<String, dynamic>?> createGuestUser({
     String? email, 
@@ -129,5 +146,37 @@ class AuthService {
     if (providerId != null) body["provider_id"] = providerId;
     
     return await ApiService.post("/users/guest", body);
+  }
+
+  // Get links for a specific provider
+  static Future<Map<String, dynamic>?> getProviderLinks(
+    String providerId, {
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    return await ApiService.get(
+      "/users/provider-links/$providerId",
+      query: {
+        "page": page.toString(),
+        "page_size": pageSize.toString(),
+      },
+    );
+  }
+
+  // Get all links with pagination
+  static Future<Map<String, dynamic>?> getAllLinks({
+    int page = 1,
+    int pageSize = 20,
+    String? providerId,
+    int? userId,
+  }) async {
+    final query = <String, String>{
+      "page": page.toString(),
+      "page_size": pageSize.toString(),
+    };
+    if (providerId != null) query["provider_id"] = providerId;
+    if (userId != null) query["user_id"] = userId.toString();
+    
+    return await ApiService.get("/users/all-links", query: query);
   }
 }

@@ -107,20 +107,36 @@ class ApiService {
   }
 
   // --- GENERIC DELETE ---
-  static Future<bool> delete(String path) async {
+  static Future<dynamic> delete(String path, {Map<String, dynamic>? query}) async {
     final token = await _getToken();
+    Uri uri = Uri.parse("$baseGatewayUrl$path");
+    
+    // Add query parameters if provided
+    if (query != null) {
+      final queryParams = query.map((key, value) => MapEntry(key, value.toString()));
+      uri = uri.replace(queryParameters: queryParams);
+    }
+    
     final response = await http.delete(
-      Uri.parse("$baseGatewayUrl$path"),
+      uri,
       headers: {
         "Content-Type": "application/json",
         if (token != null) "Authorization": "Bearer $token",
       },
     );
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return true;
+    // Clear invalid tokens on 401 (unauthorized)
+    if (response.statusCode == 401) {
+      print('⚠️ 401 Unauthorized - clearing stored token');
+      await StorageService.clearToken();
+      await StorageService.clearUser();
+      return null;
     }
-    return false;
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.body.isNotEmpty ? jsonDecode(response.body) : true;
+    }
+    return null;
   }
 
   // --- MULTIPART UPLOAD ---
