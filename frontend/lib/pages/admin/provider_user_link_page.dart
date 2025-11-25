@@ -898,6 +898,7 @@ class _ProviderUserLinkPageState extends State<ProviderUserLinkPage> with Single
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       selectedProviderForView!['provider_name'] ?? 'Unknown Provider',
@@ -905,6 +906,8 @@ class _ProviderUserLinkPageState extends State<ProviderUserLinkPage> with Single
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                     Text(
                                       selectedProviderForView!['location']?['area'] ?? 'Nairobi',
@@ -912,11 +915,14 @@ class _ProviderUserLinkPageState extends State<ProviderUserLinkPage> with Single
                                         color: Colors.grey[600],
                                         fontSize: 14,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ],
                                 ),
                               ),
-                              Icon(Icons.arrow_forward_ios, color: Colors.grey[400]),
+                              const SizedBox(width: 8),
+                              Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
                             ],
                           ),
                   ),
@@ -926,19 +932,26 @@ class _ProviderUserLinkPageState extends State<ProviderUserLinkPage> with Single
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Total Links: $providerLinksTotal",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
+                      Flexible(
+                        child: Text(
+                          "Total Links: $providerLinksTotal",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (providerLinksTotalPages > 1)
-                        Text(
-                          "Page $providerLinksPage of $providerLinksTotalPages",
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
+                        Flexible(
+                          child: Text(
+                            "Page $providerLinksPage of $providerLinksTotalPages",
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.end,
                           ),
                         ),
                     ],

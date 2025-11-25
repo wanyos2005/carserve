@@ -18,7 +18,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { apiRequest } from '../../lib/auth';
+import { apiRequest, useAuth } from '../../lib/auth';
 
 interface User {
   id: number;
@@ -43,6 +43,7 @@ interface AdminUser {
 
 const UsersPage: React.FC = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +53,14 @@ const UsersPage: React.FC = () => {
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminName, setNewAdminName] = useState('');
+  
+  // Helper to get dashboard URL with providerId
+  const getDashboardUrl = () => {
+    if (user?.providerId) {
+      return `/provider/dashboard?providerId=${user.providerId}`;
+    }
+    return '/provider/dashboard'; // Fallback if no providerId
+  };
 
   // Use backend endpoints via proxy (nginx -> user_service)
   const { data: usersData, loading: usersLoading, refetch: refetchUsers } = useApi<any>('/api/users/all');
@@ -192,7 +201,7 @@ const UsersPage: React.FC = () => {
               <p className="text-gray-600 mt-1">Manage users, providers, and admin privileges</p>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard">
+              <Link href={getDashboardUrl()}>
                 <button className="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-300 hover:border-gray-400 transition-colors">
                   Back to Dashboard
                 </button>

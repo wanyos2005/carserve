@@ -7,7 +7,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const response = await fetch(`${API_BASE_URL}/service-provider-service/providers/${providerId}/templates`, {
+      // Use /service-providers/ as per nginx config (same as POST)
+      const backendUrl = `${API_BASE_URL}/service-providers/${providerId}/templates`;
+      console.log(`📄 [Templates API] Fetching templates: ${backendUrl}`);
+      const response = await fetch(backendUrl, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -17,6 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const data = await response.json();
         return res.status(200).json(data);
       } else {
+        const errorText = await response.text();
+        console.error(`❌ [Templates API] Failed to fetch templates: ${response.status} - ${errorText}`);
         return res.status(response.status).json({ error: 'Failed to fetch templates' });
       }
     } catch (error) {
@@ -27,7 +32,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     try {
-      const response = await fetch(`${API_BASE_URL}/service-provider-service/providers/${providerId}/templates`, {
+      // Use /service-providers/ as per nginx config
+      const backendUrl = `${API_BASE_URL}/service-providers/${providerId}/templates`;
+      console.log(`📄 [Templates API] Creating template: ${backendUrl}`);
+      const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

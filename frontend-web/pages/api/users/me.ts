@@ -26,9 +26,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (response.ok) {
       const userData = await response.json();
+      console.log('👤 [API /users/me] User data from backend:', JSON.stringify(userData, null, 2));
+      console.log('👤 [API /users/me] provider_id:', userData.provider_id);
+      console.log('👤 [API /users/me] provider_id type:', typeof userData.provider_id);
       return res.status(200).json(userData);
     } else {
       const errorData = await response.json();
+      console.error('❌ [API /users/me] Error:', response.status, errorData);
       return res.status(response.status).json({ error: errorData.detail || 'Unauthorized' });
     }
   } catch (error) {

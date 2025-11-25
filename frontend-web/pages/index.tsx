@@ -18,13 +18,19 @@ import { ArrowRight, LogIn, UserPlus, Shield, Building, Car } from 'lucide-react
 
 const HomePage: React.FC = () => {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+    if (!isLoading && isAuthenticated && user) {
+      if (user.providerId) {
+        // Redirect to provider dashboard with user's providerId
+        router.push(`/provider/dashboard?providerId=${user.providerId}`);
+      } else {
+        // If no providerId, stay on home page or redirect to appropriate page
+        // For now, we'll stay on home page
+      }
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, user, router]);
 
   if (isLoading) {
     return (

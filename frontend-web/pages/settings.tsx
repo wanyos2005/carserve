@@ -18,6 +18,14 @@ import {
 const Settings: React.FC = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
+  
+  // Helper to get dashboard URL with providerId
+  const getDashboardUrl = () => {
+    if (user?.providerId) {
+      return `/provider/dashboard?providerId=${user.providerId}`;
+    }
+    return '/provider/dashboard'; // Fallback if no providerId
+  };
   const [recommendedOnly, setRecommendedOnly] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -45,7 +53,7 @@ const Settings: React.FC = () => {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center py-6">
-            <Link href="/dashboard">
+            <Link href={getDashboardUrl()}>
               <button className="flex items-center text-gray-600 hover:text-gray-900 mr-4">
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to Dashboard

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Mail, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth';
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  const { sendCode, login } = useAuth();
+  const { sendCode, login, user, isAuthenticated } = useAuth();
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -40,6 +40,19 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  // Redirect after successful login when user is available
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.providerId) {
+        // Redirect to provider dashboard with user's providerId
+        router.push(`/provider/dashboard?providerId=${user.providerId}`);
+      } else {
+        // If no providerId, redirect to home or appropriate page
+        router.push('/');
+      }
+    }
+  }, [isAuthenticated, user, router]);
+
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
@@ -53,12 +66,10 @@ const LoginPage: React.FC = () => {
 
     try {
       const success = await login(email.trim(), code.trim());
-      if (success) {
-        // Redirect based on user type
-        router.push('/dashboard');
-      } else {
+      if (!success) {
         setError('Invalid verification code. Please try again.');
       }
+      // Redirect will happen via useEffect when user state updates
     } catch (error) {
       setError('An error occurred. Please try again.');
     } finally {

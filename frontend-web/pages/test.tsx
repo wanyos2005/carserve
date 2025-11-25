@@ -1,8 +1,18 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, AlertTriangle, Star, Users, Building, Settings } from 'lucide-react';
+import { useAuth } from '../lib/auth';
 
 const TestPage: React.FC = () => {
+  const { user } = useAuth();
+  
+  // Helper to get dashboard URL with providerId
+  const getDashboardUrl = () => {
+    if (user?.providerId) {
+      return `/provider/dashboard?providerId=${user.providerId}`;
+    }
+    return '/provider/dashboard'; // Fallback if no providerId
+  };
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -91,7 +101,7 @@ const TestPage: React.FC = () => {
               <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
                 Real Login
               </Link>
-              <Link href="/dashboard" className="text-primary-600 hover:text-primary-700 font-medium">
+              <Link href={getDashboardUrl()} className="text-primary-600 hover:text-primary-700 font-medium">
                 Dashboard
               </Link>
             </div>

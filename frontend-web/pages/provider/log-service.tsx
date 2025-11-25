@@ -30,7 +30,7 @@ interface Service {
 interface Template {
   id: string;
   name: string;
-  items: Array<{ service_id: string }>;
+  items?: Array<{ service_id: string }>;
 }
 
 const ProviderLogServicePage: React.FC = () => {

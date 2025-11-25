@@ -7,7 +7,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const response = await fetch(`${API_BASE_URL}/service-provider-service/providers/${providerId}/services`, {
+      // Use /service-providers/ as per nginx config
+      // Backend route is /{provider_id}/services (no /providers/ prefix)
+      // Nginx strips /service-providers/ and forwards to backend
+      const backendUrl = `${API_BASE_URL}/service-providers/${providerId}/services`;
+      console.log(`⚙️ [Services API] Fetching services: ${backendUrl}`);
+      const response = await fetch(backendUrl, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -27,7 +32,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     try {
-      const response = await fetch(`${API_BASE_URL}/service-provider-service/providers/${providerId}/services`, {
+      // Use /service-providers/ as per nginx config (same as GET)
+      const backendUrl = `${API_BASE_URL}/service-providers/${providerId}/services`;
+      console.log(`⚙️ [Services API] Saving services: ${backendUrl}`);
+      const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,7 +47,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const data = await response.json();
         return res.status(200).json(data);
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to save services' }));
+        console.error(`❌ [Services API] Failed to save services: ${response.status}`, errorData);
         return res.status(response.status).json({ error: errorData.detail || 'Failed to save services' });
       }
     } catch (error) {

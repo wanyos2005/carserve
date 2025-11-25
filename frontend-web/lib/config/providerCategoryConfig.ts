@@ -16,13 +16,13 @@ import {
   Users,
   BarChart3,
   AlertTriangle,
-  LocalGasStation,
-  LocalCarWash,
-  Inventory2,
-  Policy,
-  Assignment,
-  Queue,
-  Business,
+  Fuel as LocalGasStation,
+  Droplet as LocalCarWash,
+  Package as Inventory2,
+  Shield as Policy,
+  ClipboardList as Assignment,
+  List as Queue,
+  Building2 as Business,
   LucideIcon
 } from 'lucide-react';
 
@@ -105,7 +105,7 @@ export class ProviderCategoryConfigs {
           subtitle: 'View past services and transactions',
           icon: History,
           color: 'purple',
-          route: '/history',
+          route: '/provider/history',
         },
         {
           title: 'Settings',
@@ -164,7 +164,7 @@ export class ProviderCategoryConfigs {
           subtitle: 'View past policies and transactions',
           icon: History,
           color: 'purple',
-          route: '/history',
+          route: '/provider/history',
         },
         {
           title: 'Reports',
@@ -230,7 +230,7 @@ export class ProviderCategoryConfigs {
           subtitle: 'View past sales and transactions',
           icon: History,
           color: 'purple',
-          route: '/history',
+          route: '/provider/history',
         },
         {
           title: 'Reports',
@@ -289,7 +289,7 @@ export class ProviderCategoryConfigs {
           subtitle: 'View past wash and detailing services',
           icon: History,
           color: 'purple',
-          route: '/history',
+          route: '/provider/history',
         },
         {
           title: 'Packages',
@@ -355,7 +355,7 @@ export class ProviderCategoryConfigs {
           subtitle: 'View past parts sales and services',
           icon: History,
           color: 'purple',
-          route: '/history',
+          route: '/provider/history',
         },
         {
           title: 'Suppliers',
@@ -434,55 +434,82 @@ export class ProviderCategoryConfigs {
   }
 
   static getDynamicStatCards(providerId: string, categoryName: string, realStats?: Record<string, any>): StatCard[] {
+    console.log('📊 [ProviderCategoryConfig] getDynamicStatCards called');
+    console.log('📊 [ProviderCategoryConfig] Provider ID:', providerId);
+    console.log('📊 [ProviderCategoryConfig] Category name:', categoryName);
+    console.log('📊 [ProviderCategoryConfig] Real stats provided:', !!realStats);
+    
     const stats = realStats || this.getCachedStats(providerId);
     const config = this.getConfig(categoryName);
     
-    if (!stats) {
+    console.log('📊 [ProviderCategoryConfig] Stats data:', stats);
+    console.log('📊 [ProviderCategoryConfig] Config business type:', config.businessType);
+    
+    // If no stats from API, return default stat cards
+    if (!stats || (typeof stats === 'object' && Object.keys(stats).length === 0)) {
+      console.log('📊 [ProviderCategoryConfig] No stats available, using default stat cards');
       return config.statCards;
     }
 
-    // Map real stats to stat cards based on category
+    // Map API stats to stat cards based on category
+    // The backend already returns category-specific stats, so we just need to map them
+    let result: StatCard[] = [];
     switch (config.businessType) {
       case ProviderBusinessType.INSURANCE_DOCUMENTATION:
-        return this.getInsuranceStatCards(stats);
+        console.log('📊 [ProviderCategoryConfig] Using insurance stat cards');
+        result = this.getInsuranceStatCards(stats);
+        break;
       case ProviderBusinessType.SUPPORT_SERVICES:
         if (categoryName.toLowerCase().includes('fuel')) {
-          return this.getFuelStationStatCards(stats);
+          console.log('📊 [ProviderCategoryConfig] Using fuel station stat cards');
+          result = this.getFuelStationStatCards(stats);
         } else if (categoryName.toLowerCase().includes('wash') || categoryName.toLowerCase().includes('detailing')) {
-          return this.getCarWashStatCards(stats);
+          console.log('📊 [ProviderCategoryConfig] Using car wash stat cards');
+          result = this.getCarWashStatCards(stats);
+        } else {
+          console.log('📊 [ProviderCategoryConfig] Using default stat cards for support services');
+          result = config.statCards;
         }
-        return config.statCards;
+        break;
       case ProviderBusinessType.SALES_PARTS:
-        return this.getSparePartsStatCards(stats);
+        console.log('📊 [ProviderCategoryConfig] Using spare parts stat cards');
+        result = this.getSparePartsStatCards(stats);
+        break;
       case ProviderBusinessType.SERVICE_MAINTENANCE:
       default:
-        return this.getGarageStatCards(stats);
+        console.log('📊 [ProviderCategoryConfig] Using garage stat cards');
+        result = this.getGarageStatCards(stats);
+        break;
     }
+    
+    console.log('📊 [ProviderCategoryConfig] Generated stat cards:', result.length);
+    return result;
   }
 
   private static getInsuranceStatCards(stats: Record<string, any>): StatCard[] {
+    // Backend returns: active_policies, todays_revenue, pending_claims, rating
     return [
       {
         title: 'Active Policies',
-        value: `${stats.active_policies || stats.activeBookings || 0}`,
+        value: `${stats.active_policies ?? 0}`,
         icon: Policy,
         color: 'green',
       },
       {
         title: "Today's Revenue",
-        value: `KES ${this.formatCurrency(stats.todays_revenue || stats.totalRevenue || 0)}`,
+        value: `KES ${this.formatCurrency(stats.todays_revenue ?? 0)}`,
         icon: TrendingUp,
         color: 'blue',
       },
       {
         title: 'Pending Claims',
-        value: `${stats.pending_claims || stats.pendingBookings || 0}`,
+        value: `${stats.pending_claims ?? 0}`,
         icon: Assignment,
         color: 'orange',
       },
       {
         title: 'Client Rating',
-        value: `${(stats.rating || 0).toFixed(1)} ★`,
+        value: `${(stats.rating ?? 0).toFixed(1)} ★`,
         icon: Star,
         color: 'amber',
       },
@@ -490,28 +517,29 @@ export class ProviderCategoryConfigs {
   }
 
   private static getFuelStationStatCards(stats: Record<string, any>): StatCard[] {
+    // Backend returns: fuel_sales_liters, todays_revenue, inventory_alerts, rating
     return [
       {
         title: 'Fuel Sales',
-        value: `${stats.fuel_sales_liters || 0}L`,
+        value: `${stats.fuel_sales_liters ?? 0}L`,
         icon: LocalGasStation,
         color: 'orange',
       },
       {
         title: "Today's Revenue",
-        value: `KES ${this.formatCurrency(stats.todays_revenue || stats.totalRevenue || 0)}`,
+        value: `KES ${this.formatCurrency(stats.todays_revenue ?? 0)}`,
         icon: TrendingUp,
         color: 'green',
       },
       {
         title: 'Inventory Alert',
-        value: `${stats.inventory_alerts || stats.pendingBookings || 0}`,
+        value: `${stats.inventory_alerts ?? 0}`,
         icon: AlertTriangle,
         color: 'red',
       },
       {
         title: 'Customer Rating',
-        value: `${(stats.rating || 0).toFixed(1)} ★`,
+        value: `${(stats.rating ?? 0).toFixed(1)} ★`,
         icon: Star,
         color: 'amber',
       },
@@ -519,28 +547,29 @@ export class ProviderCategoryConfigs {
   }
 
   private static getCarWashStatCards(stats: Record<string, any>): StatCard[] {
+    // Backend returns: todays_services, todays_revenue, queue_length, rating
     return [
       {
         title: "Today's Services",
-        value: `${stats.todays_services || stats.completedBookings || 0}`,
+        value: `${stats.todays_services ?? 0}`,
         icon: LocalCarWash,
         color: 'cyan',
       },
       {
         title: "Today's Revenue",
-        value: `KES ${this.formatCurrency(stats.todays_revenue || stats.totalRevenue || 0)}`,
+        value: `KES ${this.formatCurrency(stats.todays_revenue ?? 0)}`,
         icon: TrendingUp,
         color: 'green',
       },
       {
         title: 'Queue Length',
-        value: `${stats.queue_length || stats.pendingBookings || 0}`,
+        value: `${stats.queue_length ?? 0}`,
         icon: Queue,
         color: 'orange',
       },
       {
         title: 'Rating',
-        value: `${(stats.rating || 0).toFixed(1)} ★`,
+        value: `${(stats.rating ?? 0).toFixed(1)} ★`,
         icon: Star,
         color: 'amber',
       },
@@ -548,28 +577,29 @@ export class ProviderCategoryConfigs {
   }
 
   private static getSparePartsStatCards(stats: Record<string, any>): StatCard[] {
+    // Backend returns: active_orders, todays_sales, low_stock, rating
     return [
       {
         title: 'Active Orders',
-        value: `${stats.active_orders || stats.totalBookings || 0}`,
+        value: `${stats.active_orders ?? 0}`,
         icon: ShoppingCart,
         color: 'purple',
       },
       {
         title: "Today's Sales",
-        value: `KES ${this.formatCurrency(stats.todays_sales || stats.totalRevenue || 0)}`,
+        value: `KES ${this.formatCurrency(stats.todays_sales ?? 0)}`,
         icon: TrendingUp,
         color: 'green',
       },
       {
         title: 'Low Stock',
-        value: `${stats.low_stock || stats.pendingBookings || 0}`,
+        value: `${stats.low_stock ?? 0}`,
         icon: AlertTriangle,
         color: 'red',
       },
       {
         title: 'Rating',
-        value: `${(stats.rating || 0).toFixed(1)} ★`,
+        value: `${(stats.rating ?? 0).toFixed(1)} ★`,
         icon: Star,
         color: 'amber',
       },
@@ -577,40 +607,41 @@ export class ProviderCategoryConfigs {
   }
 
   private static getGarageStatCards(stats: Record<string, any>): StatCard[] {
+    // Backend returns: active_bookings, todays_earnings, pending_tasks, total_services_today, completed_services_today, rating
     return [
       {
         title: 'Active Bookings',
-        value: `${stats.active_bookings || stats.totalBookings || 0}`,
+        value: `${stats.active_bookings ?? 0}`,
         icon: Calendar,
         color: 'blue',
       },
       {
         title: "Today's Earnings",
-        value: `KES ${this.formatCurrency(stats.todays_earnings || stats.totalRevenue || 0)}`,
+        value: `KES ${this.formatCurrency(stats.todays_earnings ?? 0)}`,
         icon: TrendingUp,
         color: 'green',
       },
       {
         title: 'Pending Tasks',
-        value: `${stats.pending_tasks || stats.pendingBookings || 0}`,
+        value: `${stats.pending_tasks ?? 0}`,
         icon: List,
         color: 'orange',
       },
       {
         title: 'Total Services Today',
-        value: `${stats.total_services_today || stats.activeServices || 0}`,
+        value: `${stats.total_services_today ?? 0}`,
         icon: Wrench,
         color: 'purple',
       },
       {
         title: 'Completed Services Today',
-        value: `${stats.completed_services_today || stats.completedBookings || 0}`,
+        value: `${stats.completed_services_today ?? 0}`,
         icon: CheckCircle,
         color: 'teal',
       },
       {
         title: 'Rating',
-        value: `${(stats.rating || 0).toFixed(1)} ★`,
+        value: `${(stats.rating ?? 0).toFixed(1)} ★`,
         icon: Star,
         color: 'amber',
       },

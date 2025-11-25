@@ -11,15 +11,20 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  Minus
+  Minus,
+  Building,
+  Info,
+  FileText
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 
 interface ProviderDetails {
   id: string;
-  name: string;
-  description: string;
-  category: {
+  name?: string;
+  provider_name?: string;
+  description?: string;
+  provider_description?: string;
+  category?: {
     name: string;
   };
 }
@@ -77,25 +82,26 @@ const EditProviderPage: React.FC = () => {
   const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showServiceSelector, setShowServiceSelector] = useState(false);
 
-  const { data: providerData, loading: providerLoading } = useApi(`/service-provider-service/providers/${providerId}`);
-  const { data: servicesData, loading: servicesLoading } = useApi('/global-service-api/services');
-  const { data: attachedData, loading: attachedLoading } = useApi(`/service-provider-service/providers/${providerId}/services`);
+  const { data: providerData, loading: providerLoading } = useApi(`/api/service-provider-service/providers/${providerId}`);
+  const { data: servicesData, loading: servicesLoading } = useApi('/api/global-service-api/services');
+  const { data: attachedData, loading: attachedLoading } = useApi(`/api/service-provider-service/providers/${providerId}/services`);
 
   useEffect(() => {
-    if (providerData) {
-      setProvider(providerData);
+    if (providerData && typeof providerData === 'object' && !Array.isArray(providerData)) {
+      setProvider(providerData as ProviderDetails);
     }
   }, [providerData]);
 
   useEffect(() => {
-    if (servicesData) {
+    if (servicesData && Array.isArray(servicesData)) {
       setAllServices(servicesData);
     }
   }, [servicesData]);
 
   useEffect(() => {
-    if (attachedData) {
+    if (attachedData && Array.isArray(attachedData)) {
       setAttachedServices(attachedData);
       
       // Initialize form data from attached services
@@ -306,10 +312,19 @@ const EditProviderPage: React.FC = () => {
       });
 
       if (response.ok) {
-        alert('Services saved successfully');
-        router.push('/provider/dashboard');
+        const data = await response.json();
+        console.log('✅ Services saved successfully:', data);
+        alert(`Services saved successfully! ${payload.length} service${payload.length !== 1 ? 's' : ''} attached.`);
+        // Redirect to dashboard with providerId
+        if (providerId) {
+          router.push(`/provider/dashboard?providerId=${providerId}`);
+        } else {
+          router.push('/provider/dashboard');
+        }
       } else {
-        alert('Failed to save services');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to save services' }));
+        console.error('❌ Failed to save services:', errorData);
+        alert(errorData.error || errorData.detail || 'Failed to save services. Please check your connection and try again.');
       }
     } catch (error) {
       console.error('Error saving services:', error);
@@ -328,68 +343,102 @@ const EditProviderPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
-              <Link href="/provider/dashboard">
+              <Link href={providerId ? `/provider/dashboard?providerId=${providerId}` : '/provider/dashboard'}>
                 <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
                   <ArrowLeft className="h-5 w-5" />
                 </button>
               </Link>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Edit {provider?.name || 'Provider'}
+                  Edit Our Services - {provider?.name || provider?.provider_name || 'Provider'}
                 </h1>
-                <p className="text-gray-600 mt-1">Attach and configure services</p>
+                <p className="text-gray-600 mt-1">Manage your services, pricing, and service requirements</p>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Link href={`/provider/manage-templates?providerId=${providerId}`}>
-                <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Manage Templates
-                </button>
-              </Link>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save'}
-              </button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Provider Info */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Provider Information</h2>
-          <p className="text-gray-600">{provider?.description}</p>
+        {/* Header Card */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div className="flex items-start space-x-4">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Building className="h-7 w-7 text-blue-700" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-blue-700 mb-2">Service Management</h2>
+              <p className="text-gray-600 mb-4">{provider?.description || provider?.provider_description || ''}</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Info className="h-5 w-5 text-blue-700 mt-0.5" />
+                  <p className="text-sm text-blue-700">
+                    Select services you offer and configure their pricing. This information will be visible to customers.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Services Section */}
+        {/* Services Section Header */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Our Services</h2>
+          <button
+            onClick={() => setShowServiceSelector(!showServiceSelector)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{selectedServiceIds.size} Services</span>
+          </button>
+        </div>
+
+        {/* Selected Services Summary */}
+        {selectedServiceIds.size > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <Check className="h-5 w-5 text-green-700" />
+              <div>
+                <p className="font-bold text-green-700">
+                  Selected Services ({selectedServiceIds.size})
+                </p>
+                <p className="text-sm text-green-600 mt-1">
+                  Tap on services below to configure pricing and requirements for each service.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Services List */}
         <div className="bg-white rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Attach Services</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Available Services</h2>
             <p className="text-sm text-gray-600 mt-1">Select and configure services for your business</p>
           </div>
 
           <div className="p-6">
-            <div className="space-y-4">
-              {allServices.map((service) => {
+            {allServices.length === 0 ? (
+              <div className="text-center py-12">
+                <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No services available</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {allServices.map((service) => {
                 const serviceId = service.service_id;
                 const isSelected = selectedServiceIds.has(serviceId);
                 const isExpanded = expandedServices.has(serviceId);
-                const serviceDetails = serviceDetails[serviceId];
+                const currentServiceDetails = serviceDetails[serviceId];
 
                 return (
-                  <div key={serviceId} className="border border-gray-200 rounded-lg">
+                  <div key={serviceId} id={`service-${serviceId}`} className="border border-gray-200 rounded-lg">
                     <div className="p-4">
                       <div className="flex items-center space-x-3">
                         <input
@@ -524,11 +573,11 @@ const EditProviderPage: React.FC = () => {
                           </div>
 
                           {/* Service Requirements Fields */}
-                          {serviceDetails?.service_requirements?.fields && (
+                          {currentServiceDetails?.service_requirements?.fields && (
                             <div>
                               <h4 className="text-sm font-medium text-gray-700 mb-3">Service Requirements</h4>
                               <div className="space-y-4">
-                                {serviceDetails.service_requirements.fields.map((field: any, index: number) => (
+                                {currentServiceDetails.service_requirements.fields.map((field: any, index: number) => (
                                   <div key={index}>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                       {field.label}
@@ -544,9 +593,47 @@ const EditProviderPage: React.FC = () => {
                     )}
                   </div>
                 );
-              })}
-            </div>
+                })}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            onClick={() => {
+              // Scroll to services or show expanded view
+              const firstSelected = Array.from(selectedServiceIds)[0];
+              if (firstSelected) {
+                toggleServiceExpansion(firstSelected);
+                document.getElementById(`service-${firstSelected}`)?.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                setShowServiceSelector(true);
+              }
+            }}
+            disabled={selectedServiceIds.size === 0}
+            className="px-6 py-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+          >
+            <Settings className="h-5 w-5" />
+            <span>Manage Services</span>
+          </button>
+          
+          <Link href={providerId ? `/provider/manage-templates?providerId=${providerId}` : '/provider/manage-templates'}>
+            <button className="w-full px-6 py-4 bg-blue-gray-600 text-white rounded-lg hover:bg-blue-gray-700 transition-colors flex items-center justify-center space-x-2">
+              <FileText className="h-5 w-5" />
+              <span>Templates</span>
+            </button>
+          </Link>
+          
+          <button
+            onClick={handleSave}
+            disabled={isSaving || selectedServiceIds.size === 0}
+            className="px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+          >
+            <Save className="h-5 w-5" />
+            <span>{isSaving ? 'Saving...' : 'Save'}</span>
+          </button>
         </div>
       </div>
     </div>

@@ -2,8 +2,17 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/login": "pages/login.js",
-  "/dashboard": "pages/dashboard.js",
-  "/settings": "pages/settings.js",
-  "/api/users/me": "pages/api/users/me.js"
+  "/api/service-provider-service/providers/[providerId]": "pages/api/service-provider-service/providers/[providerId].js",
+  "/provider/dashboard": "pages/provider/dashboard.js",
+  "/": "pages/index.js",
+  "/api/service-provider-service/providers/[providerId]/stats": "pages/api/service-provider-service/providers/[providerId]/stats.js",
+  "/provider/log-service": "pages/provider/log-service.js",
+  "/api/service-provider-service/providers/[providerId]/templates": "pages/api/service-provider-service/providers/[providerId]/templates.js",
+  "/api/service-provider-service/providers/[providerId]/services": "pages/api/service-provider-service/providers/[providerId]/services.js",
+  "/provider/history": "pages/provider/history.js",
+  "/api/bookings/provider/[providerId]": "pages/api/bookings/provider/[providerId].js",
+  "/api/service-logs/provider/[providerId]": "pages/api/service-logs/provider/[providerId].js",
+  "/api/users/lookup": "pages/api/users/lookup.js",
+  "/api/vehicles/public/[vehicleId]": "pages/api/vehicles/public/[vehicleId].js",
+  "/api/bookings/[bookingId]": "pages/api/bookings/[bookingId].js"
 }

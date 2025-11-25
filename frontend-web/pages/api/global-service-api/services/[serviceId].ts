@@ -7,7 +7,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const response = await fetch(`${API_BASE_URL}/global-service-api/services/${serviceId}`, {
+      // Use /service-providers/ as per nginx config
+      // Backend route is /service-providers/services/{serviceId}
+      const backendUrl = `${API_BASE_URL}/service-providers/services/${serviceId}`;
+      console.log(`📋 [Global Service API] Fetching service: ${backendUrl}`);
+      const response = await fetch(backendUrl, {
         headers: {
           'Content-Type': 'application/json',
         },

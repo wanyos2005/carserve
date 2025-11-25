@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "dev:local": "next dev",
+    "dev:clean": "npm run clean && npm run dev",
+    "dev:safe": "node scripts/dev-with-retry.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('.next', {recursive: true, force: true}); console.log('Cleaned .next directory')\""
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.0",

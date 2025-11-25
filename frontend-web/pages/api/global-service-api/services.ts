@@ -5,7 +5,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const response = await fetch(`${API_BASE_URL}/global-service-api/services`, {
+      // Use /service-providers/ as per nginx config
+      // Backend route is /service-providers/services-with-categories (or /services)
+      const backendUrl = `${API_BASE_URL}/service-providers/services-with-categories`;
+      console.log(`📋 [Global Service API] Fetching all services: ${backendUrl}`);
+      const response = await fetch(backendUrl, {
         headers: {
           'Content-Type': 'application/json',
         },
