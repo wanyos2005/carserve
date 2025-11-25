@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { 
   Save, 
@@ -66,6 +66,18 @@ const ProviderLogServicePage: React.FC = () => {
   
   // Debounce timer for vehicle search
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  // Track the last matched plate to know when to clear fields (using ref to avoid dependency issues)
+  const lastMatchedPlateRef = useRef<string>('');
+
+  // Helper function to clear vehicle fields
+  const clearVehicleFields = useCallback(() => {
+    setVehicleMake('');
+    setVehicleModel('');
+    setSelectedMake('');
+    setFuelType('');
+    setYom('');
+    setMileage('');
+  }, []);
 
   // Fetch templates on mount
   useEffect(() => {
@@ -139,37 +151,61 @@ const ProviderLogServicePage: React.FC = () => {
       clearTimeout(debounceTimer);
     }
 
-    if (vehiclePlate.length < 3) {
+    const plate = vehiclePlate.trim();
+
+    // If plate is empty or too short, clear fields if they were previously auto-filled
+    if (plate.length < 3) {
+      if (lastMatchedPlateRef.current) {
+        clearVehicleFields();
+        lastMatchedPlateRef.current = '';
+      }
       return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        const results = await BookingService.searchVehicles(vehiclePlate);
+        const results = await BookingService.searchVehicles(plate);
         if (results.length > 0) {
           const vehicle = results[0];
-          if (vehicle.plate.toUpperCase() === vehiclePlate.toUpperCase()) {
+          // Only auto-fill if the plate matches exactly
+          if (vehicle.plate.toUpperCase() === plate.toUpperCase()) {
             setVehicleMake(vehicle.make || '');
             setVehicleModel(vehicle.model || '');
             setSelectedMake(vehicle.make || '');
             setFuelType(vehicle.fuel_type || '');
             setYom(vehicle.yom?.toString() || '');
             setMileage(vehicle.mileage?.toString() || '');
+            lastMatchedPlateRef.current = plate.toUpperCase();
+          } else {
+            // Plate doesn't match - clear fields if they were previously auto-filled
+            if (lastMatchedPlateRef.current) {
+              clearVehicleFields();
+              lastMatchedPlateRef.current = '';
+            }
+          }
+        } else {
+          // No results found - clear fields if they were previously auto-filled
+          if (lastMatchedPlateRef.current) {
+            clearVehicleFields();
+            lastMatchedPlateRef.current = '';
           }
         }
       } catch (err) {
         console.error('Vehicle search error:', err);
+        // On error, clear fields if they were previously auto-filled
+        if (lastMatchedPlateRef.current) {
+          clearVehicleFields();
+          lastMatchedPlateRef.current = '';
+        }
       }
     }, 400);
 
     setDebounceTimer(timer);
 
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
+      clearTimeout(timer);
     };
-  }, [vehiclePlate]);
+  }, [vehiclePlate, clearVehicleFields]);
 
   const handleTemplateChange = (template: Template | null) => {
     setSelectedTemplate(template);
@@ -431,13 +467,24 @@ const ProviderLogServicePage: React.FC = () => {
                       placeholder="e.g., 2020"
                     />
 
-                    <InputField
-                      label="Fuel Type"
-                      value={fuelType}
-                      onChange={setFuelType}
-                      type="text"
-                      placeholder="e.g., Petrol, Diesel"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fuel Type
+                      </label>
+                      <select
+                        value={fuelType}
+                        onChange={(e) => setFuelType(e.target.value)}
+                        className="
+                          w-full px-3 py-2 border border-gray-300 rounded-lg
+                          focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
+                          text-sm
+                        "
+                      >
+                        <option value="">Select fuel type</option>
+                        <option value="Petrol">Petrol</option>
+                        <option value="Diesel">Diesel</option>
+                      </select>
+                    </div>
                   </div>
 
                   <InputField

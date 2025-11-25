@@ -2,11 +2,12 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/provider/dashboard": "pages/provider/dashboard.js",
   "/provider-settings": "pages/provider-settings.js",
-  "/provider/manage-templates": "pages/provider/manage-templates.js",
-  "/api/service-provider-service/providers/[providerId]/templates": "pages/api/service-provider-service/providers/[providerId]/templates.js",
+  "/provider/log-service": "pages/provider/log-service.js",
+  "/provider/edit-provider": "pages/provider/edit-provider.js",
+  "/api/global-service-api/services/[serviceId]": "pages/api/global-service-api/services/[serviceId].js",
   "/api/service-provider-service/providers/[providerId]/services": "pages/api/service-provider-service/providers/[providerId]/services.js",
-  "/api/service-provider-service/providers/[providerId]/stats": "pages/api/service-provider-service/providers/[providerId]/stats.js",
-  "/api/service-provider-service/providers/[providerId]": "pages/api/service-provider-service/providers/[providerId].js"
+  "/provider/dashboard": "pages/provider/dashboard.js",
+  "/api/service-provider-service/providers/[providerId]": "pages/api/service-provider-service/providers/[providerId].js",
+  "/api/service-provider-service/providers/[providerId]/stats": "pages/api/service-provider-service/providers/[providerId]/stats.js"
 }

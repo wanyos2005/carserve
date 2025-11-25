@@ -29,15 +29,10 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/provider/dashboard.js"
     ],
-    "/provider/history": [
+    "/provider/edit-provider": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/provider/history.js"
-    ],
-    "/provider/manage-templates": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/provider/manage-templates.js"
+      "static/chunks/pages/provider/edit-provider.js"
     ]
   },
   "ampFirstPages": []

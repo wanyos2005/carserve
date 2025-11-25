@@ -477,62 +477,22 @@ const EditProviderPage: React.FC = () => {
                             />
                           </div>
 
-                          {/* Legacy Price Field */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Display Price (e.g., KSh 3,500 - 8,000)
-                            </label>
-                            <input
-                              type="text"
-                              value={prices[serviceId] || ''}
-                              onChange={(e) => setPrices(prev => ({ ...prev, [serviceId]: e.target.value }))}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                              placeholder="KSh 3,500 - 8,000"
-                            />
-                          </div>
-
-                          {/* Structured Pricing */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Min Price
-                              </label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KES</span>
-                                <input
-                                  type="number"
-                                  value={minPrices[serviceId] || ''}
-                                  onChange={(e) => setMinPrices(prev => ({ ...prev, [serviceId]: e.target.value }))}
-                                  className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                  placeholder="0"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Max Price
-                              </label>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KES</span>
-                                <input
-                                  type="number"
-                                  value={maxPrices[serviceId] || ''}
-                                  onChange={(e) => setMaxPrices(prev => ({ ...prev, [serviceId]: e.target.value }))}
-                                  className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                  placeholder="0"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
                           {/* Price Type */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Price Type
+                              Price Type *
                             </label>
+                            <p className="text-sm text-gray-600 mb-3">How do you want to price this service?</p>
                             <select
                               value={priceTypes[serviceId] || 'range'}
-                              onChange={(e) => setPriceTypes(prev => ({ ...prev, [serviceId]: e.target.value }))}
+                              onChange={(e) => {
+                                const newPriceType = e.target.value;
+                                setPriceTypes(prev => ({ ...prev, [serviceId]: newPriceType }));
+                                // When switching to fixed price, sync max_price with min_price
+                                if (newPriceType === 'fixed' && minPrices[serviceId]) {
+                                  setMaxPrices(prev => ({ ...prev, [serviceId]: minPrices[serviceId] }));
+                                }
+                              }}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                             >
                               <option value="fixed">Fixed Price</option>
@@ -543,19 +503,180 @@ const EditProviderPage: React.FC = () => {
                             </select>
                           </div>
 
-                          {/* Unit Field (for per_unit pricing) */}
+                          {/* Dynamic Pricing Fields based on Price Type */}
+                          {priceTypes[serviceId] === 'fixed' && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Fixed Price (KES)
+                              </label>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KES</span>
+                                <input
+                                  type="number"
+                                  value={minPrices[serviceId] || ''}
+                                  onChange={(e) => {
+                                    setMinPrices(prev => ({ ...prev, [serviceId]: e.target.value }));
+                                    setMaxPrices(prev => ({ ...prev, [serviceId]: e.target.value }));
+                                  }}
+                                  className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                  placeholder="e.g., 5000"
+                                />
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">This service has a fixed price that customers will pay.</p>
+                            </div>
+                          )}
+
+                          {priceTypes[serviceId] === 'range' && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Price Range (KES)
+                              </label>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KES</span>
+                                    <input
+                                      type="number"
+                                      value={minPrices[serviceId] || ''}
+                                      onChange={(e) => setMinPrices(prev => ({ ...prev, [serviceId]: e.target.value }))}
+                                      className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                      placeholder="e.g., 3000"
+                                    />
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">Min Price</p>
+                                </div>
+                                <div>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KES</span>
+                                    <input
+                                      type="number"
+                                      value={maxPrices[serviceId] || ''}
+                                      onChange={(e) => setMaxPrices(prev => ({ ...prev, [serviceId]: e.target.value }))}
+                                      className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                      placeholder="e.g., 8000"
+                                    />
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">Max Price</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">Customers will see a price range. Final price depends on specific requirements.</p>
+                            </div>
+                          )}
+
                           {priceTypes[serviceId] === 'per_unit' && (
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Unit (e.g., per_liter, per_hour)
+                                Per Unit Pricing (KES)
                               </label>
-                              <input
-                                type="text"
-                                value={priceUnits[serviceId] || ''}
-                                onChange={(e) => setPriceUnits(prev => ({ ...prev, [serviceId]: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                placeholder="per_liter"
-                              />
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KES</span>
+                                    <input
+                                      type="number"
+                                      value={minPrices[serviceId] || ''}
+                                      onChange={(e) => setMinPrices(prev => ({ ...prev, [serviceId]: e.target.value }))}
+                                      className="w-full pl-12 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                      placeholder="e.g., 150"
+                                    />
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">Price per Unit</p>
+                                </div>
+                                <div>
+                                  <select
+                                    value={priceUnits[serviceId] || ''}
+                                    onChange={(e) => setPriceUnits(prev => ({ ...prev, [serviceId]: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                  >
+                                    <option value="">Select Unit</option>
+                                    <option value="per_liter">Per Liter</option>
+                                    <option value="per_hour">Per Hour</option>
+                                    <option value="per_km">Per KM</option>
+                                    <option value="per_unit">Per Unit</option>
+                                  </select>
+                                  <p className="text-xs text-gray-500 mt-1">Unit</p>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">Price is calculated based on quantity (e.g., liters of fuel, hours of work).</p>
+                            </div>
+                          )}
+
+                          {priceTypes[serviceId] === 'free' && (
+                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="p-2 bg-purple-100 rounded-lg">
+                                  <span className="text-purple-700 text-lg">🎁</span>
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-semibold text-purple-700 mb-1">Free Service</h4>
+                                  <p className="text-xs text-purple-600">This service is provided free of charge to customers.</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {priceTypes[serviceId] === 'variable' && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="p-2 bg-gray-100 rounded-lg">
+                                  <span className="text-gray-700 text-lg">📞</span>
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-1">Contact for Pricing</h4>
+                                  <p className="text-xs text-gray-600">Customers will need to contact you directly for pricing information.</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Legacy Display Price Field (hidden but kept for backward compatibility) */}
+                          <input
+                            type="hidden"
+                            value={prices[serviceId] || ''}
+                            readOnly
+                          />
+
+                          {/* Price Preview */}
+                          {priceTypes[serviceId] && priceTypes[serviceId] !== 'free' && priceTypes[serviceId] !== 'variable' && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <div className="flex items-start space-x-3">
+                                <span className="text-blue-700">👁️</span>
+                                <div className="flex-1">
+                                  <h4 className="text-sm font-semibold text-blue-700 mb-1">Price Preview</h4>
+                                  <p className="text-base font-bold text-blue-800">
+                                    {(() => {
+                                      const priceType = priceTypes[serviceId] || 'range';
+                                      const minPrice = minPrices[serviceId];
+                                      const maxPrice = maxPrices[serviceId];
+                                      const unit = priceUnits[serviceId];
+                                      
+                                      switch (priceType) {
+                                        case 'fixed':
+                                          if (minPrice && !isNaN(parseFloat(minPrice))) {
+                                            return `KES ${parseFloat(minPrice).toLocaleString()}`;
+                                          }
+                                          return 'Contact for pricing';
+                                        case 'range':
+                                          if (minPrice && maxPrice && !isNaN(parseFloat(minPrice)) && !isNaN(parseFloat(maxPrice))) {
+                                            return `KES ${parseFloat(minPrice).toLocaleString()} - ${parseFloat(maxPrice).toLocaleString()}`;
+                                          }
+                                          return 'Contact for pricing';
+                                        case 'per_unit':
+                                          if (minPrice && unit && !isNaN(parseFloat(minPrice))) {
+                                            const unitText = unit === 'per_liter' ? '/liter' : 
+                                                          unit === 'per_hour' ? '/hour' : 
+                                                          unit === 'per_km' ? '/km' : '/unit';
+                                            return `KES ${parseFloat(minPrice).toLocaleString()}${unitText}`;
+                                          }
+                                          return 'Contact for pricing';
+                                        default:
+                                          return 'Contact for pricing';
+                                      }
+                                    })()}
+                                  </p>
+                                  <p className="text-xs text-blue-600 mt-1">This is how customers will see your pricing</p>
+                                </div>
+                              </div>
                             </div>
                           )}
 
@@ -568,7 +689,10 @@ const EditProviderPage: React.FC = () => {
                                 onChange={(e) => setNegotiableFlags(prev => ({ ...prev, [serviceId]: e.target.checked }))}
                                 className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                               />
-                              <span className="text-sm text-gray-700">Price is negotiable</span>
+                              <div>
+                                <span className="text-sm font-medium text-gray-700">Price is negotiable</span>
+                                <p className="text-xs text-gray-500">Allow customers to negotiate the final price</p>
+                              </div>
                             </label>
                           </div>
 
