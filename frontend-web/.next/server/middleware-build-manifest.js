@@ -19,6 +19,11 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
+    "/provider-settings": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/provider-settings.js"
+    ],
     "/provider/dashboard": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -29,10 +34,10 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/provider/history.js"
     ],
-    "/provider/log-service": [
+    "/provider/manage-templates": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/provider/log-service.js"
+      "static/chunks/pages/provider/manage-templates.js"
     ]
   },
   "ampFirstPages": []
