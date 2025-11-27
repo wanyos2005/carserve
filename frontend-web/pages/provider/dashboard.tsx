@@ -13,8 +13,8 @@ import { ProviderCategoryConfigs } from '../../lib/config/providerCategoryConfig
 import { FrontendCategoryGroups } from '../../lib/config/frontendCategoryGrouping';
 
 interface ProviderDetails {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
   category?: {
     name: string;
   };
@@ -214,18 +214,18 @@ const ProviderDashboard: React.FC = () => {
                         'bg-blue-600'
                       }`}></span>
                       {frontendGroup.name}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
+              </span>
+          </div>
+        )}
+          </div>
+
               <button
                 onClick={togglePrivileges}
                 className="p-3 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <div className={`transform transition-transform duration-300 ${isPrivilegesExpanded ? 'rotate-180' : ''}`}>
                   <Menu className="h-6 w-6 text-gray-800" />
-                </div>
+              </div>
               </button>
             </div>
           </div>
@@ -257,8 +257,8 @@ const ProviderDashboard: React.FC = () => {
                           <RefreshCw className="h-5 w-5 text-blue-600" />
                         )}
                       </button>
-                    </div>
-                    
+          </div>
+
                     {/* Stats grid - 2x2 layout */}
                     <div className="grid grid-cols-2 gap-3">
                       {statCards.slice(0, 4).map((statCard: any, index: number) => {
@@ -269,24 +269,24 @@ const ProviderDashboard: React.FC = () => {
                           <div key={index} className="bg-gray-50 rounded-xl p-4">
                             <div className="flex items-center justify-center mb-2">
                               <IconComponent className={`h-6 w-6 ${colors.text}`} />
-                            </div>
+                </div>
                             <p className="text-sm text-gray-600 text-center mb-1">
                               {statCard.title}
                             </p>
                             {statsDataLoading ? (
                               <div className="flex justify-center">
                                 <div className={`animate-spin rounded-full h-5 w-5 border-2 ${colors.text} border-t-transparent`}></div>
-                              </div>
-                            ) : (
+                  </div>
+                ) : (
                               <p className={`text-lg font-bold text-center ${colors.text}`}>
                                 {statCard.value}
                               </p>
-                            )}
-                          </div>
+                )}
+              </div>
                         );
                       })}
-                    </div>
-                  </div>
+            </div>
+          </div>
 
                   {/* Quick Actions */}
                   <h2 className="text-xl font-bold text-gray-800 mb-3">
@@ -323,24 +323,24 @@ const ProviderDashboard: React.FC = () => {
                           <div className="flex items-center space-x-4">
                             <div className={`p-3 rounded-xl ${colors.bg}`}>
                               <IconComponent className={`h-6 w-6 ${colors.text}`} />
-                            </div>
+                </div>
                             <div className="flex-1">
                               <h3 className="font-semibold text-gray-900">
                                 {action.title}
-                              </h3>
-                              <p className="text-sm text-gray-600">
+                          </h3>
+                          <p className="text-sm text-gray-600">
                                 {action.subtitle}
-                              </p>
-                            </div>
+                          </p>
+                        </div>
                             <ChevronRight className="h-4 w-4 text-gray-400" />
-                          </div>
+                      </div>
                         </button>
                       );
                     })}
-                  </div>
-                </div>
               </div>
             </div>
+          </div>
+        </div>
           ) : (
             /* Main Content Area - Provider Hub (Clean & Modern) */
             <div className="flex-1 m-5">
@@ -366,7 +366,7 @@ const ProviderDashboard: React.FC = () => {
                     ) : (
                       <DashboardIcon className="h-12 w-12 text-blue-600" />
                     )}
-                  </div>
+              </div>
                   
                   <h2 className="text-3xl font-bold text-gray-700 mb-4">
                     Your Business Hub
@@ -404,7 +404,7 @@ const ProviderDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+                  </div>
           )}
         </div>
       </div>

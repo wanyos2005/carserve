@@ -43,12 +43,37 @@ const LoginPage: React.FC = () => {
   // Redirect after successful login when user is available
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.providerId) {
+      console.log('🔍 [Login] Redirect check - user:', user);
+      console.log('🔍 [Login] Redirect check - providerId:', user.providerId);
+      console.log('🔍 [Login] Redirect check - userType:', user.userType);
+      console.log('🔍 [Login] Redirect check - isAuthenticated:', isAuthenticated);
+      
+      // Determine redirect path based on user type
+      let redirectPath = '/home'; // Default to car owner home
+      
+      if (user.providerId || user.userType === 'provider') {
         // Redirect to provider dashboard with user's providerId
-        router.push(`/provider/dashboard?providerId=${user.providerId}`);
+        redirectPath = `/provider/dashboard?providerId=${user.providerId}`;
+        console.log('✅ [Login] Redirecting provider to:', redirectPath);
+      } else if (user.userType === 'carOwner' || (!user.providerId && user.userType !== 'admin')) {
+        // Redirect car owners to their home page
+        redirectPath = '/home';
+        console.log('✅ [Login] Redirecting car owner to:', redirectPath);
+      } else if (user.userType === 'admin') {
+        // Admins can stay on marketing page or redirect to admin dashboard
+        redirectPath = '/';
+        console.log('✅ [Login] Redirecting admin to:', redirectPath);
       } else {
-        // If no providerId, redirect to home or appropriate page
-        router.push('/');
+        // Default: redirect to home for car owners
+        redirectPath = '/home';
+        console.log('✅ [Login] Default redirect to:', redirectPath);
+      }
+      
+      // Perform redirect
+      if (redirectPath) {
+        router.push(redirectPath).catch(err => {
+          console.error('❌ [Login] Redirect error:', err);
+        });
       }
     }
   }, [isAuthenticated, user, router]);
@@ -68,11 +93,18 @@ const LoginPage: React.FC = () => {
       const success = await login(email.trim(), code.trim());
       if (!success) {
         setError('Invalid verification code. Please try again.');
+        setIsLoading(false);
+        return;
       }
-      // Redirect will happen via useEffect when user state updates
+      // Wait a bit for auth state to update, then check redirect
+      // The useEffect will handle the redirect, but we can also do it here as a fallback
+      setTimeout(() => {
+        // This is a fallback - the useEffect should handle it, but just in case
+        console.log('⏱️ [Login] Fallback redirect check after login');
+      }, 500);
+      // Don't set loading to false here - let the redirect happen
     } catch (error) {
       setError('An error occurred. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };

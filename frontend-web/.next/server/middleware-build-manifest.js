@@ -19,20 +19,20 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/provider-settings": [
+    "/booking": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/provider-settings.js"
+      "static/chunks/pages/booking.js"
     ],
-    "/provider/dashboard": [
+    "/history": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/provider/dashboard.js"
+      "static/chunks/pages/history.js"
     ],
-    "/provider/edit-provider": [
+    "/home": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/provider/edit-provider.js"
+      "static/chunks/pages/home.js"
     ]
   },
   "ampFirstPages": []

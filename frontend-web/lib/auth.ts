@@ -67,13 +67,27 @@ export const useAuth = () => {
         console.log('👤 [Auth] User data from /api/users/me:', userData);
         console.log('👤 [Auth] provider_id from backend:', userData.provider_id);
         console.log('👤 [Auth] provider_id type:', typeof userData.provider_id);
+        // Determine user type - handle empty strings and null/undefined
+        const hasProviderId = userData.provider_id && 
+                              userData.provider_id.toString().trim() !== '' && 
+                              userData.provider_id.toString().trim() !== 'null' &&
+                              userData.provider_id.toString().trim() !== 'undefined';
+        
+        let userType: 'carOwner' | 'provider' | 'admin' = 'carOwner';
+        if (userData.is_admin) {
+          userType = 'admin';
+        } else if (hasProviderId) {
+          userType = 'provider';
+        } else {
+          userType = 'carOwner';
+        }
+        
         const mappedUser: User = {
           id: userData.id.toString(),
           email: userData.email,
           name: userData.name || userData.provider_name || 'User',
-          userType: (userData.is_admin ? 'admin' : 
-                   userData.provider_id ? 'provider' : 'carOwner') as 'carOwner' | 'provider' | 'admin',
-          providerId: userData.provider_id?.toString(),
+          userType,
+          providerId: hasProviderId ? userData.provider_id.toString() : undefined,
           isActive: userData.is_active !== false,
           createdAt: userData.created_at,
           lastLogin: userData.last_login,

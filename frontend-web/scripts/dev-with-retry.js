@@ -28,7 +28,7 @@ function cleanNextDir() {
 function startDevServer() {
   console.log(`🚀 Starting Next.js dev server (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
   
-  const devProcess = spawn('npx', ['next', 'dev', '-H', '0.0.0.0'], {
+  const devProcess = spawn('npx', ['next', 'dev', '--hostname', '0.0.0.0', '--port', '3000'], {
     stdio: 'inherit',
     shell: true,
     cwd: path.join(__dirname, '..'),

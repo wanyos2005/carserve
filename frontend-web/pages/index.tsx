@@ -22,13 +22,27 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      if (user.providerId) {
+      console.log('🔍 [Index] Redirect check - user:', user);
+      console.log('🔍 [Index] Redirect check - providerId:', user.providerId);
+      console.log('🔍 [Index] Redirect check - userType:', user.userType);
+      
+      // Only redirect if we're not already on the correct page
+      const currentPath = router.pathname;
+      
+      if (user.providerId || user.userType === 'provider') {
         // Redirect to provider dashboard with user's providerId
-        router.push(`/provider/dashboard?providerId=${user.providerId}`);
-      } else {
-        // If no providerId, stay on home page or redirect to appropriate page
-        // For now, we'll stay on home page
+        if (currentPath !== '/provider/dashboard') {
+          console.log('✅ [Index] Redirecting provider to dashboard');
+          router.push(`/provider/dashboard?providerId=${user.providerId}`);
+        }
+      } else if (user.userType === 'carOwner' || (!user.providerId && user.userType !== 'admin')) {
+        // Redirect car owners to their home page
+        if (currentPath !== '/home') {
+          console.log('✅ [Index] Redirecting car owner to /home');
+          router.push('/home');
+        }
       }
+      // Admins and unauthenticated users stay on marketing page
     }
   }, [isAuthenticated, isLoading, user, router]);
 
