@@ -69,11 +69,11 @@ const ProviderOnboarding: React.FC = () => {
   const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([]);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
 
-  const { data: categoriesData } = useApi('/api/service-provider-service/categories');
-  const { data: servicesData } = useApi('/api/service-provider-service/services');
+  const { data: categoriesData } = useApi<ServiceCategory[]>('/api/service-provider-service/categories');
+  const { data: servicesData } = useApi<any[]>('/api/service-provider-service/services');
 
   useEffect(() => {
-    if (categoriesData) {
+    if (categoriesData && Array.isArray(categoriesData)) {
       setServiceCategories(categoriesData);
     }
   }, [categoriesData]);
