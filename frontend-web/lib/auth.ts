@@ -137,7 +137,7 @@ export const useAuth = () => {
     }
   };
 
-  const sendCode = async (email: string): Promise<boolean> => {
+  const sendCode = async (email: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch('/api/users/send-code', {
         method: 'POST',
@@ -149,13 +149,25 @@ export const useAuth = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('Send code failed:', errorData);
+        console.error('Send code failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
+        return { 
+          success: false, 
+          error: errorData.error || errorData.details || 'Failed to send verification code' 
+        };
       }
 
-      return response.ok;
+      return { success: true };
     } catch (error) {
       console.error('Send code error:', error);
-      return false;
+      const errorMessage = error instanceof Error ? error.message : 'Network error';
+      return { 
+        success: false, 
+        error: `Connection error: ${errorMessage}. Please check your internet connection.` 
+      };
     }
   };
 

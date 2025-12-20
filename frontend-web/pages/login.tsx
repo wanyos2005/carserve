@@ -26,12 +26,12 @@ const LoginPage: React.FC = () => {
     setSuccess('');
 
     try {
-      const success = await sendCode(email.trim());
-      if (success) {
+      const result = await sendCode(email.trim());
+      if (result.success) {
         setSuccess('Verification code sent to your email');
         setStep('code');
       } else {
-        setError('Failed to send verification code. Please try again.');
+        setError(result.error || 'Failed to send verification code. Please try again.');
       }
     } catch (error) {
       setError('An error occurred. Please try again.');

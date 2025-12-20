@@ -209,7 +209,7 @@ def create_services(conn):
         
         # Car Wash & Detailing
         
-       # Added from Peter's data
+       
         ("Body Wash", "Standard exterior body wash", "Car Wash & Detailing"),
         ("Engine Wash", "General cleaning of engine surfaces", "Car Wash & Detailing"),
         ("Vacuum Cleaning", "Interior vacuuming of carpets and seats", "Car Wash & Detailing"),
