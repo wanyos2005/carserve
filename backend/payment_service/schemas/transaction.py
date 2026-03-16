@@ -6,6 +6,7 @@ from datetime import datetime
 class TransactionCreate(BaseModel):
     """Posted by the Flutter SMS reader after parsing an M-Pesa message."""
     transaction_code: str
+    raw_sms: str
     transaction_type: str = "received"
     amount: float
     balance: Optional[float] = None
@@ -22,6 +23,7 @@ class DarajaC2BCallback(BaseModel):
     Payload shape sent by Safaricom Daraja API on a C2B payment.
     Field names match Safaricom's official spec.
     """
+    RawSMS: str
     TransactionType: str
     TransID: str                    # M-Pesa transaction code
     TransTime: str                  # e.g. "20260316103000"
@@ -39,6 +41,7 @@ class DarajaC2BCallback(BaseModel):
 
 class TransactionRead(BaseModel):
     id: str
+    raw_sms: str
     transaction_code: str
     transaction_type: str
     amount: float

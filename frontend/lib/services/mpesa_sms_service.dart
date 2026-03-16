@@ -206,6 +206,7 @@ class MpesaSmsService {
     }
 
     return {
+      'raw_sms': body,
       'transaction_code': transactionCode,
       'amount': amount,
       'balance': balance,
