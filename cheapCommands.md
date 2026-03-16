@@ -253,3 +253,132 @@ tel: → opens dialer (no auto-call, no permission needed)
 sms: → opens SMS composer (no SEND_SMS needed)
 mailto: and https://wa.me/... → external apps (no sensitive permissions)
 In “Data safety,” declare location collection (if you collect it) and any analytics/crash data truthfully, and ensure the privacy policy reflects this.
+
+# see exactly what's on the server. Run these commands in the Session Manager terminal:
+
+
+# Who are we and where are we
+whoami && pwd
+
+# Check memory (confirm it's really 2GB)
+free -h
+
+# Check disk space
+df -h /
+
+# Check if docker is running and what containers exist
+sudo docker ps -a
+
+# Find the project folder
+sudo find / -name "docker-compose.yml" -not -path "*/proc/*" 2>/dev/n
+
+# See what's eating disk - Docker images are the likely culprit
+sudo du -sh /var/lib/docker
+
+# Check why alert-beat keeps crashing
+sudo docker logs --tail 20 carserve-alert-beat-1
+
+# Remove unused images, stopped containers, build cache
+# Safe — only removes things not currently running
+sudo docker system prune -a
+
+# Dumping the database, incase you want to store it as a backup
+
+sudo docker exec carserve-postgres-1 \
+  pg_dump -U AdminDb car_platform > /home/ubuntu/db_backup_$(date +%Y%m%d).sql
+===if the ssm user cant write to home/ubuntu, write to /tmp by running:
+sudo docker exec carserve-postgres-1 \
+  pg_dump -U AdminDb car_platform > /tmp/db_backup_$(date +%Y%m%d).sql
+# Verify the dumped has content
+wc -l /home/ubuntu/db_backup_*.sql
+
+# Then move it to ubuntu's home with sudo:
+sudo mv /tmp/db_backup_*.sql /home/ubuntu/
+sudo ls -lh /home/ubuntu/db_backup_*.sql
+# To upgrade our aws instance, after running the above commands:
+
+====Step 1 — Stop containers:
+
+
+cd /home/ubuntu/carserve
+sudo docker compose -f docker-compose.aws.yml down
+====Step 2 — Go to AWS Console and upgrade:
+
+
+EC2 → Instances → i-0ec6c2b1be34e3c5f
+→ Instance State → Stop instance → wait for "stopped"
+→ Actions → Instance Settings → Change instance type → t3.medium → Apply
+→ Instance State → Start instance → wait for "running"
+
+Step 3 — Once running, reconnect via Session Manager and start containers:
+
+
+cd /home/ubuntu/carserve
+sudo docker compose -f docker-compose.aws.yml up -d
+Step 4 — Verify:
+
+
+sudo docker ps
+free -h
+
+###  Creating the RDS and restoring the backup:
+
+Step 1 — Create RDS instance
+
+AWS Console (eu-north-1) → RDS → Create database
+Settings to use:
+
+Field	Value
+Creation method	Standard create
+Engine	PostgreSQL
+Version	15 (match your current container)
+Template	Free tier
+DB instance identifier	car-platform-db
+Master username	AdminDb
+Master password	Ngojakwanza (same as current)
+DB instance class	db.t3.micro
+Storage	20GB gp2
+VPC	vpc-0a6b528e29633b4b2 ← same as EC2
+Subnet group	default
+Public access	No
+VPC security group	Create new → name it rds-postgres-sg
+Database name	car_platform
+Leave everything else as default → Create database (takes ~5 min).
+
+Step 2 — Allow EC2 to talk to RDS (while RDS is creating)
+
+EC2 → Security Groups → find "rds-postgres-sg" (just created)
+→ Edit inbound rules → Add rule:
+  Type: PostgreSQL
+  Port: 5432
+  Source: sg-0e005173be308b3d8   ← your EC2 security group
+→ Save
+This means only your EC2 instance can reach the database — nothing else.
+
+Step 3 — After RDS is available, restore the backup
+Once RDS shows status Available, get the endpoint:
+
+
+RDS → Databases → car-platform-db → Connectivity → Endpoint
+# looks like: car-platform-db.xxxxxxxxx.eu-north-1.rds.amazonaws.com
+Then in Session Manager:
+
+
+# Install postgres client to connect to RDS
+sudo apt-get install -y postgresql-client
+
+# Restore the backup
+sudo psql -h <rds-endpoint> -U AdminDb -d car_platform \
+  -f /home/ubuntu/db_backup_20260316.sql
+Step 4 — Update .env on the server
+
+sudo nano /home/ubuntu/carserve/.env
+Find DATABASE_URL and update it:
+
+
+DATABASE_URL=postgresql://AdminDb:Ngojakwanza@<rds-endpoint>:5432/car_platform
+Step 5 — Restart containers without postgres
+
+cd /home/ubuntu/carserve
+sudo docker compose -f docker-compose.aws.yml down
+sudo docker compose -f docker-compose.aws.yml up -d

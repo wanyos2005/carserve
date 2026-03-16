@@ -353,6 +353,51 @@ services:
       retries: 3
       start_period: 40s
 
+  payment-service:
+    build:
+      context: ./backend/payment_service
+    volumes:
+      - ./backend/payment_service:/app
+    ports:
+      - "8010:8010"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - WEBHOOK_MAX_RETRIES=${WEBHOOK_MAX_RETRIES:-3}
+      - WEBHOOK_TIMEOUT_SECONDS=${WEBHOOK_TIMEOUT_SECONDS:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8010/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  payment-worker:
+    build:
+      context: ./backend/payment_service
+    volumes:
+      - ./backend/payment_service:/app
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - WEBHOOK_MAX_RETRIES=${WEBHOOK_MAX_RETRIES:-3}
+      - WEBHOOK_TIMEOUT_SECONDS=${WEBHOOK_TIMEOUT_SECONDS:-10}
+    depends_on:
+      - postgres
+      - redis
+    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
+
   loyalty-service:
     build:
       context: ./backend/loyalty_service
@@ -404,6 +449,8 @@ services:
       social-service:
         condition: service_started
       loyalty-service:
+        condition: service_started
+      payment-service:
         condition: service_started
 
 volumes:

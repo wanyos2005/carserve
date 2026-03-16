@@ -27,6 +27,7 @@ import 'package:driveon_car_platform/services/user_context_service.dart';
 import 'package:driveon_car_platform/services/storage_service.dart';
 import 'package:driveon_car_platform/services/fcm_service.dart';
 import 'package:driveon_car_platform/services/unified_permission_service.dart';
+import 'package:driveon_car_platform/services/mpesa_sms_service.dart';
 
 
 const abyssBlue = Color(0xFF0A192F); // dark navy blue
@@ -84,7 +85,12 @@ class _CarPlatformAppState extends State<CarPlatformApp> with WidgetsBindingObse
       
       // 2. Request notification permission and initialize FCM
       await _initializeNotifications();
-      
+
+      // 3. Initialize M-Pesa SMS listener for provider (merchant) accounts
+      if (userContext != null && userContext.isProvider) {
+        await MpesaSmsService.initialize();
+      }
+
       if (mounted) {
         setState(() {
           _userContext = userContext;
