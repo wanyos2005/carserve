@@ -6,7 +6,38 @@ on:
       - main
 
 jobs:
+  build-payment-service:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push payment-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/payment_service
+          push: true
+          tags: ghcr.io/wanyos2005/payment-service:latest
+
+      - name: Build and push payment-worker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/payment_service
+          push: true
+          tags: ghcr.io/wanyos2005/payment-worker:latest
+
   deploy:
+    needs: build-payment-service
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +73,7 @@ jobs:
               'echo --- Pulling latest code from GitHub ---',
               'git pull origin main || echo \"Git pull failed, continuing with existing code\"',
               'echo --- Building and running containers ---',
-              'docker compose -f docker-compose.aws.yml pull',
+              'docker compose -f docker-compose.aws.yml pull --ignore-pull-failures',
               'docker compose -f docker-compose.aws.yml up -d --build',
               'docker system prune -f -y',
               'echo --- Deployment complete ---'
