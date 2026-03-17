@@ -152,7 +152,7 @@ class MpesaSmsService {
     final codeMatch = RegExp(r'^([A-Z0-9]{10})\s').firstMatch(body);
     if (codeMatch == null) return null;
     final transactionCode = codeMatch.group(1)!;
-     debugPrint('⚠️ MpesaSmsService: could not parse SMS body: $codeMatch');
+     debugPrint('⚠️ MpesaSmsServiceError: mpesa code: $codeMatch');
     // Amount — "Ksh1,000.00" or "Ksh500.00"
     final amountMatch = RegExp(r'Ksh([\d,]+\.?\d*)').firstMatch(body);
     if (amountMatch == null) return null;
