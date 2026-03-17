@@ -111,6 +111,14 @@ class ProviderService {
     return await ApiService.post("/service-providers/$providerId/templates", data);
   }
   
+  // provider webhook callback setup
+  static Future<dynamic> createProviderWebhookUrl(Map<String, dynamic> data) async {
+      return await ApiService.post("/payment-service/webhooks/", data);    
+  }
+  static Future<List<dynamic>> getProviderWebhookUrls(String providerId) async {
+    final res = await ApiService.get("/payment-service/webhooks/");
+    return res is List ? res : [];
+  }
 
 
 }
