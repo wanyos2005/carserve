@@ -44,6 +44,59 @@ services:
           cpus: '0.1'
 
   # API Gateway / Reverse proxy
+  payment-service:
+    build:
+      context: ./backend/payment_service
+      dockerfile: Dockerfile
+    image: ghcr.io/wanyos2005/payment-service:latest
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  payment-worker:
+    build:
+      context: ./backend/payment_service
+      dockerfile: Dockerfile
+    image: ghcr.io/wanyos2005/payment-worker:latest
+    env_file: .env
+    command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.4'
+        reservations:
+          memory: 128M
+          cpus: '0.2'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   nginx:
     image: nginx:1.25-alpine
     container_name: gateway
@@ -57,6 +110,7 @@ services:
       - expenses-service
       - social-service
       - loyalty-service
+      - payment-service
     ports:
       - "80:80"
     volumes:
