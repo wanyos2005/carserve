@@ -10,8 +10,8 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-     defaultValue: 'http://16.16.129.217'
-     //aws elastic IP: 	16.16.129.217 //'http://192.168.0.100:8000'//'http://16.16.143.243', // ✅ Public AWS VM IP //if local machine :'http://192.168.0.103:8000', //if oracle: 'http://152.70.28.112', 
+     defaultValue: 'http://192.168.0.104:8000'  // local: port 8000, AWS: port 80
+     //aws elastic IP: 	16.16.129.217 //'http://192.168.0.104:8000'  //if local machine :'http://192.168.0.103:8000',  
   );
 }
 

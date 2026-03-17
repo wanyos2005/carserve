@@ -6,7 +6,6 @@ class ProviderService {
     int? categoryId,
     String? serviceId,
   }) async {
-    // Build query string dynamically
     final queryParams = <String, String>{};
     if (categoryId != null) queryParams['category_id'] = categoryId.toString();
     if (serviceId != null) queryParams['service_id'] = serviceId;
@@ -23,16 +22,14 @@ class ProviderService {
     return res is List ? res : [];
   }
 
-  /// 🔹 Fetch providers by a full URL (used for multi-service filtering)
   static Future<List<dynamic>> getProvidersByUrl(String url) async {
     final res = await ApiService.get(url);
     return res is List ? res : [];
   }
+
   static Future<Map<String, dynamic>?> getProviderDetails(String providerId) async {
     final res = await ApiService.get("/service-providers/$providerId");
-    if (res is Map) {
-      return Map<String, dynamic>.from(res);
-    }
+    if (res is Map) return Map<String, dynamic>.from(res);
     return null;
   }
 
@@ -41,15 +38,8 @@ class ProviderService {
   }
 
   static Future<Map<String, dynamic>?> quickCreateProvider(String name) async {
-    print("🔄 QuickCreateProvider: Sending request for provider: $name");
-    final res = await ApiService.post("/service-providers/quick-provider", {
-      "name": name,
-    });
-    print("🔄 QuickCreateProvider: API response: $res");
-    if (res is Map) {
-      return Map<String, dynamic>.from(res);
-    }
-    print("❌ QuickCreateProvider: Response is not a Map, returning null");
+    final res = await ApiService.post("/service-providers/quick-provider", {"name": name});
+    if (res is Map) return Map<String, dynamic>.from(res);
     return null;
   }
 
@@ -63,14 +53,8 @@ class ProviderService {
     return res is List ? res : [];
   }
 
-  static Future<dynamic> attachServicesToProvider(String providerId, List<Map<String,dynamic>> services) async {
-    print("🔄 ProviderService: Attaching ${services.length} services to provider $providerId");
-    print("🔄 ProviderService: Services data: $services");
-    
-    final result = await ApiService.post("/service-providers/$providerId/services", services);
-    print("🔄 ProviderService: API response: $result");
-    
-    return result;
+  static Future<dynamic> attachServicesToProvider(String providerId, List<Map<String, dynamic>> services) async {
+    return await ApiService.post("/service-providers/$providerId/services", services);
   }
 
   // 🔹 Ratings
@@ -93,6 +77,7 @@ class ProviderService {
     if (res is Map) return Map<String, dynamic>.from(res);
     return null;
   }
+
   // 🔹 Categories
   static Future<List<dynamic>> getProviderCategories() async {
     final res = await ApiService.get("/service-providers/categories/provider-categories");
@@ -100,25 +85,41 @@ class ProviderService {
   }
 
   static Future<dynamic> createProviderCategory(Map<String, dynamic> data) async {
-      return await ApiService.post("/service-providers/categories/provider-categories", data);
-    
+    return await ApiService.post("/service-providers/categories/provider-categories", data);
   }
+
   static Future<List<dynamic>> getServiceTemplates(String providerId) async {
     final res = await ApiService.get("/service-providers/$providerId/templates");
     return res is List ? res : [];
   }
+
   static Future<dynamic> createServiceTemplate(String providerId, Map<String, dynamic> data) async {
     return await ApiService.post("/service-providers/$providerId/templates", data);
   }
-  
-  // provider webhook callback setup
+
+  // 🔹 Webhooks
   static Future<dynamic> createProviderWebhookUrl(Map<String, dynamic> data) async {
-      return await ApiService.post("/payment-service/webhooks/", data);    
+    return await ApiService.post("/payment-service/webhooks", data);
   }
+
   static Future<List<dynamic>> getProviderWebhookUrls(String providerId) async {
-    final res = await ApiService.get("/payment-service/webhooks/");
+    final res = await ApiService.get("/payment-service/webhooks", query: {"provider_id": providerId});
     return res is List ? res : [];
   }
 
+  static Future<Map<String, dynamic>?> updateProviderWebhookUrl(
+      String subscriptionId, Map<String, dynamic> data) async {
+    final res = await ApiService.put("/payment-service/webhooks/$subscriptionId", data);
+    if (res is Map) return Map<String, dynamic>.from(res);
+    return null;
+  }
 
+  static Future<bool> deleteProviderWebhookUrl(String subscriptionId) async {
+    return await ApiService.delete("/payment-service/webhooks/$subscriptionId");
+  }
+
+  static Future<List<dynamic>> getWebhookDeliveryLogs(String subscriptionId) async {
+    final res = await ApiService.get("/payment-service/webhooks/$subscriptionId/logs");
+    return res is List ? res : [];
+  }
 }

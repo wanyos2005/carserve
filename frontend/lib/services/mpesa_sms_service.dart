@@ -14,15 +14,19 @@ import 'user_context_service.dart';
 // Must be a top-level function, not a class method.
 @pragma('vm:entry-point')
 void backgroundSmsHandler(SmsMessage message) {
-  if (MpesaSmsService.isMpesaSms(message)) {
-    final parsed = MpesaSmsService.parseMpesaSms(message.body ?? '');
-    if (parsed != null) {
-      // Background isolate — fire-and-forget POST.
-      // Full dedup is not available here (no SharedPreferences access from isolate),
-      // so the backend should deduplicate on transaction_code.
-      ApiService.post('/mpesa/transactions', parsed);
-    }
-  }
+  if (!MpesaSmsService.isMpesaSms(message)) return;
+  final body = message.body ?? '';
+  if (body.isEmpty) return;
+
+  // Always post raw_sms — backend deduplicates on transaction_code.
+  // No SharedPreferences access in background isolate, so we rely on backend dedup.
+  final parsed = MpesaSmsService.parseMpesaSms(body);
+  final payload = <String, dynamic>{
+    'raw_sms': body,
+    'source': 'sms_reader',
+    ...?parsed,
+  };
+  ApiService.post('/payment-service/mpesa/transactions', payload);
 }
 
 class MpesaSmsService {
@@ -32,7 +36,7 @@ class MpesaSmsService {
   static const String _processedKeyPrefix = 'mpesa_processed_';
 
   // How far back to scan the inbox on first run (in milliseconds)
-  static const int _inboxScanDaysBack = 60;
+  static const int _inboxScanDaysBack = 7;
 
   /// Call once from main.dart after user is authenticated.
   static Future<void> initialize() async {
@@ -94,38 +98,48 @@ class MpesaSmsService {
     if (!isMpesaSms(message)) return;
 
     final body = message.body ?? '';
-    final parsed = parseMpesaSms(body);
-    if (parsed == null) {
-      debugPrint('⚠️ MpesaSmsService: could not parse SMS body: $body');
-      return;
-    }
+    if (body.isEmpty) return;
 
-    final transactionCode = parsed['transaction_code'] as String;
+    // Best-effort parse — may return null for non-payment messages (balance alerts, etc.)
+    final parsed = parseMpesaSms(body);
+
+    // Use transaction_code from parsed data, or fall back to SMS date for dedup key.
+    // We always post — raw_sms is never dropped even if parsing failed.
+    final dedupeKey = (parsed?['transaction_code'] as String?) ??
+        'RAW_${message.date ?? body.hashCode}';
 
     // Deduplicate — skip if already posted
-    if (await _isAlreadyProcessed(transactionCode)) {
-      debugPrint('⏭️ MpesaSmsService: already synced $transactionCode');
+    if (await _isAlreadyProcessed(dedupeKey)) {
+      debugPrint('⏭️ MpesaSmsService: already synced $dedupeKey');
       return;
     }
+
+    // Build payload: always include raw_sms; merge parsed fields if available
+    final payload = <String, dynamic>{
+      'raw_sms': body,
+      'source': 'sms_reader',
+      ...?parsed,
+    };
 
     // Attach timestamp from the SMS metadata if available
     if (message.date != null) {
-      parsed['received_at'] = DateTime.fromMillisecondsSinceEpoch(message.date!)
-          .toIso8601String();
+      payload['received_at'] =
+          DateTime.fromMillisecondsSinceEpoch(message.date!).toIso8601String();
     }
 
     // Attach the logged-in provider's ID so the backend can route webhooks correctly
     final providerId = UserContextService.currentContext?.providerId;
     if (providerId != null) {
-      parsed['provider_id'] = providerId;
+      payload['provider_id'] = providerId;
     }
 
-    final result = await ApiService.post('/mpesa/transactions', parsed);
+    final result =
+        await ApiService.post('/payment-service/mpesa/transactions', payload);
     if (result != null) {
-      await _markAsProcessed(transactionCode);
-      debugPrint('✅ MpesaSmsService: synced $transactionCode');
+      await _markAsProcessed(dedupeKey);
+      debugPrint('✅ MpesaSmsService: synced $dedupeKey');
     } else {
-      debugPrint('❌ MpesaSmsService: failed to post $transactionCode — will retry next scan');
+      debugPrint('❌ MpesaSmsService: failed to post $dedupeKey — will retry next scan');
     }
   }
 
@@ -213,7 +227,6 @@ class MpesaSmsService {
       'transaction_type': transactionType,
       'sender_name': senderName,
       'sender_phone': senderPhone,
-      'raw_sms': body,
       'received_at': DateTime.now().toIso8601String(),
     };
   }

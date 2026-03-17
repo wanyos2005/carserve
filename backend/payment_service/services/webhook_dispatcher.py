@@ -44,6 +44,7 @@ def _build_event_payload(transaction: MpesaTransaction) -> dict:
         "transaction_id": transaction.id,
         "transaction_code": transaction.transaction_code,
         "transaction_type": transaction.transaction_type,
+        "raw_sms": transaction.raw_sms,
         "amount": transaction.amount,
         "balance": transaction.balance,
         "sender_name": transaction.sender_name,

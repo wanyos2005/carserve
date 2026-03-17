@@ -23,7 +23,7 @@ class MpesaTransaction(Base):
     transaction_type = Column(String, nullable=False, default="received")
     
 
-    amount = Column(Float, nullable=False)
+    amount = Column(Float, nullable=True)    # null when SMS could not be parsed
     balance = Column(Float, nullable=True)   # merchant balance after transaction
 
     sender_name = Column(String, nullable=True)

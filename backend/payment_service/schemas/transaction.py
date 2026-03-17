@@ -5,15 +5,14 @@ from datetime import datetime
 
 class TransactionCreate(BaseModel):
     """Posted by the Flutter SMS reader after parsing an M-Pesa message."""
-    transaction_code: str
-    raw_sms: str
-    transaction_type: str = "received"
-    amount: float
+    raw_sms: str                                  # always required — never drop the original SMS
+    transaction_code: Optional[str] = None        # auto-generated server-side if parsing failed
+    transaction_type: str = "unknown"
+    amount: Optional[float] = None                # None when SMS could not be parsed
     balance: Optional[float] = None
     sender_name: Optional[str] = None
     sender_phone: Optional[str] = None
     provider_id: Optional[str] = None
-    raw_sms: Optional[str] = None
     source: str = "sms_reader"
     received_at: Optional[datetime] = None
 
@@ -41,10 +40,10 @@ class DarajaC2BCallback(BaseModel):
 
 class TransactionRead(BaseModel):
     id: str
-    raw_sms: str
+    raw_sms: Optional[str]
     transaction_code: str
     transaction_type: str
-    amount: float
+    amount: Optional[float]
     balance: Optional[float]
     sender_name: Optional[str]
     sender_phone: Optional[str]

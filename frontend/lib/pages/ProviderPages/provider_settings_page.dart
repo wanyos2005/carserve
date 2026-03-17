@@ -3,6 +3,7 @@ import 'package:driveon_car_platform/pages/AdminPages/edit_our_services_page.dar
 import 'package:driveon_car_platform/pages/manage_templates_page.dart';
 import 'package:driveon_car_platform/services/auth_service.dart';
 import 'package:driveon_car_platform/pages/ProviderPages/provider_loyalty_page.dart';
+import 'package:driveon_car_platform/pages/ProviderPages/webhook_settings_page.dart';
 
 class ProviderSettingsPage extends StatelessWidget {
   final String providerId;
@@ -115,6 +116,25 @@ class ProviderSettingsPage extends StatelessWidget {
                       
                       const SizedBox(height: 16),
                       
+                      // Payment Webhooks Card
+                      _buildSettingsCard(
+                        context,
+                        title: 'Payment Webhooks',
+                        subtitle: 'Configure callback URLs to receive M-Pesa payment notifications',
+                        icon: Icons.webhook,
+                        color: Colors.teal,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => WebhookSettingsPage(providerId: providerId),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
                       // Account Settings Card
                       _buildSettingsCard(
                         context,
@@ -174,7 +194,7 @@ class ProviderSettingsPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(

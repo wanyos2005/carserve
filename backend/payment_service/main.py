@@ -20,7 +20,7 @@ with engine.connect() as conn:
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Payment Service", version="1.0.0")
+app = FastAPI(title="Payment Service", version="1.0.0", redirect_slashes=False)
 
 app.add_middleware(
     CORSMiddleware,

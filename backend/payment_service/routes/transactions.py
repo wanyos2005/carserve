@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -12,7 +13,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
+    "",
     response_model=TransactionRead,
     status_code=status.HTTP_201_CREATED,
     summary="Receive a transaction from the Flutter SMS reader",
@@ -27,8 +28,11 @@ def create_transaction(
     the worker picks it up independently so the app gets a fast response,
     and deliveries survive a server restart.
     """
+    # Auto-generate a stable code if SMS parsing could not extract one
+    transaction_code = payload.transaction_code or f"RAW-{uuid.uuid4().hex[:12].upper()}"
+
     transaction = MpesaTransaction(
-        transaction_code=payload.transaction_code,
+        transaction_code=transaction_code,
         transaction_type=payload.transaction_type,
         amount=payload.amount,
         balance=payload.balance,
@@ -64,7 +68,7 @@ def create_transaction(
 
 
 @router.get(
-    "/",
+    "",
     response_model=list[TransactionRead],
     summary="List transactions for a provider",
 )

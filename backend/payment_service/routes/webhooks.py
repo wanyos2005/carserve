@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Optional
 
 from core.db import get_db
 from models.webhook import WebhookSubscription, WebhookDeliveryLog
@@ -15,7 +14,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
+    "",
     response_model=WebhookSubscriptionRead,
     status_code=status.HTTP_201_CREATED,
     summary="Register a callback URL for a provider",
@@ -42,7 +41,7 @@ def subscribe(payload: WebhookSubscriptionCreate, db: Session = Depends(get_db))
 
 
 @router.get(
-    "/",
+    "",
     response_model=list[WebhookSubscriptionRead],
     summary="List webhook subscriptions for a provider",
 )

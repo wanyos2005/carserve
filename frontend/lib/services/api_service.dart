@@ -72,7 +72,8 @@ class ApiService {
       body: jsonEncode(body),
     );
 
-    // (debug logs removed)
+    print('🌐 API POST: $baseGatewayUrl$path → ${response.statusCode}');
+    if (response.statusCode >= 400) print('🌐 POST error body: ${response.body}');
 
     // Clear invalid tokens on 401 (unauthorized)
     if (response.statusCode == 401) {
