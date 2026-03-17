@@ -20,12 +20,14 @@ class WebhookSubscription(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # Provider that owns this subscription (links to service_providers.providers.id)
+    # which station this belongs to
     provider_id = Column(String, nullable=False, index=True)
 
     # A human-readable label: "My POS System", "QuickBooks", etc.
     label = Column(String, nullable=True)
 
     # The URL that will receive POST requests on every new payment
+    #FuelPro's or DEMOFMS URL (can be same across many providers)
     callback_url = Column(String, nullable=False)
 
     # HMAC-SHA256 signing secret — provider supplies this when subscribing.

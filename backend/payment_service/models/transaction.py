@@ -12,8 +12,7 @@ class MpesaTransaction(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    
-    # The raw SMS body — useful for auditing and re-parsing
+     # The raw SMS body — useful for auditing and re-parsing
     raw_sms = Column(String, nullable=True)
     # The M-Pesa transaction reference, e.g. "RA12B3C4DE5"
     transaction_code = Column(String, nullable=False, index=True)
@@ -22,6 +21,7 @@ class MpesaTransaction(Base):
     # "paybill_payment" = customer paid to paybill/till
     # "daraja_c2b" = came directly from Safaricom Daraja callback
     transaction_type = Column(String, nullable=False, default="received")
+    
 
     amount = Column(Float, nullable=False)
     balance = Column(Float, nullable=True)   # merchant balance after transaction
@@ -32,6 +32,7 @@ class MpesaTransaction(Base):
     # The provider (merchant) who received the payment
     provider_id = Column(String, nullable=True, index=True)
 
+   
 
     # Source that reported the transaction: "sms_reader" | "daraja"
     source = Column(String, nullable=False, default="sms_reader")

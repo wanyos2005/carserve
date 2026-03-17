@@ -10,7 +10,7 @@ import 'package:driveon_car_platform/services/config.dart';
 class ApiService {
   static const String baseGatewayUrl = ApiConfig.baseUrl;
   // Production gateway:
-  // Oracle Cloud VM -> "http://152.70.28.112"
+ 
 
   // --- TOKEN HANDLER ---
   static Future<String?> _getToken() async {

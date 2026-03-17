@@ -71,3 +71,31 @@ docs/
 
 All documentation files were moved from the project root to maintain better organization and service-specific documentation structure.
 
+Step 1 — Start only the services you need
+
+cd c:/systemc/car
+docker-compose up -d postgres redis payment-service
+This avoids starting all 15 containers.
+
+Step 2 — Run migrations
+
+docker-compose exec payment-service alembic upgrade head
+Step 3 — Open Swagger UI
+Go to http://localhost:8010/docs — FastAPI generates this automatically. You can test every endpoint from the browser.
+
+Step 4 — Get a free webhook test URL
+Go to https://webhook.site — it gives you a unique URL like:
+
+
+https://webhook.site/abc-123-xyz
+Every POST sent to it shows up live on screen. Use this as your callback_url when testing webhook subscriptions — no need to build a receiver.
+
+Step 5 — Test flow in Swagger
+
+1. POST /webhooks/subscribe
+   { "callback_url": "https://webhook.site/your-unique-url", "provider_id": "test-provider" }
+
+2. POST /mpesa/transactions
+   { "raw_message": "RA12B3C4DE5 Confirmed. Ksh1,000.00 received from JOHN DOE..." }
+
+3. Check webhook.site — you should see the incoming POST
