@@ -41,6 +41,7 @@ SCHEMAS=(
     "expenses"
     "alerts"
     "social"
+    "payments"
 )
 
 for schema in "${SCHEMAS[@]}"; do
@@ -66,6 +67,7 @@ declare -A SERVICES=(
     ["expenses-service"]="expenses"
     ["alert-service"]="alerts"
     ["social-service"]="social"
+    ["payment-service"]="payments"
 )
 
 for service_name in "${!SERVICES[@]}"; do

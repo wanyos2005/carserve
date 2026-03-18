@@ -121,7 +121,10 @@ class UserContextService {
         }
       }
 
-      // If no stored context, try to fetch from API
+      // If no stored context, try to fetch from API (only if we have a token)
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+
       final userData = await AuthService.getMe();
       if (userData != null) {
         final context = UserContext.fromUserData(userData);
@@ -140,6 +143,9 @@ class UserContextService {
   /// Update user context with fresh data
   static Future<UserContext?> refreshContext() async {
     try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+
       final userData = await AuthService.getMe();
       if (userData != null) {
         final context = UserContext.fromUserData(userData);
@@ -157,6 +163,11 @@ class UserContextService {
   /// Clear user context (on logout)
   static Future<void> clearContext() async {
     await StorageService.clearContext(_userContextKey);
+    _currentContext = null;
+  }
+
+  /// Clear only the in-memory context (called on 401 mid-session)
+  static void clearContextInMemory() {
     _currentContext = null;
   }
 

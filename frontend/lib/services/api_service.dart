@@ -49,8 +49,8 @@ class ApiService {
     // Clear invalid tokens on 401 (unauthorized)
     if (response.statusCode == 401) {
       print('⚠️ 401 Unauthorized - clearing stored token');
-      await StorageService.clearToken();
-      await StorageService.clearUser();
+      await StorageService.clearAllAuth();
+      UserContextService.clearContextInMemory();
       return null;
     }
 
@@ -78,8 +78,8 @@ class ApiService {
     // Clear invalid tokens on 401 (unauthorized)
     if (response.statusCode == 401) {
       print('⚠️ 401 Unauthorized - clearing stored token');
-      await StorageService.clearToken();
-      await StorageService.clearUser();
+      await StorageService.clearAllAuth();
+      UserContextService.clearContextInMemory();
       return null;
     }
 
@@ -129,8 +129,8 @@ class ApiService {
     // Clear invalid tokens on 401 (unauthorized)
     if (response.statusCode == 401) {
       print('⚠️ 401 Unauthorized - clearing stored token');
-      await StorageService.clearToken();
-      await StorageService.clearUser();
+      await StorageService.clearAllAuth();
+      UserContextService.clearContextInMemory();
       return null;
     }
 

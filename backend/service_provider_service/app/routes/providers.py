@@ -659,6 +659,85 @@ def quick_create_provider(payload: ProviderQuickCreate, db: Session = Depends(ge
     return new_provider
 
 
+@router.get("/providers/")
+def search_providers(
+    db: Session = Depends(get_db),
+    service_ids: list[str] = Query(None),
+    match_all: bool = Query(False),
+    category_id: int | None = Query(None),
+    search: str = Query(None),
+):
+    rows = crud_provider.search_provider_view(
+        db,
+        service_ids,
+        match_all,
+        search,
+        category_id,
+    )
+
+    grouped = {}
+    for r in rows:
+        # Skip None rows that might be returned from the view
+        if r is None or r.provider_id is None:
+            continue
+
+        if r.provider_id not in grouped:
+            # Format location data to be more user-friendly
+            location_data = r.provider_location or {}
+            formatted_location = {
+                "area": location_data.get("name", "Nairobi"),
+                "coordinates": {
+                    "lat": location_data.get("lat"),
+                    "lng": location_data.get("lng")
+                },
+                "address": f"{location_data.get('name', 'Nairobi')}, Kenya"
+            }
+
+            grouped[r.provider_id] = {
+                "provider_id": r.provider_id,
+                "provider_name": r.provider_name,
+                "description": r.provider_description,
+                "contact_info": r.provider_contact_info,
+                "location": formatted_location,
+                "rating": float(r.provider_rating) if r.provider_rating else 0.0,
+                "is_registered": r.provider_is_registered,
+                "created_at": r.provider_created_at,
+                "category": {
+                    "id": r.provider_category_id,
+                    "name": r.provider_category_name
+                },
+                "services": []
+            }
+        grouped[r.provider_id]["services"].append({
+            "service_id": r.service_id,
+            "service_name": r.service_name,
+            "service_description": r.service_description,
+
+            # Legacy price field
+            "price": r.price,
+
+            # New structured pricing fields
+            "min_price": float(r.min_price) if r.min_price else None,
+            "max_price": float(r.max_price) if r.max_price else None,
+            "price_type": r.price_type,
+            "currency": r.currency,
+            "unit": r.unit,
+            "negotiable": r.negotiable,
+
+            "duration": r.duration,
+            "display_name": r.display_name,
+            "booking_required": r.booking_required,
+            "extra_data": r.extra_data,
+            "category": {
+                "id": r.service_category_id,
+                "name": r.service_category_name
+            },
+            "requirements": r.service_requirements
+        })
+
+    return list(grouped.values())
+
+
 # -----------------------
 # Provider-specific routes (placed LAST to avoid collisions)
 # -----------------------
@@ -789,80 +868,3 @@ def list_service_templates_for_provider(
     return templates
 
 
-@router.get("/providers/")
-def search_providers(
-    db: Session = Depends(get_db),
-    service_ids: list[str] = Query(None),
-    match_all: bool = Query(False),
-    category_id: int | None = Query(None),
-    search: str = Query(None),
-):
-    rows = crud_provider.search_provider_view(
-        db,
-        service_ids,
-        match_all,
-        search,
-        category_id,
-    )
-
-    grouped = {}
-    for r in rows:
-        # Skip None rows that might be returned from the view
-        if r is None or r.provider_id is None:
-            continue
-            
-        if r.provider_id not in grouped:
-            # Format location data to be more user-friendly
-            location_data = r.provider_location or {}
-            formatted_location = {
-                "area": location_data.get("name", "Nairobi"),
-                "coordinates": {
-                    "lat": location_data.get("lat"),
-                    "lng": location_data.get("lng")
-                },
-                "address": f"{location_data.get('name', 'Nairobi')}, Kenya"
-            }
-            
-            grouped[r.provider_id] = {
-                "provider_id": r.provider_id,
-                "provider_name": r.provider_name,
-                "description": r.provider_description,
-                "contact_info": r.provider_contact_info,
-                "location": formatted_location,
-                "rating": float(r.provider_rating) if r.provider_rating else 0.0,
-                "is_registered": r.provider_is_registered,
-                "created_at": r.provider_created_at,
-                "category": {
-                    "id": r.provider_category_id,
-                    "name": r.provider_category_name
-                },
-                "services": []
-            }
-        grouped[r.provider_id]["services"].append({
-            "service_id": r.service_id,
-            "service_name": r.service_name,
-            "service_description": r.service_description,
-            
-            # Legacy price field
-            "price": r.price,
-            
-            # New structured pricing fields
-            "min_price": float(r.min_price) if r.min_price else None,
-            "max_price": float(r.max_price) if r.max_price else None,
-            "price_type": r.price_type,
-            "currency": r.currency,
-            "unit": r.unit,
-            "negotiable": r.negotiable,
-            
-            "duration": r.duration,
-            "display_name": r.display_name,
-            "booking_required": r.booking_required,
-            "extra_data": r.extra_data,
-            "category": {
-                "id": r.service_category_id,
-                "name": r.service_category_name
-            },
-            "requirements": r.service_requirements
-        })
-
-    return list(grouped.values())

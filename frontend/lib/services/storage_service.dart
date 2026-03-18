@@ -92,5 +92,6 @@ class StorageService {
     await prefs.remove('token');
     await prefs.remove('user');
     await prefs.remove('email');
+    await prefs.remove('user_context');
   }
 }
