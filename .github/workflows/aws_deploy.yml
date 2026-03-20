@@ -41,84 +41,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            echo "--- Starting deployment on VPS ---"
+            cd /home/carserve
 
-      # Step 3: Trigger SSM deployment on EC2
-      - name: Trigger deployment on EC2 via SSM
-        id: deploy
-        run: |
-          echo "🚀 Sending deployment command to EC2 via SSM..."
+            echo "--- Pulling latest code ---"
+            git stash || true
+            git pull origin main
 
-          COMMAND_ID=$(aws ssm send-command \
-            --targets "Key=InstanceIds,Values=i-0ec6c2b1be34e3c5f" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy FastAPI using instance role" \
-            --parameters "commands=[
-              'set -e',
-              'export HOME=/home/ubuntu',
-              'echo --- Starting deployment on EC2 ---',
-              'cd /home/ubuntu/carserve || exit 1',
-              'echo --- Fixing git safe directory ownership ---',
-              'git config --system --add safe.directory /home/ubuntu/carserve || true',
-              'echo --- Pulling latest code from GitHub ---',
-              'git pull origin main || echo \"Git pull failed, continuing with existing code\"',
-              'echo --- Building and running containers ---',
-              'docker compose -f docker-compose.aws.yml pull --ignore-pull-failures',
-              'docker compose -f docker-compose.aws.yml up -d --build',
-              'docker system prune -f -y',
-              'echo --- Deployment complete ---'
-            ]" \
-            --region ${{ secrets.AWS_REGION }} \
-            --query "Command.CommandId" \
-            --output text)
+            echo "--- Pulling updated images ---"
+            docker compose -f docker-compose.aws.yml pull --ignore-pull-failures
 
-          echo "SSM Command ID: $COMMAND_ID"
-          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+            echo "--- Restarting services ---"
+            docker compose -f docker-compose.aws.yml up -d --build
 
-      # Step 4: Wait for SSM command to complete and fetch logs
-      - name: Wait for SSM command to complete and fetch logs
-        run: |
-          STATUS="Pending"
-          ATTEMPTS=0
-          CMD_ID=${{ steps.deploy.outputs.command_id }}
+            echo "--- Cleaning up ---"
+            docker system prune -f
 
-          echo "⏳ Waiting for SSM command to finish..."
-
-          while [[ "$STATUS" != "Success" && "$STATUS" != "Failed" ]]; do
-            sleep 10
-            STATUS=$(aws ssm list-command-invocations \
-              --command-id "$CMD_ID" \
-              --details \
-              --query "CommandInvocations[0].Status" \
-              --output text)
-            echo "Current SSM status: $STATUS"
-            ATTEMPTS=$((ATTEMPTS+1))
-            if [ "$ATTEMPTS" -gt 30 ]; then
-              echo "❌ Timeout waiting for SSM command."
-              exit 1
-            fi
-          done
-
-          echo "===== 🧾 SSM Deployment Logs ====="
-          aws ssm list-command-invocations \
-            --command-id "$CMD_ID" \
-            --details \
-            --query "CommandInvocations[0].CommandPlugins[0].Output" \
-            --output text || true
-
-          if [ "$STATUS" != "Success" ]; then
-            echo "❌ SSM deployment failed!"
-            exit 1
-          fi
-
-          echo "✅ Deployment completed successfully!"
+            echo "--- Deployment complete ---"
