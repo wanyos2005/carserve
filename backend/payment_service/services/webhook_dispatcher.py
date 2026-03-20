@@ -110,6 +110,7 @@ def _deliver(
             content=body_str,
             headers=headers,
             timeout=WEBHOOK_TIMEOUT_SECONDS,
+            verify=False,
         )
         http_status = response.status_code
         if 200 <= response.status_code < 300:
