@@ -122,13 +122,22 @@ def _deliver(
             error = f"HTTP {response.status_code}: {response.text[:200]}"
             logger.warning(f"⚠️  Webhook {sub.callback_url} returned {response.status_code}")
 
-    except httpx.TimeoutException:
+    except httpx.TimeoutException as exc:
         status = "timeout"
-        error = f"Timed out after {WEBHOOK_TIMEOUT_SECONDS}s"
-        logger.warning(f"⏱️  Webhook {sub.callback_url} timed out (attempt {attempt})")
+        error = f"Timed out after {WEBHOOK_TIMEOUT_SECONDS}s ({type(exc).__name__})"
+        logger.warning(f"⏱️  Webhook {sub.callback_url} timed out (attempt {attempt}/{WEBHOOK_MAX_RETRIES})")
+    except httpx.ConnectError as exc:
+        error = f"ConnectError: {exc} — target server refused or is unreachable"
+        logger.error(f"❌ Webhook {sub.callback_url} connection refused (attempt {attempt}/{WEBHOOK_MAX_RETRIES}): {exc}")
+    except httpx.RemoteProtocolError as exc:
+        error = f"RemoteProtocolError: {exc} — server closed connection without a valid HTTP response"
+        logger.error(f"❌ Webhook {sub.callback_url} remote protocol error (attempt {attempt}/{WEBHOOK_MAX_RETRIES}): {exc}")
+    except httpx.NetworkError as exc:
+        error = f"NetworkError ({type(exc).__name__}): {exc}"
+        logger.error(f"❌ Webhook {sub.callback_url} network error (attempt {attempt}/{WEBHOOK_MAX_RETRIES}): {type(exc).__name__}: {exc}")
     except Exception as exc:
-        error = str(exc)[:500]
-        logger.error(f"❌ Webhook {sub.callback_url} error: {exc}")
+        error = f"{type(exc).__name__}: {str(exc)[:400]}"
+        logger.error(f"❌ Webhook {sub.callback_url} unexpected error (attempt {attempt}/{WEBHOOK_MAX_RETRIES}): {type(exc).__name__}: {exc}")
 
     # Log this attempt
     log = WebhookDeliveryLog(
@@ -144,5 +153,10 @@ def _deliver(
 
     # Retry on failure (up to WEBHOOK_MAX_RETRIES)
     if status != "success" and attempt < WEBHOOK_MAX_RETRIES:
-        logger.info(f"🔄 Retrying webhook {sub.callback_url} (attempt {attempt + 1})")
+        logger.info(f"🔄 Retrying webhook {sub.callback_url} (attempt {attempt + 1}/{WEBHOOK_MAX_RETRIES})")
         _deliver(sub, transaction_id, body_str, db, attempt + 1)
+    elif status != "success":
+        logger.error(
+            f"🚫 Webhook PERMANENTLY FAILED for {sub.callback_url} after {WEBHOOK_MAX_RETRIES} attempts. "
+            f"Last error: {error} | subscription_id={sub.id} | transaction_id={transaction_id}"
+        )

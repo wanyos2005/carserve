@@ -143,7 +143,7 @@ check images currently used, docker images and docker ps
 reduce system logs: sudo journalctl --vacuum-size=50M
 
 ssh into ec2.   
-ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.143.243
+ssh -i "C:\Users\Peter Wanyonyi\Downloads\fastapi-key.pem.pem" ubuntu@16.16.129.217
 
 
 Run STATUS="Pending"
@@ -253,6 +253,30 @@ tel: → opens dialer (no auto-call, no permission needed)
 sms: → opens SMS composer (no SEND_SMS needed)
 mailto: and https://wa.me/... → external apps (no sensitive permissions)
 In “Data safety,” declare location collection (if you collect it) and any analytics/crash data truthfully, and ensure the privacy policy reflects this.
+
+===
+playstore permission issue:
+The SMS use is legitimate and specific — it's for service providers only, auto-reading M-Pesa payment confirmations from the sender "MPESA". Here's what you need to do:
+
+In Play Console → Policy → App Content → Sensitive App Permissions → SMS/Call Log
+
+Fill in the declaration form with this:
+
+Which permissions does your app use?
+
+READ_SMS
+RECEIVE_SMS
+What is the core feature that requires this permission?
+
+DriveOn is a car service platform for automotive service providers in Kenya. The SMS permissions are used exclusively to auto-detect incoming M-Pesa payment confirmations sent by Safaricom (sender: "MPESA") to the service provider's device. When a customer pays for a car service via M-Pesa, the app reads the confirmation SMS to automatically record the transaction in the provider's payment dashboard — eliminating manual entry errors and ensuring accurate payment reconciliation. No SMS data from any other sender is accessed. All captured data is linked to the provider's own business account and is not shared with third parties.
+
+Is this the core functionality of the app?
+
+Yes — for the service provider role. Without SMS reading, providers would have to manually enter every M-Pesa transaction, which is error-prone and not viable for high-volume businesses.
+
+Does your app share this data with third parties?
+
+No. Data is transmitted only to the provider's own account on the DriveOn backend server.
 
 # see exactly what's on the server. Run these commands in the Session Manager terminal:
 
