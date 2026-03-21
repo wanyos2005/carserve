@@ -104,7 +104,7 @@ services:
     env_file: .env
     environment:
       - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
-    command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=2", "--queues=payments"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -346,7 +346,7 @@ services:
       - rabbitmq
     restart: unless-stopped
 
-    command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
+    command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "--queues=alerts"]
     deploy:
       resources:
         limits:

@@ -62,11 +62,11 @@ def create_transaction(
             return existing
         raise HTTPException(status_code=409, detail="Duplicate transaction")
 
-    # Queue a Celery task — the payment-worker picks this up from Redis
+    # Queue a Celery task — the payment-worker picks this up from RabbitMQ
     # and dispatches webhooks independently of this web server process
     logger.info(f"📤 Queuing dispatch_webhooks for transaction {transaction.transaction_code} id={transaction.id}")
     try:
-        task = celery_app.send_task("dispatch_webhooks", args=[transaction.id])
+        task = celery_app.send_task("dispatch_webhooks", args=[transaction.id], queue="payments")
         logger.info(f"✅ Task queued: task_id={task.id} for transaction {transaction.transaction_code}")
     except Exception as e:
         logger.error(f"❌ Failed to queue dispatch_webhooks for {transaction.transaction_code}: {type(e).__name__}: {e}")

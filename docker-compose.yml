@@ -273,7 +273,7 @@ services:
       - postgres
       - redis
       - rabbitmq
-    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
+    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO --queues=payments"
 
   alert-beat:
     build:
@@ -415,7 +415,7 @@ services:
       - postgres
       - redis
       - rabbitmq
-    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
+    command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO --queues=alerts"
 
   loyalty-service:
     build:
