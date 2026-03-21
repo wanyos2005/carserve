@@ -1,4 +1,5 @@
 import uuid
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +11,7 @@ from schemas.transaction import TransactionCreate, TransactionRead
 from celery_app import celery_app
 
 router = APIRouter()
+logger = logging.getLogger("uvicorn")
 
 
 @router.post(
@@ -62,7 +64,12 @@ def create_transaction(
 
     # Queue a Celery task — the payment-worker picks this up from Redis
     # and dispatches webhooks independently of this web server process
-    celery_app.send_task("dispatch_webhooks", args=[transaction.id])
+    logger.info(f"📤 Queuing dispatch_webhooks for transaction {transaction.transaction_code} id={transaction.id}")
+    try:
+        task = celery_app.send_task("dispatch_webhooks", args=[transaction.id])
+        logger.info(f"✅ Task queued: task_id={task.id} for transaction {transaction.transaction_code}")
+    except Exception as e:
+        logger.error(f"❌ Failed to queue dispatch_webhooks for {transaction.transaction_code}: {type(e).__name__}: {e}")
 
     return transaction
 
