@@ -102,6 +102,8 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/payment-worker:latest
     env_file: .env
+    environment:
+      - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
     command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
     depends_on:
       postgres:
