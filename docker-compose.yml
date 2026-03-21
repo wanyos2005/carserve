@@ -28,6 +28,22 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: carserve
+      RABBITMQ_DEFAULT_PASS: carserve_mq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
   user-service:
     build:
       context: ./backend/user_service
@@ -227,7 +243,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - USER_SERVICE_URL=http://user-service:8001
       - BOOKING_SERVICE_URL=http://booking-service:8004
@@ -256,6 +272,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - rabbitmq
     command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
 
   alert-beat:
@@ -266,13 +283,14 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - USER_SERVICE_URL=http://user-service:8001
       - BOOKING_SERVICE_URL=http://booking-service:8004
       - INSURANCE_SERVICE_URL=http://insurance-service:8005
     depends_on:
       - redis
+      - rabbitmq
       - user-service
       - booking-service
       - insurance-service
@@ -389,13 +407,14 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - WEBHOOK_MAX_RETRIES=${WEBHOOK_MAX_RETRIES:-3}
       - WEBHOOK_TIMEOUT_SECONDS=${WEBHOOK_TIMEOUT_SECONDS:-10}
     depends_on:
       - postgres
       - redis
+      - rabbitmq
     command: bash -lc "celery -A celery_app.celery_app worker --loglevel=INFO"
 
   loyalty-service:
@@ -456,3 +475,4 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  rabbitmq-data:

@@ -15,9 +15,14 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     broker_connection_retry_on_startup=True,
+    broker_heartbeat=10,
+    broker_connection_timeout=30,
     broker_transport_options={
         "visibility_timeout": 3600,
         "socket_keepalive": True,
+        "socket_timeout": 5,
+        "socket_connect_timeout": 5,
+        "health_check_interval": 25,
     },
 )
 

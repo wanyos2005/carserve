@@ -43,6 +43,28 @@ services:
           memory: 64M
           cpus: '0.1'
 
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: carserve
+      RABBITMQ_DEFAULT_PASS: carserve_mq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
   # API Gateway / Reverse proxy
   payment-service:
     build:
@@ -50,10 +72,14 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/wanyos2005/payment-service:latest
     env_file: .env
+    environment:
+      - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
     deploy:
@@ -81,6 +107,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
     deploy:
@@ -286,7 +314,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - USER_SERVICE_URL=http://user-service:8001
       - BOOKING_SERVICE_URL=http://booking-service:8004
@@ -313,8 +341,9 @@ services:
     depends_on:
       - postgres
       - redis
+      - rabbitmq
     restart: unless-stopped
-    
+
     command: ["python", "-m", "celery", "-A", "celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
     deploy:
       resources:
@@ -339,13 +368,14 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_BROKER_URL=amqp://carserve:carserve_mq@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - USER_SERVICE_URL=http://user-service:8001
       - BOOKING_SERVICE_URL=http://booking-service:8004
       - INSURANCE_SERVICE_URL=http://insurance-service:8005
     depends_on:
       - redis
+      - rabbitmq
       - user-service
       - booking-service
       - insurance-service
@@ -442,6 +472,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  rabbitmq-data:
   social_uploads:
 
 networks:
