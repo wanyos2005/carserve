@@ -14,6 +14,11 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="UTC",
     enable_utc=True,
+    broker_connection_retry_on_startup=True,
+    broker_transport_options={
+        "visibility_timeout": 3600,
+        "socket_keepalive": True,
+    },
 )
 
 # Ensure tasks module is imported so tasks are registered with the worker
