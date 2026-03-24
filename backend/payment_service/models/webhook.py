@@ -83,4 +83,7 @@ class WebhookDeliveryLog(Base):
 
     attempt_number = Column(Integer, default=1, nullable=False)
 
+    # Raw response body returned by the subscriber's server (capped at 2000 chars)
+    response_body = Column(Text, nullable=True)
+
     attempted_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

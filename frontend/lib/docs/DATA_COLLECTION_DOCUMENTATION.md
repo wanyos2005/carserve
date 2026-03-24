@@ -259,5 +259,3 @@ This document provides a comprehensive overview of all data collection practices
 - **Languages**: English, [Other Languages]
 
 ---
-
-**This documentation is updated regularly to reflect current data collection practices and compliance requirements.**

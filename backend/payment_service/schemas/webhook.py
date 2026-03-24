@@ -54,6 +54,7 @@ class WebhookDeliveryLogRead(BaseModel):
     status: str
     error: Optional[str]
     attempt_number: int
+    response_body: Optional[str]
     attempted_at: datetime
 
     class Config:

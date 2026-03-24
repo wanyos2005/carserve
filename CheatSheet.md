@@ -195,3 +195,42 @@ Step 7 — Auto-renew — Let's Encrypt certs expire every 90 days. Add a cron j
 certbot renew --pre-hook "docker compose -f /home/carserve/docker-compose.aws.yml stop nginx" \
               --post-hook "docker compose -f /home/carserve/
 
+
+===
+generating ssh for github
+ssh-keygen -t rsa -b 4096 -C "github-actions-deploy" -f ~/.ssh/id_rsa -N ""
+
+==
+Then authorize it for login:
+
+
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+get it:
+cat ~/.ssh/id_rsa
+
+## confirm if vps is not using new code:
+The VPS hasn't pulled the latest code. Check:
+
+cd /home/carserve && git status && git log --oneline -3
+
+## Check if the payment-service can actually connect to Redis:
+
+
+docker compose -f docker-compose.aws.yml exec payment-service python -c "from celery_app import celery_app; print(celery_app.connection().connect())"
+## check all Redis keys (not just the celery list — it might be using a different key):
+
+
+docker compose -f docker-compose.aws.yml exec redis redis-cli keys "*"
+
+##  Now test sending a task directly from the payment-service container:
+
+
+docker compose -f docker-compose.aws.yml exec payment-service python -c "
+from celery_app import celery_app
+result = celery_app.send_task('dispatch_webhooks', args=['test-id-123'])
+print('Task ID:', result.id)
+
+## testing reachability of a:
+curl -v --max-time 10 https://demofms.efikas.co.ke/Mekven/nyolaSms -X POST -H "Content-Type: application/json" -d '{"test": true}' 2>&1

@@ -103,6 +103,7 @@ def _deliver(
     status = "failed"
     http_status = None
     error = None
+    response_body = None
 
     try:
         response = httpx.post(
@@ -112,6 +113,7 @@ def _deliver(
             timeout=WEBHOOK_TIMEOUT_SECONDS,
         )
         http_status = response.status_code
+        response_body = response.text[:2000] if response.text else None
         if 200 <= response.status_code < 300:
             status = "success"
             logger.info(
@@ -147,6 +149,7 @@ def _deliver(
         status=status,
         error=error,
         attempt_number=attempt,
+        response_body=response_body,
     )
     db.add(log)
     db.commit()

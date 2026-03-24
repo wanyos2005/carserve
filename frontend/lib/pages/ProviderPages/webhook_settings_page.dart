@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:driveon_car_platform/services/provider_service.dart';
@@ -634,76 +636,159 @@ class _WebhookLogsPageState extends State<_WebhookLogsPage> {
     final error = log['error'] as String?;
     final attemptedAt = log['attempted_at'] as String? ?? '';
     final attempt = log['attempt_number'] as int? ?? 1;
+    final rawResponseBody = log['response_body'] as String?;
     final isSuccess = status == 'success';
     final color = isSuccess ? Colors.green : Colors.red;
 
+    // Try to parse response_body as JSON for structured display
+    Map<String, dynamic>? parsedResponse;
+    if (rawResponseBody != null && rawResponseBody.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawResponseBody);
+        if (decoded is Map<String, dynamic>) parsedResponse = decoded;
+      } catch (_) {}
+    }
+
+    // Pull out recognisable payment fields (covers Kelly's schema and common M-Pesa patterns)
+    final respStatus = _strField(parsedResponse, ['status', 'Status', 'result']);
+    final respCode = _strField(parsedResponse, ['code', 'transaction_code', 'TransID', 'ref']);
+    final respAmount = _strField(parsedResponse, ['amount', 'Amount', 'trans_amount']);
+    final respName = _strField(parsedResponse, ['name', 'Name', 'BillRefNumber', 'customer']);
+    final respTime = _strField(parsedResponse, ['trans_time', 'TransTime', 'timestamp', 'time', 'created_at']);
+    final respMessage = _strField(parsedResponse, ['message', 'Message', 'ResultDesc', 'description']);
+
     return Card(
       elevation: 1,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration:
-                  BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(status.toUpperCase(),
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: color)),
-                      if (httpStatus != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text('HTTP $httpStatus',
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey[700])),
-                        ),
-                      ],
-                      if (attempt > 1) ...[
-                        const SizedBox(width: 6),
-                        Text('attempt $attempt',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.orange[700])),
-                      ],
-                    ],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header row ──────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 10),
+                Text(status.toUpperCase(),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13, color: color)),
+                if (httpStatus != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('HTTP $httpStatus',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[700])),
                   ),
-                  if (error != null && error.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(error,
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.red[400]),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                  ],
+                ],
+                if (attempt > 1) ...[
+                  const SizedBox(width: 6),
+                  Text('attempt $attempt',
+                      style: TextStyle(fontSize: 11, color: Colors.orange[700])),
+                ],
+                const Spacer(),
+                Text(_formatDate(attemptedAt),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+              ],
+            ),
+          ),
+
+          // ── Error text (failed/timeout deliveries) ───────────────────────
+          if (error != null && error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Text(error,
+                  style: TextStyle(fontSize: 12, color: Colors.red[400]),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis),
+            ),
+
+          // ── Parsed response fields ────────────────────────────────────────
+          if (parsedResponse != null) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 6,
+                children: [
+                  if (respStatus != null) _chip('Status', respStatus),
+                  if (respCode != null) _chip('Code', respCode),
+                  if (respAmount != null) _chip('Amount', 'Ksh $respAmount'),
+                  if (respName != null) _chip('Name', respName),
+                  if (respTime != null) _chip('Time', respTime),
                 ],
               ),
             ),
-            Text(_formatDate(attemptedAt),
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey[400])),
+            if (respMessage != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+                child: Text(respMessage,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ),
           ],
-        ),
+
+          // ── Raw response collapsible ──────────────────────────────────────
+          if (rawResponseBody != null && rawResponseBody.isNotEmpty)
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: Text('Raw response',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: SelectableText(
+                      rawResponseBody,
+                      style: const TextStyle(
+                          fontFamily: 'monospace', fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
+    );
+  }
+
+  /// Returns the first non-null string value found under any of [keys] in [map].
+  String? _strField(Map<String, dynamic>? map, List<String> keys) {
+    if (map == null) return null;
+    for (final k in keys) {
+      final v = map[k];
+      if (v != null) return v.toString();
+    }
+    return null;
+  }
+
+  Widget _chip(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+        Text(value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+      ],
     );
   }
 
