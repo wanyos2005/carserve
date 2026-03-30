@@ -2,7 +2,7 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from models.alert import AlertType, AlertStatus, AlertChannel
+from models.alert import AlertType, AlertStatus, AlertChannel, BroadcastAlertStatus, IncidentType, IncidentStatus
 
 class AlertCreate(BaseModel):
     user_id: int
@@ -134,3 +134,101 @@ class AppDownloadPromptResponse(BaseModel):
     user_id: int
     discount_code: str
     success: bool = True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Drivon Alerts – BroadcastAlert schemas
+# ─────────────────────────────────────────────────────────────────────────────
+
+class BroadcastAlertCreate(BaseModel):
+    title: str
+    message: str
+    type: AlertType
+    priority: int = 2
+    channels: List[AlertChannel] = [AlertChannel.IN_APP, AlertChannel.PUSH]
+    target_audience: str = "all"
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    radius_km: Optional[int] = None
+    active_from: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    source: Optional[str] = None
+    action_url: Optional[str] = None
+    action_text: Optional[str] = None
+
+class BroadcastAlertUpdate(BaseModel):
+    title: Optional[str] = None
+    message: Optional[str] = None
+    priority: Optional[int] = None
+    channels: Optional[List[AlertChannel]] = None
+    target_audience: Optional[str] = None
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    radius_km: Optional[int] = None
+    active_from: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    source: Optional[str] = None
+    action_url: Optional[str] = None
+    action_text: Optional[str] = None
+    status: Optional[BroadcastAlertStatus] = None
+
+class BroadcastAlertResponse(BaseModel):
+    id: str
+    title: str
+    message: str
+    type: AlertType
+    priority: int
+    channels: List[str]
+    target_audience: str
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    radius_km: Optional[int] = None
+    status: BroadcastAlertStatus
+    active_from: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    created_by_admin: Optional[str] = None
+    source: Optional[str] = None
+    action_url: Optional[str] = None
+    action_text: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Drivon Alerts – IncidentReport schemas
+# ─────────────────────────────────────────────────────────────────────────────
+
+class IncidentReportCreate(BaseModel):
+    user_id: int
+    incident_type: IncidentType
+    title: str
+    description: str
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    location_text: Optional[str] = None
+    media_urls: List[str] = []
+
+class IncidentReportUpdate(BaseModel):
+    status: Optional[IncidentStatus] = None
+    admin_notes: Optional[str] = None
+
+class IncidentReportResponse(BaseModel):
+    id: str
+    user_id: int
+    incident_type: IncidentType
+    title: str
+    description: str
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    location_text: Optional[str] = None
+    media_urls: List[str]
+    status: IncidentStatus
+    admin_notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

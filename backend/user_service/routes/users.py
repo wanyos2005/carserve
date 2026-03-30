@@ -1,4 +1,5 @@
 #backend/user_service/routes/users.py
+import logging
 import random
 from datetime import datetime, timedelta
 from typing import Optional
@@ -145,7 +146,7 @@ def send_code(
 # - provider_id = provider-linked user
 TEST_ACCOUNTS = {
     "playstore.review@driveon.com": None,  # Normal user (car owner)
-    "provider.review@driveon.com": "d1ae41d3-cd0b-4b18-bc46-66b31508da2d",  # Provider-linked user (Premium Auto Services - Karen - Test Provider)
+    "provider.review@driveon.com": "20aaf88e-1723-4e0f-aafb-5372a1bd09fb",  # Provider-linked user (Kelly's Station)
     "admin.review@driveon.com": None,  # Admin user (will be assigned admin role)
     "test.review@driveon.com": None,  # Normal user
     "google.review@driveon.com": None,  # Normal user
@@ -412,9 +413,34 @@ def get_user_fcm_token(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return FCMTokenResponse(message="FCM token retrieved", fcm_token=user.fcm_token)
 
+def _notify_alert_service_topic(token: str, action: str) -> None:
+    """
+    Fire-and-forget: tell alert-service to subscribe/unsubscribe this FCM token
+    from the drivon_alerts_all topic.  Failures are logged but never propagate.
+    action: "subscribe-push" | "unsubscribe-push"
+    """
+    import threading
+    import requests as _requests
+    from core.config import ALERT_SERVICE_URL
+
+    def _call():
+        try:
+            _requests.post(
+                f"{ALERT_SERVICE_URL}/broadcast-alerts/{action}",
+                params={"token": token},
+                timeout=5,
+            )
+        except Exception as exc:
+            logging.getLogger("uvicorn").warning(
+                f"FCM topic {action} call failed (non-fatal): {exc}"
+            )
+
+    threading.Thread(target=_call, daemon=True).start()
+
+
 @router.post("/users/{user_id}/fcm-token", response_model=FCMTokenResponse)
 def register_fcm_token(
-    user_id: int, 
+    user_id: int,
     token_request: FCMTokenRequest,
     db: Session = Depends(get_db)
 ):
@@ -422,11 +448,18 @@ def register_fcm_token(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
+    old_token = user.fcm_token
     user.fcm_token = token_request.fcm_token
     db.commit()
+
+    # Unsubscribe the old token before subscribing the new one (avoids ghost subscriptions)
+    if old_token and old_token != token_request.fcm_token:
+        _notify_alert_service_topic(old_token, "unsubscribe-push")
+    _notify_alert_service_topic(token_request.fcm_token, "subscribe-push")
+
     return FCMTokenResponse(
-        message="FCM token registered successfully", 
+        message="FCM token registered successfully",
         fcm_token=token_request.fcm_token
     )
 
@@ -436,7 +469,10 @@ def remove_fcm_token(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
+    if user.fcm_token:
+        _notify_alert_service_topic(user.fcm_token, "unsubscribe-push")
+
     user.fcm_token = None
     db.commit()
     return FCMTokenResponse(message="FCM token removed successfully")
@@ -932,4 +968,49 @@ def get_user_stats(
         "provider_users": provider_count,
         "car_owner_users": car_owner_count
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phone number management (Drivon Alerts – progressive phone capture)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.patch("/me/phone")
+def update_my_phone(
+    phone: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Update the authenticated user's phone number.
+    Phone is optional at registration; users are prompted to add it later
+    to receive Drivon Alerts via SMS.
+    """
+    phone = phone.strip()
+    if phone.startswith("0") and len(phone) == 10:
+        phone = "+254" + phone[1:]
+    elif phone.startswith("254") and not phone.startswith("+"):
+        phone = "+" + phone
+
+    existing = db.query(User).filter(User.phone == phone, User.id != current_user.id).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Phone number already in use")
+
+    current_user.phone = phone
+    db.commit()
+    return {"id": current_user.id, "phone": current_user.phone, "message": "Phone updated successfully"}
+
+
+@router.get("/ids")
+def get_all_user_ids(
+    page: int = 1,
+    page_size: int = 200,
+    db: Session = Depends(get_db),
+):
+    """
+    Return paginated list of all user IDs.
+    Used by alert-service broadcast fanout task.
+    """
+    offset = (page - 1) * page_size
+    ids = [row[0] for row in db.query(User.id).offset(offset).limit(page_size).all()]
+    return {"ids": ids, "page": page, "page_size": page_size}
 

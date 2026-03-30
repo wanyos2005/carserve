@@ -107,6 +107,27 @@ class ApiService {
     return null;
   }
 
+  // --- GENERIC PATCH ---
+  static Future<dynamic> patch(String path, dynamic body, {Map<String, String>? query}) async {
+    final token = await _getToken();
+    Uri uri = Uri.parse("$baseGatewayUrl$path");
+    if (query != null) {
+      uri = uri.replace(queryParameters: query);
+    }
+    final response = await http.patch(
+      uri,
+      headers: {
+        "Content-Type": "application/json",
+        if (token != null) "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.body.isNotEmpty ? jsonDecode(response.body) : null;
+    }
+    return null;
+  }
+
   // --- GENERIC DELETE ---
   static Future<dynamic> delete(String path, {Map<String, dynamic>? query}) async {
     final token = await _getToken();

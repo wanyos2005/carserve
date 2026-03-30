@@ -6,7 +6,6 @@ import 'package:driveon_car_platform/pages/main_service_nav.dart';
 // Pages
 import 'package:driveon_car_platform/pages/welcome_screen.dart';
 import 'package:driveon_car_platform/pages/login_page.dart';
-import 'package:driveon_car_platform/pages/home_page.dart';
 import 'package:driveon_car_platform/pages/Insurance/c_insurance_policy_page.dart';
 import 'package:driveon_car_platform/pages/ProviderPages/provider_homepage.dart';
 import 'package:driveon_car_platform/pages/ProviderPages/provider_log_service_page.dart';
@@ -16,6 +15,7 @@ import 'package:driveon_car_platform/pages/history_page.dart';
 import 'package:driveon_car_platform/pages/expenses_page.dart';
 import 'package:driveon_car_platform/pages/add_expense_page.dart';
 import 'package:driveon_car_platform/pages/alerts_inbox_page.dart';
+import 'package:driveon_car_platform/pages/drivon_alerts_page.dart';
 import 'package:driveon_car_platform/pages/ProviderPages/provider_settings_page.dart';
 
 // Insurance Pages
@@ -154,7 +154,7 @@ class _CarPlatformAppState extends State<CarPlatformApp> with WidgetsBindingObse
       routes: {
         "/welcome": (context) => const WelcomeScreen(),
         "/login": (context) => const LoginPage(),
-        "/home": (context) => const HomePage(),
+        "/home": (context) => const MainServiceNav(),
         "/insurance": (context) => const CInsurancePolicyPage(),
         "/services": (context) => const MainServiceNav(),
         
@@ -168,6 +168,7 @@ class _CarPlatformAppState extends State<CarPlatformApp> with WidgetsBindingObse
         
         // Alerts Routes
         "/alerts": (context) => const AlertsInboxPage(),
+        "/drivon-alerts": (context) => const DrivonAlertsPage(),
         
         // Provider Routes
         "/provider-log-service": (context) {
@@ -222,7 +223,7 @@ class _CarPlatformAppState extends State<CarPlatformApp> with WidgetsBindingObse
       } else if (_userContext!.isProvider && _userContext!.providerId != null) {
         return ProviderHomePage(providerId: _userContext!.providerId!);
       } else {
-        return const HomePage();
+        return const MainServiceNav();
       }
     } else {
       // User is not logged in - show welcome screen

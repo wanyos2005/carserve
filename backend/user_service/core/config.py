@@ -27,6 +27,9 @@ JWT_SECRET_KEY = SECRET_KEY
 ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 43200
 
+# Service URLs
+ALERT_SERVICE_URL = os.getenv("ALERT_SERVICE_URL", "http://alert-service:8006")
+
 # CORS Configuration
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 

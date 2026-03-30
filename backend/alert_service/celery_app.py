@@ -33,7 +33,11 @@ celery_app.conf.beat_schedule = {
         "schedule": 30 * 60,
         "args": ["service_due"],
     },
-    #
+    # Every 10 minutes: expire old broadcast alerts
+    "expire-broadcast-alerts": {
+        "task": "expire_broadcast_alerts",
+        "schedule": 10 * 60,
+    },
 }
 
 

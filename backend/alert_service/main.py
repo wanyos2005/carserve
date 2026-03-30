@@ -8,14 +8,17 @@ from sqlalchemy import text
 from core.config import ALLOWED_ORIGINS
 from routes.alerts import router as alerts_router
 from routes.rules import router as rules_router
+from routes.broadcast_alerts import router as broadcast_alerts_router
+from routes.incidents import router as incidents_router
 # Centralized notifications now integrated into alerts router
 from services.metrics import snapshot
-from models import alert as _models  # ensure model is imported before create_all
+from models import alert as _models  # ensure all models imported before create_all
 
 app = FastAPI(
-    title="Alert Service", 
-    version="1.0.0", 
-    description="Smart mobility companion alert system with insurance, service, and promotional notifications"
+    title="Alert Service",
+    version="1.0.0",
+    description="Smart mobility companion alert system with insurance, service, and promotional notifications",
+    redirect_slashes=False,
 )
 
 # CORS middleware
@@ -45,6 +48,8 @@ async def log_requests(request: Request, call_next):
 # Include routers
 app.include_router(alerts_router, prefix="/alerts", tags=["alerts"])
 app.include_router(rules_router, prefix="/rules", tags=["alert-rules"])
+app.include_router(broadcast_alerts_router, prefix="/broadcast-alerts", tags=["drivon-alerts"])
+app.include_router(incidents_router, prefix="/incidents", tags=["drivon-alerts"])
 # Notifications consolidated under /alerts
 
 # Add direct route for /rules (without trailing slash) to handle nginx forwarding
@@ -72,10 +77,12 @@ def health():
         "version": "1.0.0",
         "features": [
             "Insurance expiry reminders",
-            "Service due notifications", 
+            "Service due notifications",
             "Promotional alerts",
             "Multi-channel delivery",
-            "Smart alert rules engine"
+            "Smart alert rules engine",
+            "Drivon Alerts: broadcast safety/weather/security/route alerts",
+            "Drivon Alerts: user incident reporting",
         ],
         "metrics": data,
     }

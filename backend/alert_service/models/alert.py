@@ -14,6 +14,12 @@ class AlertType(str, enum.Enum):
     PAYMENT_REMINDER = "payment_reminder"
     APP_DOWNLOAD_PROMPT = "app_download_prompt"
     RATING_REQUEST = "rating_request"
+    # Drivon Alerts pillar
+    WEATHER = "weather"
+    SECURITY = "security"
+    SAFETY = "safety"
+    ROUTE_ALERT = "route_alert"
+    FLEET_ALERT = "fleet_alert"
 
 class AlertStatus(str, enum.Enum):
     PENDING = "pending"
@@ -128,6 +134,94 @@ class AlertPreference(Base):
     
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Drivon Alerts pillar models
+# ─────────────────────────────────────────────────────────────────────────────
+
+class BroadcastAlertStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+
+class IncidentType(str, enum.Enum):
+    SECURITY = "security"
+    ROAD = "road"
+    WEATHER = "weather"
+    VEHICLE = "vehicle"
+    OTHER = "other"
+
+class IncidentStatus(str, enum.Enum):
+    SUBMITTED = "submitted"
+    REVIEWING = "reviewing"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
+class BroadcastAlert(Base):
+    """Admin-created broadcast alert pushed to all users (Drivon Alerts pillar)."""
+    __tablename__ = "broadcast_alerts"
+    __table_args__ = {"schema": "alerts"}
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(Enum(AlertType), index=True, nullable=False)
+    priority = Column(Integer, default=2)  # 1=low 2=medium 3=high 4=urgent
+
+    # Delivery
+    channels = Column(JSON, nullable=False)           # List[AlertChannel]
+    target_audience = Column(String, default="all")   # all | registered | premium
+
+    # Optional geographic targeting (Phase 1: optional, unused in fanout)
+    latitude = Column(String, nullable=True)
+    longitude = Column(String, nullable=True)
+    radius_km = Column(Integer, nullable=True)
+
+    # Lifecycle
+    status = Column(Enum(BroadcastAlertStatus), default=BroadcastAlertStatus.DRAFT, index=True)
+    active_from = Column(TIMESTAMP(timezone=True), nullable=True)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    # Provenance
+    created_by_admin = Column(String, nullable=True)  # admin user_id or name
+    source = Column(String, nullable=True)            # OSINT source reference
+
+    # Call-to-action (optional)
+    action_url = Column(String, nullable=True)
+    action_text = Column(String, nullable=True)
+
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class IncidentReport(Base):
+    """User-submitted incident report (call-to-action from Drivon Alerts screen)."""
+    __tablename__ = "incident_reports"
+    __table_args__ = {"schema": "alerts"}
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(Integer, index=True, nullable=False)
+
+    incident_type = Column(Enum(IncidentType), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+
+    # Location (optional)
+    latitude = Column(String, nullable=True)
+    longitude = Column(String, nullable=True)
+    location_text = Column(String, nullable=True)
+
+    # Media (URLs stored after upload to Cloudflare R2 via social-service)
+    media_urls = Column(JSON, default=list)
+
+    # Admin workflow
+    status = Column(Enum(IncidentStatus), default=IncidentStatus.SUBMITTED, index=True)
+    admin_notes = Column(Text, nullable=True)
+
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
 
 #the notification log is a log of the notification that has been sent to the user
 class NotificationLog(Base):

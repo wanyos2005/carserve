@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:driveon_car_platform/services/auth_service.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
-import 'home_page.dart';
+import 'main_service_nav.dart';
 import 'ProviderPages/provider_homepage.dart';
 import 'AdminPages/admin_dashboard.dart';
 
@@ -49,7 +49,7 @@ class _PasscodePageState extends State<PasscodePage> {
           // 🚗 Regular car owner
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const HomePage()),
+            MaterialPageRoute(builder: (_) => const MainServiceNav()),
           );
         }
       } else {
