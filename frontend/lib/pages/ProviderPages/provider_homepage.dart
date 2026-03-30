@@ -39,7 +39,7 @@ class _ProviderHomePageState extends State<ProviderHomePage> with TickerProvider
   Future<void> _loadProviderDetails() async {
     try {
       final provider = await ProviderService.getProviderDetails(widget.providerId);
-      
+      if (!mounted) return;
       setState(() {
         _categoryName = provider?['category']?['name'];
         _providerName = provider?['name'];
@@ -47,11 +47,12 @@ class _ProviderHomePageState extends State<ProviderHomePage> with TickerProvider
         _frontendGroup = FrontendCategoryGroups.getGroupForBackendCategory(_categoryName ?? '');
         _isLoading = false;
       });
-      
+
       // Load real-time stats after provider details are loaded
       await _loadProviderStats();
     } catch (e) {
       debugPrint("Failed to load provider details: $e");
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _statsLoading = false;

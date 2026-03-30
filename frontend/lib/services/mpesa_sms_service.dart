@@ -31,15 +31,18 @@ void backgroundSmsHandler(SmsMessage message) {
 
 class MpesaSmsService {
   static final Telephony _telephony = Telephony.instance;
+  static bool _isInitialized = false;
 
   // SharedPreferences key prefix for processed transaction codes
   static const String _processedKeyPrefix = 'mpesa_processed_';
 
   // How far back to scan the inbox on first run (in milliseconds)
-  static const int _inboxScanDaysBack = 7;
+  static const int _inboxScanDaysBack = 1;
 
-  /// Call once from main.dart after user is authenticated.
+  /// Call once after user is authenticated as a provider.
   static Future<void> initialize() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
     try {
       final granted = await _telephony.requestPhoneAndSmsPermissions;
       if (granted != true) {
@@ -166,7 +169,7 @@ class MpesaSmsService {
     final codeMatch = RegExp(r'^([A-Z0-9]{10})\s').firstMatch(body);
     if (codeMatch == null) return null;
     final transactionCode = codeMatch.group(1)!;
-     debugPrint('⚠️ MpesaSmsServiceError: mpesa code: $codeMatch');
+     debugPrint('📦 MpesaSmsService: parsed transaction code: ${codeMatch.group(1)}');
     // Amount — "Ksh1,000.00" or "Ksh500.00"
     final amountMatch = RegExp(r'Ksh([\d,]+\.?\d*)').firstMatch(body);
     if (amountMatch == null) return null;

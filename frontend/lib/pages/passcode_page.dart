@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:driveon_car_platform/services/auth_service.dart';
 import 'package:driveon_car_platform/services/user_context_service.dart';
+import 'package:driveon_car_platform/services/mpesa_sms_service.dart';
 import 'main_service_nav.dart';
 import 'ProviderPages/provider_homepage.dart';
 import 'AdminPages/admin_dashboard.dart';
@@ -19,6 +20,7 @@ class _PasscodePageState extends State<PasscodePage> {
   String? _error;
 
   Future<void> _verifyCode() async {
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
 
@@ -38,7 +40,9 @@ class _PasscodePageState extends State<PasscodePage> {
             MaterialPageRoute(builder: (_) => const AdminDashboard()),
           );
         } else if (userContext.isProvider && userContext.providerId != null) {
-          // ✅ Provider employee or owner
+          // ✅ Provider employee or owner — trigger SMS permission prompt, don't block navigation
+          MpesaSmsService.initialize();
+          if (!mounted) return;
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
