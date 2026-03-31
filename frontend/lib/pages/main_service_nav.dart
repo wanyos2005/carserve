@@ -61,68 +61,56 @@ class _MainServiceNavState extends State<MainServiceNav> with TickerProviderStat
       body: SafeArea(
         child: Column(
           children: [
-            // ── Header ──────────────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome...',
-                        style: theme.textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  GestureDetector(
-                    onTap: _togglePrivileges,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: 8,
-                            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          AnimatedRotation(
-                            turns: _isPrivilegesExpanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 300),
-                            child: Icon(Icons.menu,
-                                color: theme.iconTheme.color, size: 24),
-                          ),
-                          if (_unreadAlertCount > 0 && !_isPrivilegesExpanded)
-                            Positioned(
-                              right: -4,
-                              top: -4,
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: const BoxDecoration(
-                                    color: Colors.red, shape: BoxShape.circle),
-                                child: Text(
-                                  _unreadAlertCount > 9 ? '9+' : '$_unreadAlertCount',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold),
-                                ),
+            // ── Menu toggle (compact) ────────────────────────────────────
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8, right: 16, bottom: 4),
+                child: GestureDetector(
+                  onTap: _togglePrivileges,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          blurRadius: 8,
+                          color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        AnimatedRotation(
+                          turns: _isPrivilegesExpanded ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 300),
+                          child: Icon(Icons.menu,
+                              color: theme.iconTheme.color, size: 24),
+                        ),
+                        if (_unreadAlertCount > 0 && !_isPrivilegesExpanded)
+                          Positioned(
+                            right: -4,
+                            top: -4,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                  color: Colors.red, shape: BoxShape.circle),
+                              child: Text(
+                                _unreadAlertCount > 9 ? '9+' : '$_unreadAlertCount',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
 
