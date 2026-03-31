@@ -1,7 +1,9 @@
 // lib/pages/AdminPages/broadcast_alert_management_page.dart
 // Admin interface for creating and managing Drivon Alerts broadcast alerts.
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:driveon_car_platform/services/drivon_alerts_service.dart';
 
 class BroadcastAlertManagementPage extends StatefulWidget {
@@ -311,6 +313,8 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
   }
   bool _publishNow = false;
   bool _submitting = false;
+  final List<File> _pickedImages = [];
+  bool _uploadingImages = false;
 
   static const _alertTypes = [
     ('security',    'Security'),
@@ -330,11 +334,28 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked != null) setState(() => _pickedImages.add(File(picked.path)));
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
+
+    // Upload any picked images first
+    List<String> uploadedUrls = [];
+    if (_pickedImages.isNotEmpty) {
+      setState(() => _uploadingImages = true);
+      for (final img in _pickedImages) {
+        final url = await DrivonAlertsService.uploadAlertImage(img);
+        if (url != null) uploadedUrls.add(url);
+      }
+      setState(() => _uploadingImages = false);
+    }
 
     final createResult = await DrivonAlertsService.adminCreateAlert(
       title: _titleCtrl.text.trim(),
@@ -348,6 +369,7 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
       actionText: _actionTextCtrl.text.trim().isEmpty
           ? null
           : _actionTextCtrl.text.trim(),
+      mediaUrls: uploadedUrls,
     );
 
     if (!mounted) return;
@@ -448,6 +470,54 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
                 ),
               ),
               const SizedBox(height: 12),
+
+              // Image attachments
+              Row(
+                children: [
+                  const Text('Images',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _pickedImages.length >= 4 ? null : _pickImage,
+                    icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                    label: const Text('Add'),
+                  ),
+                ],
+              ),
+              if (_pickedImages.isNotEmpty) ...[
+                SizedBox(
+                  height: 80,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _pickedImages.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) => Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(_pickedImages[i],
+                              width: 80, height: 80, fit: BoxFit.cover),
+                        ),
+                        Positioned(
+                          top: 2, right: 2,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _pickedImages.removeAt(i)),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle),
+                              child: const Icon(Icons.close,
+                                  size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -493,10 +563,17 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
                     foregroundColor: Colors.white,
                   ),
                   child: _submitting
-                      ? const SizedBox(
-                          width: 20, height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              width: 18, height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(_uploadingImages ? 'Uploading images…' : 'Saving…'),
+                          ],
                         )
                       : Text(_publishNow ? 'Create & Publish' : 'Save as Draft'),
                 ),

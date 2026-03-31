@@ -71,13 +71,9 @@ class _MainServiceNavState extends State<MainServiceNav> with TickerProviderStat
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Welcome Back!',
+                        'Welcome...',
                         style: theme.textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Your mobility hub awaits',
-                        style: theme.textTheme.bodyMedium,
                       ),
                     ],
                   ),

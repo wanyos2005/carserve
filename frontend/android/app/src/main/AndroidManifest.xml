@@ -12,10 +12,11 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
 
-    <!-- Permissions for M-Pesa SMS reading (optional - only used on phones with SMS capability) -->
+    <!-- Permissions for M-Pesa SMS reading - pending Google Play review approval
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    -->
     
     <application
         android:label="DriveOn"
@@ -49,7 +50,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Required by telephony package for background SMS listening -->
+        <!-- SMS receiver - pending Google Play review approval
         <receiver
             android:name="com.shounakmulay.telephony.sms.IncomingSmsReceiver"
             android:permission="android.permission.BROADCAST_SMS"
@@ -58,6 +59,7 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+        -->
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

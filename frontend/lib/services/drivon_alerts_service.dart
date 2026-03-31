@@ -1,6 +1,7 @@
 // lib/services/drivon_alerts_service.dart
 // API client for Drivon Alerts pillar: broadcast alerts + incident reports.
 
+import 'dart:io';
 import 'package:driveon_car_platform/services/api_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -19,6 +20,7 @@ class BroadcastAlert {
   final String? actionText;
   final String? expiresAt;
   final String createdAt;
+  final List<String> mediaUrls;
 
   BroadcastAlert({
     required this.id,
@@ -32,6 +34,7 @@ class BroadcastAlert {
     this.actionText,
     this.expiresAt,
     required this.createdAt,
+    this.mediaUrls = const [],
   });
 
   factory BroadcastAlert.fromJson(Map<String, dynamic> json) {
@@ -47,6 +50,7 @@ class BroadcastAlert {
       actionText: json['action_text'],
       expiresAt: json['expires_at'],
       createdAt: json['created_at'] ?? '',
+      mediaUrls: List<String>.from(json['media_urls'] ?? []),
     );
   }
 }
@@ -188,6 +192,24 @@ class DrivonAlertsService {
     }
   }
 
+  /// Upload an image file to Cloudflare R2 via social-service.
+  /// Returns the public URL on success, or null on failure.
+  static Future<String?> uploadAlertImage(File imageFile) async {
+    try {
+      final result = await ApiService.uploadMultipart(
+        '/social/media/upload',
+        fields: {'folder': 'alerts'},
+        files: {'file': imageFile},
+      );
+      if (result != null && result['url'] != null) {
+        return result['url'] as String;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>> adminCreateAlert({
     required String title,
     required String message,
@@ -198,6 +220,7 @@ class DrivonAlertsService {
     String? actionUrl,
     String? actionText,
     String? expiresAt,
+    List<String> mediaUrls = const [],
   }) async {
     try {
       final body = {
@@ -210,6 +233,7 @@ class DrivonAlertsService {
         if (actionUrl != null) 'action_url': actionUrl,
         if (actionText != null) 'action_text': actionText,
         if (expiresAt != null) 'expires_at': expiresAt,
+        'media_urls': mediaUrls,
       };
       final response = await ApiService.post('$_broadcastBase/', body);
       if (response == null) return {'success': false, 'error': 'Server error'};

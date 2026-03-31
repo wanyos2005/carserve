@@ -191,6 +191,9 @@ class BroadcastAlert(Base):
     action_url = Column(String, nullable=True)
     action_text = Column(String, nullable=True)
 
+    # Media attachments (Cloudflare R2 URLs)
+    media_urls = Column(JSON, default=list)
+
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 

@@ -155,6 +155,7 @@ class BroadcastAlertCreate(BaseModel):
     source: Optional[str] = None
     action_url: Optional[str] = None
     action_text: Optional[str] = None
+    media_urls: List[str] = []
 
 class BroadcastAlertUpdate(BaseModel):
     title: Optional[str] = None
@@ -190,6 +191,7 @@ class BroadcastAlertResponse(BaseModel):
     source: Optional[str] = None
     action_url: Optional[str] = None
     action_text: Optional[str] = None
+    media_urls: List[str] = []
     created_at: datetime
     updated_at: datetime
 

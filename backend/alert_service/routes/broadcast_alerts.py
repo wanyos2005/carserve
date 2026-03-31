@@ -95,6 +95,7 @@ async def create_broadcast_alert(
         source=data.source,
         action_url=data.action_url,
         action_text=data.action_text,
+        media_urls=data.media_urls,
         created_by_admin=admin_id,
         status=BroadcastAlertStatus.DRAFT,
     )

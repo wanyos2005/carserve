@@ -218,6 +218,32 @@ class _BroadcastAlertCard extends StatelessWidget {
                 ],
               ),
             ],
+            if (alert.mediaUrls.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 140,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: alert.mediaUrls.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) => ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      alert.mediaUrls[i],
+                      width: 200,
+                      height: 140,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 200, height: 140,
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.broken_image_outlined,
+                            color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (alert.actionUrl != null && alert.actionUrl!.isNotEmpty) ...[
               const SizedBox(height: 10),
               SizedBox(

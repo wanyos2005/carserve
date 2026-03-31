@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:driveon_car_platform/pages/login_page.dart';
-import 'package:driveon_car_platform/pages/ProviderPages/dynamic_onboarding_flow.dart';
-import 'package:driveon_car_platform/models/onboarding_config.dart';
+// SUPPRESSED: Provider onboarding imports — re-enable when provider features go live
+// import 'package:driveon_car_platform/pages/ProviderPages/dynamic_onboarding_flow.dart';
+// import 'package:driveon_car_platform/models/onboarding_config.dart';
 
 //we first declare the class OnboardingScreens which extends StatefulWidget
 class OnboardingScreens extends StatefulWidget {
@@ -17,56 +18,87 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
   int _currentPage = 0;
 
   //we then declare the list _onboardingData which contains the data for the onboarding screens
+  // ALERTS-FOCUSED SLIDES — strategy phase: gain users through the Alerts feature first
   final List<OnboardingData> _onboardingData = [
     OnboardingData(
-      title: "Find Trusted Service Providers",
-      description: "Connect with verified garages, mechanics, and automotive specialists in your area. All providers are vetted and rated by real customers.",
-      image: Icons.build_circle,
+      title: "Real-Time Road Alerts",
+      description: "Get instant notifications about hazards, accidents, and road conditions near you — before you encounter them.",
+      image: Icons.warning_amber_rounded,
+      color: const Color(0xFFD32F2F),
+      features: [
+        "Live Hazard Warnings",
+        "Location-Based Alerts",
+        "Instant Notifications",
+        "Accurate & Up-to-Date",
+      ],
+    ),
+    OnboardingData(
+      title: "Report Incidents Instantly",
+      description: "Spot a pothole, accident, or road closure? Report it in seconds and help fellow drivers stay safe.",
+      image: Icons.report_problem,
       color: const Color(0xFF1E3A8A),
       features: [
-        "Verified & Rated Providers",
-        "Real Customer Reviews",
-        "Location-Based Search",
-        "24/7 Availability",
+        "One-Tap Reporting",
+        "Photo Attachments",
+        "Verified by Community",
+        "Reach Nearby Drivers",
       ],
     ),
     OnboardingData(
-      title: "Book Services Instantly",
-      description: "Schedule oil changes, repairs, inspections, and more with just a few taps. Choose your preferred time and get instant confirmation.",
-      image: Icons.calendar_today,
+      title: "Stay Informed, Drive Safe",
+      description: "Receive safety briefings tailored to your regular routes. Know what's ahead before you hit the road.",
+      image: Icons.shield_outlined,
       color: const Color(0xFF059669),
       features: [
-        "Instant Booking",
-        "Flexible Scheduling",
-        "Real-Time Availability",
-        "Service Tracking",
+        "Route-Specific Alerts",
+        "Weather Warnings",
+        "Traffic Incidents",
+        "Emergency Broadcasts",
       ],
     ),
     OnboardingData(
-      title: "Complete Automotive Care",
-      description: "From routine maintenance to repairs, fuel stations to car washes - we've got all your automotive needs covered.",
-      image: Icons.car_repair,
-      color: const Color(0xFFDC2626),
-      features: [
-        "Routine Maintenance",
-        "Emergency Repairs",
-        "Fuel & Car Wash",
-        "Insurance & Documentation",
-      ],
-    ),
-    OnboardingData(
-      title: "Transparent Pricing",
-      description: "No hidden fees or surprises. See upfront pricing for all services, compare quotes, and pay securely through the app.",
-      image: Icons.account_balance_wallet,
+      title: "Community-Powered Safety",
+      description: "Every driver on DriveOn contributes to a safer road network. Together we see more, share faster, and protect each other.",
+      image: Icons.people_alt_outlined,
       color: const Color(0xFF7C3AED),
       features: [
-        "Upfront Pricing",
-        "Quote Comparison",
-        "Secure Payments",
-        "No Hidden Fees",
+        "Crowd-Sourced Reports",
+        "Verified Alert Network",
+        "Growing Community",
+        "Always Free to Use",
       ],
     ),
   ];
+
+  // SUPPRESSED: Provider-focused slides — re-enable when service provider features go live
+  // OnboardingData(
+  //   title: "Find Trusted Service Providers",
+  //   description: "Connect with verified garages, mechanics, and automotive specialists in your area. All providers are vetted and rated by real customers.",
+  //   image: Icons.build_circle,
+  //   color: const Color(0xFF1E3A8A),
+  //   features: ["Verified & Rated Providers", "Real Customer Reviews", "Location-Based Search", "24/7 Availability"],
+  // ),
+  // OnboardingData(
+  //   title: "Book Services Instantly",
+  //   description: "Schedule oil changes, repairs, inspections, and more with just a few taps.",
+  //   image: Icons.calendar_today,
+  //   color: const Color(0xFF059669),
+  //   features: ["Instant Booking", "Flexible Scheduling", "Real-Time Availability", "Service Tracking"],
+  // ),
+  // OnboardingData(
+  //   title: "Complete Automotive Care",
+  //   description: "From routine maintenance to repairs, fuel stations to car washes - we've got all your automotive needs covered.",
+  //   image: Icons.car_repair,
+  //   color: const Color(0xFFDC2626),
+  //   features: ["Routine Maintenance", "Emergency Repairs", "Fuel & Car Wash", "Insurance & Documentation"],
+  // ),
+  // OnboardingData(
+  //   title: "Transparent Pricing",
+  //   description: "No hidden fees or surprises. See upfront pricing for all services, compare quotes, and pay securely through the app.",
+  //   image: Icons.account_balance_wallet,
+  //   color: const Color(0xFF7C3AED),
+  //   features: ["Upfront Pricing", "Quote Comparison", "Secure Payments", "No Hidden Fees"],
+  // ),
   //dispose in laymans language means to remove the object from the memory, in this case we are removing the page controller from the memory, so that it is not used again
   //since the user the user has already seen the onboarding screens, we can remove the page controller from the memory
   @override
@@ -188,31 +220,30 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
                          ),
                        ),
                        
-                       const SizedBox(width: 12),
-                       
-                       // Provider Registration Button (Right)
-                       Expanded(
-                         child: SizedBox(
-                           height: 50,
-                           child: OutlinedButton(
-                             onPressed: _goToProviderOnboarding,
-                             style: OutlinedButton.styleFrom(
-                               side: const BorderSide(color: Color(0xFFD32F2F), width: 2),
-                               shape: RoundedRectangleBorder(
-                                 borderRadius: BorderRadius.circular(12),
-                               ),
-                             ),
-                             child: const Text(
-                               'Register as Provider',
-                               style: TextStyle(
-                                 fontSize: 16,
-                                 fontWeight: FontWeight.w600,
-                                 color: Color(0xFFD32F2F),
-                               ),
-                             ),
-                           ),
-                         ),
-                       ),
+                       // SUPPRESSED: "Register as Provider" button — re-enable when provider features go live
+                       // const SizedBox(width: 12),
+                       // Expanded(
+                       //   child: SizedBox(
+                       //     height: 50,
+                       //     child: OutlinedButton(
+                       //       onPressed: _goToProviderOnboarding,
+                       //       style: OutlinedButton.styleFrom(
+                       //         side: const BorderSide(color: Color(0xFFD32F2F), width: 2),
+                       //         shape: RoundedRectangleBorder(
+                       //           borderRadius: BorderRadius.circular(12),
+                       //         ),
+                       //       ),
+                       //       child: const Text(
+                       //         'Register as Provider',
+                       //         style: TextStyle(
+                       //           fontSize: 16,
+                       //           fontWeight: FontWeight.w600,
+                       //           color: Color(0xFFD32F2F),
+                       //         ),
+                       //       ),
+                       //     ),
+                       //   ),
+                       // ),
                      ],
                    ),
                 ],
@@ -333,71 +364,72 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
     );
   }
 
-  void _goToProviderOnboarding() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Register As',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.build_circle, color: Colors.blue),
-                    title: const Text('Service Provider'),
-                    subtitle: const Text('Garage, fuel station, car wash, roadside, etc.'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DynamicOnboardingFlow(
-                            type: OnboardingType.serviceProvider,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.security, color: Colors.red),
-                    title: const Text('Insurance Partner'),
-                    subtitle: const Text('Insurance company offering quotes and policies'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DynamicOnboardingFlow(
-                            type: OnboardingType.insurancePartner,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // SUPPRESSED: Provider registration bottom sheet — re-enable when provider features go live
+  // void _goToProviderOnboarding() {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     shape: const RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  //     ),
+  //     builder: (context) {
+  //       return SafeArea(
+  //         child: Padding(
+  //           padding: const EdgeInsets.all(16),
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 'Register As',
+  //                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //               ),
+  //               const SizedBox(height: 12),
+  //               Card(
+  //                 child: ListTile(
+  //                   leading: const Icon(Icons.build_circle, color: Colors.blue),
+  //                   title: const Text('Service Provider'),
+  //                   subtitle: const Text('Garage, fuel station, car wash, roadside, etc.'),
+  //                   onTap: () {
+  //                     Navigator.pop(context);
+  //                     Navigator.pushReplacement(
+  //                       context,
+  //                       MaterialPageRoute(
+  //                         builder: (context) => const DynamicOnboardingFlow(
+  //                           type: OnboardingType.serviceProvider,
+  //                         ),
+  //                       ),
+  //                     );
+  //                   },
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 8),
+  //               Card(
+  //                 child: ListTile(
+  //                   leading: const Icon(Icons.security, color: Colors.red),
+  //                   title: const Text('Insurance Partner'),
+  //                   subtitle: const Text('Insurance company offering quotes and policies'),
+  //                   onTap: () {
+  //                     Navigator.pop(context);
+  //                     Navigator.pushReplacement(
+  //                       context,
+  //                       MaterialPageRoute(
+  //                         builder: (context) => const DynamicOnboardingFlow(
+  //                           type: OnboardingType.insurancePartner,
+  //                         ),
+  //                       ),
+  //                     );
+  //                   },
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 }
 
 class OnboardingData {

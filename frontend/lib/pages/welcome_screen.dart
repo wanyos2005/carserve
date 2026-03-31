@@ -144,13 +144,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       const SizedBox(height: 8),
                       
                       // Tagline
+                      // SUPPRESSED: "Your Complete Automotive Solution" — too broad while we focus on Alerts
+                      // child: const Text('Your Complete Automotive Solution', ...)
                       AnimatedBuilder(
                         animation: _fadeAnimation,
                         builder: (context, child) {
                           return Opacity(
                             opacity: _fadeAnimation.value,
                             child: const Text(
-                              'Your Complete Automotive Solution',
+                              'Drive Safe. Stay Informed.',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.black54,
