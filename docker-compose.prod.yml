@@ -144,7 +144,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx.aws.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
     restart: unless-stopped
     deploy:
       resources:

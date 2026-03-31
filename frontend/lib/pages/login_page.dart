@@ -52,17 +52,9 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const Spacer(),
 
+               const SizedBox(height: 8),
                 Text(
-                  "Ready to Browse?",
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontSize: 28),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Just enter your email for a seamless one-time signup",
+                  "Enter your email for a seamless one-time signup",
                   style: Theme.of(context)
                       .textTheme
                       .bodyLarge

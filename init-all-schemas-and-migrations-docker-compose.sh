@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.aws.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Database Schema & Migration Initializer${NC}"
