@@ -15,7 +15,7 @@ import 'package:driveon_car_platform/pages/history_page.dart';
 import 'package:driveon_car_platform/pages/expenses_page.dart';
 import 'package:driveon_car_platform/pages/add_expense_page.dart';
 import 'package:driveon_car_platform/pages/alerts_inbox_page.dart';
-import 'package:driveon_car_platform/pages/drivon_alerts_page.dart';
+import 'package:driveon_car_platform/pages/driveon_alerts_page.dart';
 import 'package:driveon_car_platform/pages/ProviderPages/provider_settings_page.dart';
 
 // Insurance Pages

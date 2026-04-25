@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:driveon_car_platform/pages/drivon_alerts_page.dart';
+import 'package:driveon_car_platform/pages/driveon_alerts_page.dart';
 import 'package:driveon_car_platform/pages/enhanced_booking_page.dart';
 import 'package:driveon_car_platform/pages/service_log_page.dart';
 import 'package:driveon_car_platform/pages/vehicle_list_page.dart';
@@ -59,66 +59,14 @@ class _MainServiceNavState extends State<MainServiceNav> with TickerProviderStat
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // ── Menu toggle (compact) ────────────────────────────────────
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8, right: 16, bottom: 4),
-                child: GestureDetector(
-                  onTap: _togglePrivileges,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          blurRadius: 8,
-                          color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        AnimatedRotation(
-                          turns: _isPrivilegesExpanded ? 0.5 : 0,
-                          duration: const Duration(milliseconds: 300),
-                          child: Icon(Icons.menu,
-                              color: theme.iconTheme.color, size: 24),
-                        ),
-                        if (_unreadAlertCount > 0 && !_isPrivilegesExpanded)
-                          Positioned(
-                            right: -4,
-                            top: -4,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                  color: Colors.red, shape: BoxShape.circle),
-                              child: Text(
-                                _unreadAlertCount > 9 ? '9+' : '$_unreadAlertCount',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Conditional: privileges menu OR tab pages ────────────────────
-            if (_isPrivilegesExpanded) ...[
-              Expanded(
+            // ── Full-screen content ──────────────────────────────────────
+            if (_isPrivilegesExpanded)
+              Positioned.fill(
+                top: 52,
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: cardColor,
                     borderRadius: BorderRadius.circular(20),
@@ -201,10 +149,60 @@ class _MainServiceNavState extends State<MainServiceNav> with TickerProviderStat
                     ),
                   ),
                 ),
+              )
+            else
+              Positioned.fill(child: _pages[_selectedIndex]),
+
+            // ── Floating menu button (overlaid, zero layout cost) ────────
+            Positioned(
+              top: 8,
+              right: 16,
+              child: GestureDetector(
+                onTap: _togglePrivileges,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        blurRadius: 8,
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AnimatedRotation(
+                        turns: _isPrivilegesExpanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Icon(Icons.menu,
+                            color: theme.iconTheme.color, size: 22),
+                      ),
+                      if (_unreadAlertCount > 0 && !_isPrivilegesExpanded)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                                color: Colors.red, shape: BoxShape.circle),
+                            child: Text(
+                              _unreadAlertCount > 9 ? '9+' : '$_unreadAlertCount',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-            ] else ...[
-              Expanded(child: _pages[_selectedIndex]),
-            ],
+            ),
           ],
         ),
       ),
@@ -227,7 +225,7 @@ class _MainServiceNavState extends State<MainServiceNav> with TickerProviderStat
           BottomNavigationBarItem(
             icon: Icon(Icons.campaign_outlined, size: 28),
             activeIcon: Icon(Icons.campaign, size: 32),
-            label: 'Drivon Alerts',
+            label: 'DriveOn Alerts',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_month, size: 28),

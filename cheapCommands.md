@@ -406,3 +406,5 @@ Step 5 — Restart containers without postgres
 cd /home/ubuntu/carserve
 sudo docker compose -f docker-compose.aws.yml down
 sudo docker compose -f docker-compose.aws.yml up -d
+
+docker compose exec alert-service alembic upgrade head
